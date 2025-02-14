@@ -1,6 +1,6 @@
 import { Drawer } from 'expo-router/drawer';
-import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
-import { Link, useNavigation, useRouter } from 'expo-router';
+import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
+import { Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Image,
@@ -15,37 +15,23 @@ import {
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { DrawerActions } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
-import { getChats, renameChat } from '@/utils/Database';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useDrawerStatus } from '@react-navigation/drawer';
-import { Chat } from '@/utils/Interfaces';
 import * as ContextMenu from 'zeego/context-menu';
 import { useRevenueCat } from '@/providers/RevenueCat';
-import { Keyboard } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
+import { useChat } from '@/hooks/useChat';
 
 export const CustomDrawerContent = (props: any) => {
-  const { bottom, top } = useSafeAreaInsets();
-  const db = useSQLiteContext();
-  const isDrawerOpen = useDrawerStatus() === 'open';
-  const [history, setHistory] = useState<Chat[]>([]);
+  const { bottom, top } = useSafeAreaInsets()
+  // const isDrawerOpen = useDrawerStatus() === 'open';
+  const { conversations: history } = useChat();
   const router = useRouter();
   const {user} = useAuth();
 
-  useEffect(() => {
-    loadChats();
-    Keyboard.dismiss();
-  }, [isDrawerOpen]);
 
-  const loadChats = async () => {
-    // Load chats from SQLite
-    const result = (await getChats(db)) as Chat[];
-    setHistory(result);
-  };
+ 
 
-  const onDeleteChat = (chatId: number) => {
+  const onDeleteChat = (chatId: string) => {
     Alert.alert('Delete Chat', 'Are you sure you want to delete this chat?', [
       {
         text: 'Cancel',
@@ -55,19 +41,17 @@ export const CustomDrawerContent = (props: any) => {
         text: 'Delete',
         onPress: async () => {
           // Delete the chat
-          await db.runAsync('DELETE FROM chats WHERE id = ?', chatId);
-          loadChats();
+          
         },
       },
     ]);
   };
 
-  const onRenameChat = (chatId: number) => {
+  const onRenameChat = (chatId: string) => {
     Alert.prompt('Rename Chat', 'Enter a new name for the chat', async (newName) => {
       if (newName) {
         // Rename the chat
-        await renameChat(db, chatId, newName);
-        loadChats();
+       
       }
     });
   };
@@ -93,7 +77,7 @@ export const CustomDrawerContent = (props: any) => {
           <ContextMenu.Root key={chat.id}>
             <ContextMenu.Trigger>
               <DrawerItem
-                label={chat.title}
+                label={chat.content_summary || ''}
                 onPress={() => router.push(`/(chat)/${chat.id}`)}
                 inactiveTintColor="#000"
               />
@@ -107,7 +91,7 @@ export const CustomDrawerContent = (props: any) => {
                 )}
               </ContextMenu.Preview>
 
-              <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chat.id)}>
+              <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chat.id || '')}>
                 <ContextMenu.ItemTitle>Rename</ContextMenu.ItemTitle>
                 <ContextMenu.ItemIcon
                   ios={{
@@ -116,7 +100,7 @@ export const CustomDrawerContent = (props: any) => {
                   }}
                 />
               </ContextMenu.Item>
-              <ContextMenu.Item key={'delete'} onSelect={() => onDeleteChat(chat.id)} destructive>
+              <ContextMenu.Item key={'delete'} onSelect={() => onDeleteChat(chat.id|| '')} destructive>
                 <ContextMenu.ItemTitle>Delete</ContextMenu.ItemTitle>
                 <ContextMenu.ItemIcon
                   ios={{

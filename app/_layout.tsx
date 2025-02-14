@@ -12,10 +12,9 @@ import "react-native-reanimated";
 
 import { useColorScheme } from "@/components/useColorScheme";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { SQLiteProvider } from "expo-sqlite";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { migrateDbIfNeeded } from "@/utils/Database";
 import Colors from "@/constants/Colors";
+import { ChatProvider } from "@/hooks/useChat";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -136,7 +135,7 @@ function RootLayoutNav() {
 
   return (
     <AuthProvider>
-      <SQLiteProvider databaseName="chat.db" onInit={migrateDbIfNeeded}>
+      <ChatProvider>
         <ThemeProvider
           value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
         >
@@ -144,7 +143,7 @@ function RootLayoutNav() {
             <Layout />
           </GestureHandlerRootView>
         </ThemeProvider>
-      </SQLiteProvider>
+      </ChatProvider>
     </AuthProvider>
   );
 }

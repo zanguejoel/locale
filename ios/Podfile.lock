@@ -65,8 +65,6 @@ PODS:
     - ExpoModulesCore
   - ExpoSplashScreen (0.29.21):
     - ExpoModulesCore
-  - ExpoSQLite (15.1.2):
-    - ExpoModulesCore
   - ExpoSystemUI (4.0.7):
     - ExpoModulesCore
   - ExpoWebBrowser (14.0.2):
@@ -1929,7 +1927,6 @@ DEPENDENCIES:
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - "ExpoSharing (from `../node_modules/.pnpm/expo-sharing@13.0.1_expo@52.0.30_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@7.26_l3wflbq3rki4wromttpl2u4ly4/node_modules/expo-sharing/ios`)"
   - "ExpoSplashScreen (from `../node_modules/.pnpm/expo-splash-screen@0.29.21_expo@52.0.30_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+co_gwrfeowipyx5glpsgzi6pl46qq/node_modules/expo-splash-screen/ios`)"
-  - "ExpoSQLite (from `../node_modules/.pnpm/expo-sqlite@15.1.2_expo@52.0.30_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@7.26._3rdziaoggqj3d6wdmdp2d5ktiy/node_modules/expo-sqlite/ios`)"
   - "ExpoSystemUI (from `../node_modules/.pnpm/expo-system-ui@4.0.7_expo@52.0.30_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@7.2_senunxqcibti6ntttgvlzwy2na/node_modules/expo-system-ui/ios`)"
   - "ExpoWebBrowser (from `../node_modules/.pnpm/expo-web-browser@14.0.2_expo@52.0.30_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@_jz6snzwnrm4ymkvylzaop76bvm/node_modules/expo-web-browser/ios`)"
   - "FBLazyVector (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@7.26.7__@types+react@18.3.18_react@18.3.1/node_modules/react-native/Libraries/FBLazyVector`)"
@@ -2058,8 +2055,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/.pnpm/expo-sharing@13.0.1_expo@52.0.30_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@7.26_l3wflbq3rki4wromttpl2u4ly4/node_modules/expo-sharing/ios"
   ExpoSplashScreen:
     :path: "../node_modules/.pnpm/expo-splash-screen@0.29.21_expo@52.0.30_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+co_gwrfeowipyx5glpsgzi6pl46qq/node_modules/expo-splash-screen/ios"
-  ExpoSQLite:
-    :path: "../node_modules/.pnpm/expo-sqlite@15.1.2_expo@52.0.30_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@7.26._3rdziaoggqj3d6wdmdp2d5ktiy/node_modules/expo-sqlite/ios"
   ExpoSystemUI:
     :path: "../node_modules/.pnpm/expo-system-ui@4.0.7_expo@52.0.30_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@7.2_senunxqcibti6ntttgvlzwy2na/node_modules/expo-system-ui/ios"
   ExpoWebBrowser:
@@ -2234,7 +2229,6 @@ SPEC CHECKSUMS:
   ExpoModulesCore: 231638400651045f797b1da72feccbd86f96dbf5
   ExpoSharing: 849a5ce9985c22598c16ec027e32969be8062e8e
   ExpoSplashScreen: c64f3b577e1cb0b6a2f47d01c528ad7d80d9ae6a
-  ExpoSQLite: fab1425f90f593057ab439dbf2fef7d42a83abdd
   ExpoSystemUI: 36f50ee42da3e814bffd01ee38edcf3c7cc0015d
   ExpoWebBrowser: a212e6b480d8857d3e441fba51e0c968333803b3
   FBLazyVector: be509404b5de73a64a74284edcaf73a5d1e128b1
