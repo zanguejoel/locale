@@ -94,6 +94,7 @@ const Layout = () => {
     <Stack>
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="registration" options={{ headerShown: false }} />
+      <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
       <Stack.Screen name="(chat)" options={{ headerShown: false }} />
       <Stack.Screen
         name="(modal)/settings"
