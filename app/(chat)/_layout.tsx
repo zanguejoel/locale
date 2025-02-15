@@ -1,5 +1,5 @@
 import { Drawer } from 'expo-router/drawer';
-import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
+import { DrawerContentScrollView, DrawerItem, DrawerItemList } from '@react-navigation/drawer';
 import { Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -68,16 +68,17 @@ export const CustomDrawerContent = (props: any) => {
           />
         </View>
       </View>
+      
 
       <DrawerContentScrollView
         {...props}
         contentContainerStyle={{ backgroundColor: '#fff', paddingTop: 0 }}>
-        {/* <DrawerItemList {...props} /> */}
+       
         {history.map((chat) => (
           <ContextMenu.Root key={chat.id}>
             <ContextMenu.Trigger>
               <DrawerItem
-                label={chat.content_summary || ''}
+                label={chat.title || ''}
                 onPress={() => router.push(`/(chat)/${chat.id}`)}
                 inactiveTintColor="#000"
               />

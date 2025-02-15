@@ -56,6 +56,7 @@ interface ChatContextType {
   conversations: Conversations[];
   currentConversationId: string | null;
   isLoading: boolean;
+  isSending: boolean;
   sendMessage: (message: string, messageType?: string, operation?: string | null) => Promise<void>;
   fetchMessages: (conversationId: string) => Promise<void>;
   fetchConversation: (conversationId: string) => Promise<void>;
@@ -85,6 +86,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchConversation();
     Keyboard.dismiss();
   }, []);
+
+  
+
 
   useEffect(() => {
     if(currentConversationId) {
@@ -207,6 +211,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchConversation = async () => {
     try {
       setIsLoading(true);
+      await api.setAuthToken(user?.token || '');
       const response = await api.get<Conversations[]>(`/conversation/search?limit=50`);
 
       if (!response.ok || !response.data) {
@@ -315,6 +320,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         conversations,
         currentConversationId,
         isLoading,
+        isSending,
         sendMessage,
         fetchMessages,
         fetchConversation,

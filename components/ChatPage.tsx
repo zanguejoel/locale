@@ -1,7 +1,7 @@
 import MessageInput from '@/components/ChatInput';
 import { defaultStyles } from '@/constants/Styles';
-import { Stack } from 'expo-router';
-import { useState } from 'react';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Image, View, StyleSheet, KeyboardAvoidingView, Platform} from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import ChatMessage from '@/components/ChatMessage';
@@ -12,8 +12,14 @@ import { useChat } from '@/hooks/useChat';
 const ChatPage = () => {
   const [height, setHeight] = useState(0);
   const chat = useChat();
-  const {messages, sendMessage} = chat;
+  const {messages, sendMessage, setCurrentRoom} = chat;
+  let { id } = useLocalSearchParams<{ id: string }>();
 
+  useEffect(() => {
+    if(id) {
+      setCurrentRoom(id);
+    }
+  }, [id]);
 
   const onLayout = (event: any) => {
     const { height } = event.nativeEvent.layout;
