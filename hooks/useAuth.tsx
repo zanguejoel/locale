@@ -30,6 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if(!user?.user_id) {
       setIsSignedIn(false);
     } else {
+      api.setAuthToken(user?.token);
       setIsSignedIn(true);
     }
 

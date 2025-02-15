@@ -210,15 +210,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.get<Conversations[]>(`/conversation/search?limit=50`);
 
       if (!response.ok || !response.data) {
-        throw new Error('Failed to fetch messages');
+        console.log(JSON.stringify(response));
+        throw new Error(response.problem);
       }
       setConversations(response.data || []);
       if(response.data?.length && response.data[0].id) {
         setCurrentRoom(response.data[0].id);
       }
     } catch (error) {
-      console.error('Fetch messages error:', error);
-      throw error;
+      console.error('Fetch messages error--:', error);
+      // throw error;
     } finally {
       setIsLoading(false);
     }
@@ -235,14 +236,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!response.ok || !response.data) {
-        throw new Error('Failed to fetch messages');
-      }
+        //throw new Error('Failed to fetch messages');
+      } 
       console.log(response.data);
-      const messages = response.data.map(m => ({...m, role: m.role === "assistant" ? Role.Bot : Role.User}))
+      const messages = response.data.map(m => ({...m, role: `${m.role}` === "assistant" ? Role.Bot : Role.User}))
       setMessages(messages || []);
     } catch (error) {
       console.error('Fetch messages error:', error);
-      throw error;
+      // throw error;
     } finally {
       setIsLoading(false);
     }
