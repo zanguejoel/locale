@@ -99,7 +99,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const _messages = updateLastItem(messages || [], message => ({
       ...message,
-      content: stream
+      content: stream,
+      //laoding: isSending
     }))
   setMessages(_messages);
  }, [stream]);
@@ -118,7 +119,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages((state) => [
       ...state,
       { role: Role.User, content: message || '' },
-      { role: Role.Bot, content: '', isLoading: true }
+      { role: Role.Bot, content: '', /* loading: true  */}
     ]);
 
     const formData = new FormData();
