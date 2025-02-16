@@ -125,9 +125,6 @@ importers:
       react-native-mmkv:
         specifier: ^3.2.0
         version: 3.2.0(react-native@0.76.6(@babel/core@7.26.7)(@babel/preset-env@7.26.7(@babel/core@7.26.7))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1)
-      react-native-openai:
-        specifier: ^0.6.2
-        version: 0.6.2(react-native@0.76.6(@babel/core@7.26.7)(@babel/preset-env@7.26.7(@babel/core@7.26.7))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1)
       react-native-polyfill-globals:
         specifier: ^3.1.0
         version: 3.1.0(base-64@1.0.0)(react-native-fetch-api@3.0.0)(react-native-get-random-values@1.11.0(react-native@0.76.6(@babel/core@7.26.7)(@babel/preset-env@7.26.7(@babel/core@7.26.7))(@types/react@18.3.18)(react@18.3.1)))(react-native-url-polyfill@2.0.0(react-native@0.76.6(@babel/core@7.26.7)(@babel/preset-env@7.26.7(@babel/core@7.26.7))(@types/react@18.3.18)(react@18.3.1)))(text-encoding@0.7.0)(web-streams-polyfill@4.1.0)
@@ -4441,13 +4438,6 @@ packages:
 
   react-native-mmkv@3.2.0:
     resolution: {integrity: sha512-9y7K//1MaU46TFrXkyU0wT5VGk9Y2FDLFV6NPl+z3jTbm2G7SC1UIxneF6CfhSmBX5CfKze9SO7kwDuRx7flpQ==}
-    peerDependencies:
-      react: '*'
-      react-native: '*'
-
-  react-native-openai@0.6.2:
-    resolution: {integrity: sha512-m55c7EdxNnUNI38P8TUjXWsfjSPJDYCHS+ybY0DYcGYwHpffwaVj/+3RCFvpUFK+MDcSpfWMTnUpu85FqsRxQQ==}
-    engines: {node: '>= 16.0.0'}
     peerDependencies:
       react: '*'
       react-native: '*'
@@ -10732,11 +10722,6 @@ snapshots:
       react-native-fit-image: 1.5.5
 
   react-native-mmkv@3.2.0(react-native@0.76.6(@babel/core@7.26.7)(@babel/preset-env@7.26.7(@babel/core@7.26.7))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1):
-    dependencies:
-      react: 18.3.1
-      react-native: 0.76.6(@babel/core@7.26.7)(@babel/preset-env@7.26.7(@babel/core@7.26.7))(@types/react@18.3.18)(react@18.3.1)
-
-  react-native-openai@0.6.2(react-native@0.76.6(@babel/core@7.26.7)(@babel/preset-env@7.26.7(@babel/core@7.26.7))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1):
     dependencies:
       react: 18.3.1
       react-native: 0.76.6(@babel/core@7.26.7)(@babel/preset-env@7.26.7(@babel/core@7.26.7))(@types/react@18.3.18)(react@18.3.1)

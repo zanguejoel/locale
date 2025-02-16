@@ -1,16 +1,18 @@
 import MessageInput from '@/components/ChatInput';
 import { defaultStyles } from '@/constants/Styles';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, View, StyleSheet, KeyboardAvoidingView, Platform} from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import ChatMessage from '@/components/ChatMessage';
 import MessageIdeas from '@/components/MessageIdeas';
 import { useChat } from '@/hooks/useChat';
+import { Message } from '@/utils/Interfaces';
 
 
 const ChatPage = () => {
   const [height, setHeight] = useState(0);
+  const messageListRef = useRef<FlashList<Message>>(null);
   const chat = useChat();
   const {messages, sendMessage, setCurrentRoom} = chat;
   let { id } = useLocalSearchParams<{ id: string }>();
@@ -20,6 +22,13 @@ const ChatPage = () => {
       setCurrentRoom(id);
     }
   }, [id]);
+
+
+  useEffect(() => {
+    if(messages.length && messageListRef?.current) {
+      messageListRef.current?.scrollToIndex({index: messages.length - 1, animated:true})
+    }
+  }, [messages, id]);
 
   const onLayout = (event: any) => {
     const { height } = event.nativeEvent.layout;
@@ -45,6 +54,8 @@ const ChatPage = () => {
         )}
 
         <FlashList
+          ref={messageListRef}
+          initialScrollIndex={0}
           data={messages}
           renderItem={({ item }) => <ChatMessage {...item} />}
           estimatedItemSize={400}

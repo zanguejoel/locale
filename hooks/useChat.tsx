@@ -57,9 +57,10 @@ interface ChatContextType {
   currentConversationId: string | null;
   isLoading: boolean;
   isSending: boolean;
+  stream: string;
   sendMessage: (message: string, messageType?: string, operation?: string | null) => Promise<void>;
   fetchMessages: (conversationId: string) => Promise<void>;
-  fetchConversation: (conversationId: string) => Promise<void>;
+  fetchConversation: (q?: string) => Promise<void>;
   createConversation: (participantIds: string[]) => Promise<string>;
   markAsRead: (conversationId: string) => Promise<void>;
   setCurrentRoom: (conversationId: string) => void;
@@ -71,7 +72,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user] = useMMKVStorage<User | null>('user', null);
   const [conversations, setConversations] = useMMKVStorage<Conversations[]>('chat_conversations', []);
-  const [messages, setMessages] = useMMKVStorage<Message[]>('chat_messages', []);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -209,22 +210,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   };
 
-  const fetchConversation = async () => {
+  const fetchConversation = async (q?: string) => {
     try {
       setIsLoading(true);
       await api.setAuthToken(user?.token || '');
-      const response = await api.get<Conversations[]>(`/conversation/search?limit=50`);
+      const response = await api.get<Conversations[]>(`/conversation/search?limit=500${q ? `&q=${q}` : ""}`);
 
       if (!response.ok || !response.data) {
-        console.log(JSON.stringify(response));
-        throw new Error(response.problem);
+        console.log(JSON.stringify(response.problem));
+        // throw new Error(response.problem);
       }
       setConversations(response.data || []);
       if(response.data?.length && response.data[0].id) {
         setCurrentRoom(response.data[0].id);
       }
     } catch (error) {
-      console.error('Fetch messages error--:', error);
+      console.error('Fetch conversations messages error:', error);
       // throw error;
     } finally {
       setIsLoading(false);
@@ -244,7 +245,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!response.ok || !response.data) {
         //throw new Error('Failed to fetch messages');
       } 
-      console.log(response.data);
       const messages = response.data.map(m => ({...m, role: `${m.role}` === "assistant" ? Role.Bot : Role.User}))
       setMessages(messages || []);
     } catch (error) {
@@ -268,6 +268,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const newRoom = response.data;
       setConversations(prev => [...prev, newRoom]);
+      await setCurrentRoom(newRoom.id);
       return newRoom.id;
     } catch (error) {
       console.error('Create chat room error:', error);
@@ -322,6 +323,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentConversationId,
         isLoading,
         isSending,
+        stream,
         sendMessage,
         fetchMessages,
         fetchConversation,

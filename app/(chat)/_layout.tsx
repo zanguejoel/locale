@@ -23,8 +23,9 @@ import { useChat } from '@/hooks/useChat';
 
 export const CustomDrawerContent = (props: any) => {
   const { bottom, top } = useSafeAreaInsets()
+
   // const isDrawerOpen = useDrawerStatus() === 'open';
-  const { conversations: history } = useChat();
+  const { conversations } = useChat();
   const router = useRouter();
   const {user} = useAuth();
 
@@ -74,7 +75,7 @@ export const CustomDrawerContent = (props: any) => {
         {...props}
         contentContainerStyle={{ backgroundColor: '#fff', paddingTop: 0 }}>
        
-        {history.map((chat) => (
+        {conversations.map((chat) => (
           <ContextMenu.Root key={chat.id}>
             <ContextMenu.Trigger>
               <DrawerItem
@@ -175,8 +176,8 @@ const Layout = () => {
             <Link href={'/(chat)/new'} push asChild>
               <TouchableOpacity>
                 <Ionicons
-                  name="add-circle-outline"
-                  size={30}
+                  name="create-outline"
+                  size={24}
                   color={Colors.grey}
                   style={{ marginRight: 16 }}
                 />

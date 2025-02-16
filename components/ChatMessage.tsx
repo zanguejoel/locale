@@ -132,12 +132,9 @@ const ChatMessage = memo(({
       accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
       accessibilityRole="text"
     >
-      <Text style={[
-        styles.text,
-        role === Role.Bot ? styles.botText : styles.userText,
-      ]}>
+     
         <MarkdownDisplay>{content}</MarkdownDisplay>
-      </Text>
+      
     </Pressable>
   );
 

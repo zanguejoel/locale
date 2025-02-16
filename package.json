@@ -53,7 +53,6 @@
     "react-native-ios-utilities": "^5.1.1",
     "react-native-markdown-display": "^7.0.2",
     "react-native-mmkv": "^3.2.0",
-    "react-native-openai": "^0.6.2",
     "react-native-polyfill-globals": "^3.1.0",
     "react-native-purchases": "^8.5.2",
     "react-native-reanimated": "~3.16.7",
