@@ -14,8 +14,10 @@ const ChatPage = () => {
   const [height, setHeight] = useState(0);
   const messageListRef = useRef<FlashList<Message>>(null);
   const chat = useChat();
-  const {messages, sendMessage, setCurrentRoom} = chat;
+  const {messages, currentConversationId, sendMessage, setCurrentRoom} = chat;
   let { id } = useLocalSearchParams<{ id: string }>();
+
+ 
 
   useEffect(() => {
     if(id) {
@@ -28,7 +30,7 @@ const ChatPage = () => {
     if(messages.length && messageListRef?.current) {
       messageListRef.current?.scrollToIndex({index: messages.length - 1, animated:true})
     }
-  }, [messages, id]);
+  }, [messages, currentConversationId]);
 
   const onLayout = (event: any) => {
     const { height } = event.nativeEvent.layout;

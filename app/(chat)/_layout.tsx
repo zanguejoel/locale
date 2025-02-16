@@ -20,17 +20,19 @@ import * as ContextMenu from 'zeego/context-menu';
 import { useRevenueCat } from '@/providers/RevenueCat';
 import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
+import { useEffect, useState } from 'react';
 
 export const CustomDrawerContent = (props: any) => {
   const { bottom, top } = useSafeAreaInsets()
 
   // const isDrawerOpen = useDrawerStatus() === 'open';
-  const { conversations } = useChat();
+  const { conversations, currentConversationId, fetchConversation, } = useChat();
   const router = useRouter();
   const {user} = useAuth();
+  const [query, setQuery] = useState('');
 
 
- 
+  
 
   const onDeleteChat = (chatId: string) => {
     Alert.alert('Delete Chat', 'Are you sure you want to delete this chat?', [
@@ -66,6 +68,7 @@ export const CustomDrawerContent = (props: any) => {
             style={styles.input}
             placeholder="Search"
             underlineColorAndroid="transparent"
+            onChangeText={(value) => setQuery(value)}
           />
         </View>
       </View>
@@ -75,7 +78,7 @@ export const CustomDrawerContent = (props: any) => {
         {...props}
         contentContainerStyle={{ backgroundColor: '#fff', paddingTop: 0 }}>
        
-        {conversations.map((chat) => (
+        {conversations.filter( c => !query || c.title?.toLowerCase()?.includes(query.toLowerCase())).map((chat) => (
           <ContextMenu.Root key={chat.id}>
             <ContextMenu.Trigger>
               <DrawerItem
