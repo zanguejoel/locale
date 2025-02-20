@@ -20,7 +20,8 @@ import * as ContextMenu from 'zeego/context-menu';
 import { useRevenueCat } from '@/providers/RevenueCat';
 import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+
 
 export const CustomDrawerContent = (props: any) => {
   const { bottom, top } = useSafeAreaInsets()
@@ -78,7 +79,7 @@ export const CustomDrawerContent = (props: any) => {
         {...props}
         contentContainerStyle={{ backgroundColor: '#fff', paddingTop: 0 }}>
        
-        {conversations.filter( c => !query || c.title?.toLowerCase()?.includes(query.toLowerCase())).map((chat) => (
+        {conversations?.length && conversations.filter( c => !query || c.title?.toLowerCase()?.includes(query.toLowerCase())).map((chat) => (
           <ContextMenu.Root key={chat.id}>
             <ContextMenu.Trigger>
               <DrawerItem

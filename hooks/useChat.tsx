@@ -280,7 +280,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const markAsRead = async (conversationId: string) => {
     try {
-     console.log('Handle set read');
+    //  console.log('Handle set read');
     } catch (error) {
       console.error('Mark as read error:', error);
       throw error;
