@@ -64,7 +64,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "~0.19.13",
     "snakecase-keys": "^8.0.1",
-    "web-streams-polyfill": "^4.1.0",
+    "web-streams-polyfill": "^3.2.1",
     "zeego": "^2.0.4"
   },
   "devDependencies": {
