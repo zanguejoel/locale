@@ -13,6 +13,7 @@ interface AuthContextType {
   signOut: () => void;
   isLoading: boolean;
   isSignedIn: boolean;
+  forgotPassword: (e: string) => {}
 }
 
 
@@ -27,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Initial loading state is handled by useMMKVStorage
     setIsLoading(false);
-    if(!user?.user_id) {
+    if (!user?.user_id) {
       setIsSignedIn(false);
     } else {
       api.setAuthToken(user?.token);
@@ -39,24 +40,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const response = await api.post<{token: string} | any>('/auth/login', {
-          email,
-          password
+      const response = await api.post<{ token: string } | any>('/auth/login', {
+        email,
+        password
       });
-      if(!response.ok) {
+      if (!response.ok) {
         throw response.data;
       }
-      if(!response.data?.token) {
-        throw {detail: "Error, Try again later."}
+      if (!response.data?.token) {
+        throw { detail: "Error, Try again later." }
       }
       await api.setAuthToken(response.data?.token);
-      const userResponse = await  api.get<User | any>('/auth/me');
-      if(!(userResponse.ok && userResponse.data)) {
-        throw {detail: "Error, Try again later."}
+      const userResponse = await api.get<User | any>('/auth/me');
+      if (!(userResponse.ok && userResponse.data)) {
+        throw { detail: "Error, Try again later." }
       }
       console.log(console.log(JSON.stringify(userResponse.data)));
-      const newUser = {...userResponse.data, token: response.data?.token };
-      
+      const newUser = { ...userResponse.data, token: response.data?.token };
+
       setUser(newUser);
     } catch (error) {
       console.error('Sign in error:', JSON.stringify(error));
@@ -65,6 +66,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     }
   };
+
+  const forgotPassword = async (email: string) => {
+    try {
+      const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${email}`);
+
+      console.log('-response--------', response)
+      if (!response.ok) {
+        throw response.data;
+      }
+      if (!response.data?.token) {
+        throw { detail: "Error, Try again later." }
+      }
+
+    } catch (error) {
+      console.error('Forgot password error:', JSON.stringify(error))
+    }
+  }
 
   const signUp = async (email: string, password: string) => {
     try {
@@ -86,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-     
+
     } catch (error) {
       console.error('Sign up error:', error);
       throw error;
@@ -101,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword }}>
       {children}
     </AuthContext.Provider>
   );
