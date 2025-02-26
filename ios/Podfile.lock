@@ -1450,6 +1450,27 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - react-native-webview (13.12.5):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - React-nativeconfig (0.76.6)
   - React-NativeModulesApple (0.76.6):
     - glog
@@ -1901,26 +1922,26 @@ PODS:
 DEPENDENCIES:
   - "boost (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/third-party-podspecs/boost.podspec`)"
   - "DoubleConversion (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)"
-  - "EXConstants (from `../node_modules/.pnpm/expo-constants@17.0.7_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+c_cb188a28380f5a27fc9c56ce8c2a00b3/node_modules/expo-constants/ios`)"
-  - "EXImageLoader (from `../node_modules/.pnpm/expo-image-loader@5.0.0_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel_10d88c17a4206018a37590b57d562d55/node_modules/expo-image-loader/ios`)"
-  - "Expo (from `../node_modules/.pnpm/expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@expo+metr_640ea985360c1c9430cb0eefee7b7f34/node_modules/expo`)"
-  - "ExpoAsset (from `../node_modules/.pnpm/expo-asset@11.0.4_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@_43d0602a46d3cabd078fb41fe230c77a/node_modules/expo-asset/ios`)"
-  - "ExpoBlur (from `../node_modules/.pnpm/expo-blur@14.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7_c9fa527bc62d0d7d335ecfd1c8c80722/node_modules/expo-blur/ios`)"
-  - "ExpoClipboard (from `../node_modules/.pnpm/expo-clipboard@7.0.1_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+co_636585efbbb9bdee726c86e76ddd3b03/node_modules/expo-clipboard/ios`)"
-  - "ExpoDocumentPicker (from `../node_modules/.pnpm/expo-document-picker@13.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@b_e2395ac1f5a281a6c640943c70409292/node_modules/expo-document-picker/ios`)"
-  - "ExpoFileSystem (from `../node_modules/.pnpm/expo-file-system@18.0.11_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babe_09b84ceee75fc24b767578e0a1e9fffc/node_modules/expo-file-system/ios`)"
-  - "ExpoFont (from `../node_modules/.pnpm/expo-font@13.0.4_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7_6ba0d23c7dc3d09f75a318886f327905/node_modules/expo-font/ios`)"
-  - "ExpoHead (from `../node_modules/.pnpm/expo-router@4.0.17_84c89bda192a5c77e6c034f52c7bd1fe/node_modules/expo-router/ios`)"
-  - "ExpoImagePicker (from `../node_modules/.pnpm/expo-image-picker@16.0.6_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babe_f75dc810ef3770a3e470e2c9b4e74d97/node_modules/expo-image-picker/ios`)"
-  - "ExpoKeepAwake (from `../node_modules/.pnpm/expo-keep-awake@14.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+_758566809afd8e1c4d3d68eda5d33aae/node_modules/expo-keep-awake/ios`)"
-  - "ExpoLinearGradient (from `../node_modules/.pnpm/expo-linear-gradient@14.0.2_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@b_fafe9aa2571526e6e6849cff7e7e53bb/node_modules/expo-linear-gradient/ios`)"
-  - "ExpoLinking (from `../node_modules/.pnpm/expo-linking@7.0.5_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core_7fd3536cf09c932aa83eb52e6e85afd2/node_modules/expo-linking/ios`)"
-  - "ExpoMediaLibrary (from `../node_modules/.pnpm/expo-media-library@17.0.6_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@bab_dffb107a7b31edca7e033526eb053a4a/node_modules/expo-media-library/ios`)"
+  - "EXConstants (from `../node_modules/.pnpm/expo-constants@17.0.7_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+c_0efe2bb7fceefdb496d51d9f82106a09/node_modules/expo-constants/ios`)"
+  - "EXImageLoader (from `../node_modules/.pnpm/expo-image-loader@5.0.0_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel_eb4cdb2d511363f73539e2fb3f1cdc49/node_modules/expo-image-loader/ios`)"
+  - "Expo (from `../node_modules/.pnpm/expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@expo+metr_bbf2b0669def9da1e240be609e1092f9/node_modules/expo`)"
+  - "ExpoAsset (from `../node_modules/.pnpm/expo-asset@11.0.4_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@_82933defbdc9a8a556defa2fb8a8e678/node_modules/expo-asset/ios`)"
+  - "ExpoBlur (from `../node_modules/.pnpm/expo-blur@14.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7_e2adec72f07531c46239f3756d177284/node_modules/expo-blur/ios`)"
+  - "ExpoClipboard (from `../node_modules/.pnpm/expo-clipboard@7.0.1_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+co_43fcaa6a8771932276cc62c6a250bd84/node_modules/expo-clipboard/ios`)"
+  - "ExpoDocumentPicker (from `../node_modules/.pnpm/expo-document-picker@13.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@b_80d0f27d160ac72054020965d6298ba6/node_modules/expo-document-picker/ios`)"
+  - "ExpoFileSystem (from `../node_modules/.pnpm/expo-file-system@18.0.11_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babe_99c2e2cfa02f93d173708dd6fecb986e/node_modules/expo-file-system/ios`)"
+  - "ExpoFont (from `../node_modules/.pnpm/expo-font@13.0.4_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7_7fa2191bf416f62155adb638d9f23d39/node_modules/expo-font/ios`)"
+  - "ExpoHead (from `../node_modules/.pnpm/expo-router@4.0.17_59608ac9c82793fcaf0781c581c77fc3/node_modules/expo-router/ios`)"
+  - "ExpoImagePicker (from `../node_modules/.pnpm/expo-image-picker@16.0.6_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babe_61af770877e50a548269f59fcb7f9709/node_modules/expo-image-picker/ios`)"
+  - "ExpoKeepAwake (from `../node_modules/.pnpm/expo-keep-awake@14.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+_8f2c02a34d8caab7802950e4acd3a62f/node_modules/expo-keep-awake/ios`)"
+  - "ExpoLinearGradient (from `../node_modules/.pnpm/expo-linear-gradient@14.0.2_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@b_bc7c5de61891dd64a2b65c35f772217d/node_modules/expo-linear-gradient/ios`)"
+  - "ExpoLinking (from `../node_modules/.pnpm/expo-linking@7.0.5_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core_d48c9acf09e62263ec663dc7673e94bf/node_modules/expo-linking/ios`)"
+  - "ExpoMediaLibrary (from `../node_modules/.pnpm/expo-media-library@17.0.6_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@bab_8e4adccff0233f9cf9b7ce61b454d78b/node_modules/expo-media-library/ios`)"
   - "ExpoModulesCore (from `../node_modules/.pnpm/expo-modules-core@2.2.2/node_modules/expo-modules-core`)"
-  - "ExpoSharing (from `../node_modules/.pnpm/expo-sharing@13.0.1_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+cor_d5e955f5ed91e10f6ce0c79a8ba1971f/node_modules/expo-sharing/ios`)"
-  - "ExpoSplashScreen (from `../node_modules/.pnpm/expo-splash-screen@0.29.22_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@ba_9fa064dba2948d114bd51d2047b99956/node_modules/expo-splash-screen/ios`)"
-  - "ExpoSystemUI (from `../node_modules/.pnpm/expo-system-ui@4.0.8_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+co_fdcb6818f91c4b5f5c900363307609e8/node_modules/expo-system-ui/ios`)"
-  - "ExpoWebBrowser (from `../node_modules/.pnpm/expo-web-browser@14.0.2_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel_83e48e83275189bf13f1afd59c79f91e/node_modules/expo-web-browser/ios`)"
+  - "ExpoSharing (from `../node_modules/.pnpm/expo-sharing@13.0.1_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+cor_afdf50928aa9df1828975ca4d6f01fe6/node_modules/expo-sharing/ios`)"
+  - "ExpoSplashScreen (from `../node_modules/.pnpm/expo-splash-screen@0.29.22_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@ba_50e8b8824e755f00104e160ca87c3a7f/node_modules/expo-splash-screen/ios`)"
+  - "ExpoSystemUI (from `../node_modules/.pnpm/expo-system-ui@4.0.8_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+co_def7dc9d46d60f70b044c2e18687ec75/node_modules/expo-system-ui/ios`)"
+  - "ExpoWebBrowser (from `../node_modules/.pnpm/expo-web-browser@14.0.2_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel_8f8703ff52087d96f5a616cab0446c7b/node_modules/expo-web-browser/ios`)"
   - "FBLazyVector (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/Libraries/FBLazyVector`)"
   - "fmt (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/third-party-podspecs/fmt.podspec`)"
   - "glog (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/third-party-podspecs/glog.podspec`)"
@@ -1961,6 +1982,7 @@ DEPENDENCIES:
   - react-native-ios-utilities (from `../node_modules/react-native-ios-utilities`)
   - react-native-mmkv (from `../node_modules/react-native-mmkv`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-webview (from `../node_modules/react-native-webview`)
   - "React-nativeconfig (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/ReactCommon`)"
   - "React-NativeModulesApple (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)"
   - "React-perflogger (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/ReactCommon/reactperflogger`)"
@@ -2010,45 +2032,45 @@ EXTERNAL SOURCES:
   DoubleConversion:
     :podspec: "../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/third-party-podspecs/DoubleConversion.podspec"
   EXConstants:
-    :path: "../node_modules/.pnpm/expo-constants@17.0.7_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+c_cb188a28380f5a27fc9c56ce8c2a00b3/node_modules/expo-constants/ios"
+    :path: "../node_modules/.pnpm/expo-constants@17.0.7_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+c_0efe2bb7fceefdb496d51d9f82106a09/node_modules/expo-constants/ios"
   EXImageLoader:
-    :path: "../node_modules/.pnpm/expo-image-loader@5.0.0_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel_10d88c17a4206018a37590b57d562d55/node_modules/expo-image-loader/ios"
+    :path: "../node_modules/.pnpm/expo-image-loader@5.0.0_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel_eb4cdb2d511363f73539e2fb3f1cdc49/node_modules/expo-image-loader/ios"
   Expo:
-    :path: "../node_modules/.pnpm/expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@expo+metr_640ea985360c1c9430cb0eefee7b7f34/node_modules/expo"
+    :path: "../node_modules/.pnpm/expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@expo+metr_bbf2b0669def9da1e240be609e1092f9/node_modules/expo"
   ExpoAsset:
-    :path: "../node_modules/.pnpm/expo-asset@11.0.4_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@_43d0602a46d3cabd078fb41fe230c77a/node_modules/expo-asset/ios"
+    :path: "../node_modules/.pnpm/expo-asset@11.0.4_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@_82933defbdc9a8a556defa2fb8a8e678/node_modules/expo-asset/ios"
   ExpoBlur:
-    :path: "../node_modules/.pnpm/expo-blur@14.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7_c9fa527bc62d0d7d335ecfd1c8c80722/node_modules/expo-blur/ios"
+    :path: "../node_modules/.pnpm/expo-blur@14.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7_e2adec72f07531c46239f3756d177284/node_modules/expo-blur/ios"
   ExpoClipboard:
-    :path: "../node_modules/.pnpm/expo-clipboard@7.0.1_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+co_636585efbbb9bdee726c86e76ddd3b03/node_modules/expo-clipboard/ios"
+    :path: "../node_modules/.pnpm/expo-clipboard@7.0.1_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+co_43fcaa6a8771932276cc62c6a250bd84/node_modules/expo-clipboard/ios"
   ExpoDocumentPicker:
-    :path: "../node_modules/.pnpm/expo-document-picker@13.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@b_e2395ac1f5a281a6c640943c70409292/node_modules/expo-document-picker/ios"
+    :path: "../node_modules/.pnpm/expo-document-picker@13.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@b_80d0f27d160ac72054020965d6298ba6/node_modules/expo-document-picker/ios"
   ExpoFileSystem:
-    :path: "../node_modules/.pnpm/expo-file-system@18.0.11_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babe_09b84ceee75fc24b767578e0a1e9fffc/node_modules/expo-file-system/ios"
+    :path: "../node_modules/.pnpm/expo-file-system@18.0.11_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babe_99c2e2cfa02f93d173708dd6fecb986e/node_modules/expo-file-system/ios"
   ExpoFont:
-    :path: "../node_modules/.pnpm/expo-font@13.0.4_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7_6ba0d23c7dc3d09f75a318886f327905/node_modules/expo-font/ios"
+    :path: "../node_modules/.pnpm/expo-font@13.0.4_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7_7fa2191bf416f62155adb638d9f23d39/node_modules/expo-font/ios"
   ExpoHead:
-    :path: "../node_modules/.pnpm/expo-router@4.0.17_84c89bda192a5c77e6c034f52c7bd1fe/node_modules/expo-router/ios"
+    :path: "../node_modules/.pnpm/expo-router@4.0.17_59608ac9c82793fcaf0781c581c77fc3/node_modules/expo-router/ios"
   ExpoImagePicker:
-    :path: "../node_modules/.pnpm/expo-image-picker@16.0.6_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babe_f75dc810ef3770a3e470e2c9b4e74d97/node_modules/expo-image-picker/ios"
+    :path: "../node_modules/.pnpm/expo-image-picker@16.0.6_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babe_61af770877e50a548269f59fcb7f9709/node_modules/expo-image-picker/ios"
   ExpoKeepAwake:
-    :path: "../node_modules/.pnpm/expo-keep-awake@14.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+_758566809afd8e1c4d3d68eda5d33aae/node_modules/expo-keep-awake/ios"
+    :path: "../node_modules/.pnpm/expo-keep-awake@14.0.3_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+_8f2c02a34d8caab7802950e4acd3a62f/node_modules/expo-keep-awake/ios"
   ExpoLinearGradient:
-    :path: "../node_modules/.pnpm/expo-linear-gradient@14.0.2_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@b_fafe9aa2571526e6e6849cff7e7e53bb/node_modules/expo-linear-gradient/ios"
+    :path: "../node_modules/.pnpm/expo-linear-gradient@14.0.2_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@b_bc7c5de61891dd64a2b65c35f772217d/node_modules/expo-linear-gradient/ios"
   ExpoLinking:
-    :path: "../node_modules/.pnpm/expo-linking@7.0.5_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core_7fd3536cf09c932aa83eb52e6e85afd2/node_modules/expo-linking/ios"
+    :path: "../node_modules/.pnpm/expo-linking@7.0.5_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core_d48c9acf09e62263ec663dc7673e94bf/node_modules/expo-linking/ios"
   ExpoMediaLibrary:
-    :path: "../node_modules/.pnpm/expo-media-library@17.0.6_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@bab_dffb107a7b31edca7e033526eb053a4a/node_modules/expo-media-library/ios"
+    :path: "../node_modules/.pnpm/expo-media-library@17.0.6_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@bab_8e4adccff0233f9cf9b7ce61b454d78b/node_modules/expo-media-library/ios"
   ExpoModulesCore:
     :path: "../node_modules/.pnpm/expo-modules-core@2.2.2/node_modules/expo-modules-core"
   ExpoSharing:
-    :path: "../node_modules/.pnpm/expo-sharing@13.0.1_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+cor_d5e955f5ed91e10f6ce0c79a8ba1971f/node_modules/expo-sharing/ios"
+    :path: "../node_modules/.pnpm/expo-sharing@13.0.1_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+cor_afdf50928aa9df1828975ca4d6f01fe6/node_modules/expo-sharing/ios"
   ExpoSplashScreen:
-    :path: "../node_modules/.pnpm/expo-splash-screen@0.29.22_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@ba_9fa064dba2948d114bd51d2047b99956/node_modules/expo-splash-screen/ios"
+    :path: "../node_modules/.pnpm/expo-splash-screen@0.29.22_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@ba_50e8b8824e755f00104e160ca87c3a7f/node_modules/expo-splash-screen/ios"
   ExpoSystemUI:
-    :path: "../node_modules/.pnpm/expo-system-ui@4.0.8_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+co_fdcb6818f91c4b5f5c900363307609e8/node_modules/expo-system-ui/ios"
+    :path: "../node_modules/.pnpm/expo-system-ui@4.0.8_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+co_def7dc9d46d60f70b044c2e18687ec75/node_modules/expo-system-ui/ios"
   ExpoWebBrowser:
-    :path: "../node_modules/.pnpm/expo-web-browser@14.0.2_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel_83e48e83275189bf13f1afd59c79f91e/node_modules/expo-web-browser/ios"
+    :path: "../node_modules/.pnpm/expo-web-browser@14.0.2_expo@52.0.37_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel_8f8703ff52087d96f5a616cab0446c7b/node_modules/expo-web-browser/ios"
   FBLazyVector:
     :path: "../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/Libraries/FBLazyVector"
   fmt:
@@ -2126,6 +2148,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-mmkv"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-webview:
+    :path: "../node_modules/react-native-webview"
   React-nativeconfig:
     :path: "../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.9_@babel+preset-env@7.26.9_@babel+core@7.26.9__@types+react@18.3.18_react@18.3.1/node_modules/react-native/ReactCommon"
   React-NativeModulesApple:
@@ -2258,6 +2282,7 @@ SPEC CHECKSUMS:
   react-native-ios-utilities: c5f4c43c3a6792c6e4e3b2c6401baffa01c7cebe
   react-native-mmkv: 21d0f6ed2d9532f2370cef81eca4ccbef7350441
   react-native-safe-area-context: 458f6b948437afcb59198016b26bbd02ff9c3b47
+  react-native-webview: 40b8823be3fac70f0404016e6aed754ef4307517
   React-nativeconfig: 539ff4de6ce3b694e8e751080568c281c84903ce
   React-NativeModulesApple: 771cc40b086281b820fe455fedebbe4341fd0c90
   React-perflogger: 4e80a5b8d61dfb38024e7d5b8efaf9ce1037d31f
