@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
 import {
@@ -20,13 +20,31 @@ import CustomInput from "@/components/CustomInput";
 interface ErrorType {
   email?: string;
 }
+const TIMER_DURATION = 60;
 
 const ForgotPassword = () => {
-  const { resetPassword, isLoading } = useAuth();
+  const { isLoading, forgotPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<ErrorType>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setInterval(() => {
+        setResendTimer(prev => (prev > 1 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [resendTimer]);
+
+  // const handleResend = async () => {
+  //   if (resendTimer > 0) return;
+  //   await handleResetPassword();
+  //   setResendTimer(TIMER_DURATION);
+  // };
 
   const validateEmail = () => {
     if (!email) {
@@ -45,7 +63,9 @@ const ForgotPassword = () => {
 
     if (validateEmail()) {
       try {
-        await resetPassword(email);
+        setResendTimer(TIMER_DURATION);
+
+        await forgotPassword(email);
         setResetSent(true);
       } catch (err: any) {
         Alert.alert(
@@ -82,14 +102,26 @@ const ForgotPassword = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[defaultStyles.btnSecondary, styles.resendButton]}
+              disabled={resendTimer > 0}
+              style={[defaultStyles.btnSecondary, styles.resendButton, { borderColor: resendTimer > 0 ? 'gray' : Colors.primary }]}
               onPress={handleResetPassword}
             >
-              <Text style={[styles.buttonText, { color: Colors.primary }]}>
+              <Text style={[styles.buttonText, { color: resendTimer > 0 ? 'gray' : Colors.primary }]}>
                 Resend Email
               </Text>
+
             </TouchableOpacity>
+
           </View>
+          {resendTimer > 0 && (
+            <View style={styles.resendContainerTimer}>
+              <Text style={{ color: resendTimer > 0 ? 'gray' : Colors.primary }}>
+                Resend the code
+              </Text>
+              <Text style={styles.timerText}>{resendTimer}s</Text>
+            </View>
+
+          )}
         </View>
       </View>
     );
@@ -100,55 +132,55 @@ const ForgotPassword = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-    <SafeAreaView>
-      {isLoading && (
-        <View style={defaultStyles.loadingOverlay}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+      <SafeAreaView>
+        {isLoading && (
+          <View style={defaultStyles.loadingOverlay}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        )}
+
+        <View style={styles.headerContainer}>
+          <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+          <Text style={styles.title}>Forgot Password?</Text>
+          <Text style={styles.subtitle}>
+            Enter your email address to receive password reset instructions
+          </Text>
         </View>
-      )}
 
-      <View style={styles.headerContainer}>
-        <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
-        <Text style={styles.title}>Forgot Password?</Text>
-        <Text style={styles.subtitle}>
-          Enter your email address to receive password reset instructions
-        </Text>
-      </View>
+        <View style={styles.formContainer}>
+          <CustomInput
+            icon="mail-outline"
+            placeholder="Enter your email"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (isSubmitted) validateEmail();
+            }}
+            error={!!error.email}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
+          />
+          {error.email && <Text style={styles.errorText}>{error.email}</Text>}
 
-      <View style={styles.formContainer}>
-        <CustomInput
-          icon="mail-outline"
-          placeholder="Enter your email"
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            if (isSubmitted) validateEmail();
-          }}
-          error={!!error.email}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-        />
-        {error.email && <Text style={styles.errorText}>{error.email}</Text>}
+          <View style={styles.btnContainer}>
+            <TouchableOpacity
+              style={[defaultStyles.btn, styles.resetButton]}
+              onPress={handleResetPassword}
+            >
+              <Text style={styles.buttonText}>Send Reset Instructions</Text>
+            </TouchableOpacity>
 
-        <View style={styles.btnContainer}>
-          <TouchableOpacity
-            style={[defaultStyles.btn, styles.resetButton]}
-            onPress={handleResetPassword}
-          >
-            <Text style={styles.buttonText}>Send Reset Instructions</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[defaultStyles.btnSecondary, styles.cancelButton]}
-            onPress={() => router.back()}
-          >
-            <Text style={[styles.buttonText, { color: Colors.primary }]}>
-              Back to Login
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[defaultStyles.btnSecondary, styles.cancelButton]}
+              onPress={() => router.back()}
+            >
+              <Text style={[styles.buttonText, { color: Colors.primary }]}>
+                Back to Login
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -165,6 +197,11 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     paddingHorizontal: 24,
   },
+  resendContainerTimer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
   logo: {
     width: 80,
     height: 80,
@@ -176,6 +213,13 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     marginBottom: 12,
     textAlign: 'center',
+  },
+  timerText: {
+    fontSize: 13,
+    marginLeft: 4,
+    color: Colors.primary,
+    textAlign: 'center',
+    lineHeight: 22,
   },
   subtitle: {
     fontSize: 16,

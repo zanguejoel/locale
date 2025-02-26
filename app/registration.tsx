@@ -17,6 +17,7 @@ import {
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
+import WebView from "react-native-webview";
 
 interface ErrorType {
   firstName?: string;
@@ -41,6 +42,7 @@ const Registration = () => {
   const [errors, setErrors] = useState<ErrorType>({});
   const [isValidForm, setIsFormValid] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
@@ -50,7 +52,6 @@ const Registration = () => {
     password: "",
     confirmPassword: "",
   });
-
 
 
   const validateForm = () => {
@@ -90,7 +91,7 @@ const Registration = () => {
     if (!formData.password) {
       errors.password = "Password is required";
     } else if (!passwordRegex.test(formData.password)) {
-      errors.password = 
+      errors.password =
         "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character";
     }
 
@@ -113,20 +114,26 @@ const Registration = () => {
     }));
     validateForm();
   };
-
   const onSignUpPress = async () => {
+
     setFormSubmitted(true);
-    
+
     if (validateForm()) {
       try {
-        await signUp(formData);
-        Alert.alert("Success", "Registration successful!");
-        router.replace('/login');
+        await signUp(formData, captchaToken, router);
       } catch (err: any) {
         Alert.alert("Error", err.message || "Registration failed");
       }
     }
   };
+
+  const onMessage = (event: any) => {
+    const message = event.nativeEvent.data;
+    if (message) {
+      setCaptchaToken(message);
+    }
+  };
+
 
   return (
     <KeyboardAvoidingView
@@ -134,101 +141,143 @@ const Registration = () => {
       style={styles.container}
     >
       <SafeAreaView>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {isLoading && (
-          <View style={defaultStyles.loadingOverlay}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {isLoading && (
+            <View style={defaultStyles.loadingOverlay}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          )}
+
+          <View style={styles.headerContainer}>
+            <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Sign up to get started</Text>
           </View>
-        )}
 
-        <View style={styles.headerContainer}>
-          <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Sign up to get started</Text>
-        </View>
+          <View style={styles.formContainer}>
+            <CustomInput
+              icon="person-outline"
+              placeholder="First Name"
+              value={formData.firstName}
+              onChangeText={(value) => handleInputChange("firstName", value)}
+              error={!!errors.firstName}
+              autoCapitalize="words"
+            />
+            {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
 
-        <View style={styles.formContainer}>
-          <CustomInput
-            icon="person-outline"
-            placeholder="First Name"
-            value={formData.firstName}
-            onChangeText={(value) => handleInputChange("firstName", value)}
-            error={!!errors.firstName}
-            autoCapitalize="words"
-          />
-          {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
+            <CustomInput
+              icon="person-outline"
+              placeholder="Last Name"
+              value={formData.lastName}
+              onChangeText={(value) => handleInputChange("lastName", value)}
+              error={!!errors.lastName}
+              autoCapitalize="words"
+            />
+            {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
 
-          <CustomInput
-            icon="person-outline"
-            placeholder="Last Name"
-            value={formData.lastName}
-            onChangeText={(value) => handleInputChange("lastName", value)}
-            error={!!errors.lastName}
-            autoCapitalize="words"
-          />
-          {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
+            <CustomInput
+              icon="mail-outline"
+              placeholder="Email"
+              value={formData.email}
+              onChangeText={(value) => handleInputChange("email", value)}
+              error={!!errors.email}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-          <CustomInput
-            icon="mail-outline"
-            placeholder="Email"
-            value={formData.email}
-            onChangeText={(value) => handleInputChange("email", value)}
-            error={!!errors.email}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            <CustomInput
+              icon="call-outline"
+              placeholder="Phone Number"
+              value={formData.phone}
+              onChangeText={(value) => handleInputChange("phone", value)}
+              error={!!errors.phone}
+              keyboardType="phone-pad"
+            />
+            {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
-          <CustomInput
-            icon="call-outline"
-            placeholder="Phone Number"
-            value={formData.phone}
-            onChangeText={(value) => handleInputChange("phone", value)}
-            error={!!errors.phone}
-            keyboardType="phone-pad"
-          />
-          {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+            <CustomInput
+              icon="lock-closed-outline"
+              placeholder="Password"
+              value={formData.password}
+              onChangeText={(value) => handleInputChange("password", value)}
+              error={!!errors.password}
+              isPassword
+            />
+            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
-          <CustomInput
-            icon="lock-closed-outline"
-            placeholder="Password"
-            value={formData.password}
-            onChangeText={(value) => handleInputChange("password", value)}
-            error={!!errors.password}
-            isPassword
-          />
-          {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            <CustomInput
+              icon="lock-closed-outline"
+              placeholder="Confirm Password"
+              value={formData.confirmPassword}
+              onChangeText={(value) => handleInputChange("confirmPassword", value)}
+              error={!!errors.confirmPassword}
+              isPassword
+            />
+            {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
 
-          <CustomInput
-            icon="lock-closed-outline"
-            placeholder="Confirm Password"
-            value={formData.confirmPassword}
-            onChangeText={(value) => handleInputChange("confirmPassword", value)}
-            error={!!errors.confirmPassword}
-            isPassword
-          />
-          {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-
-          <View style={styles.btnContainer}>
-            <TouchableOpacity
-              style={[defaultStyles.btn, styles.signUpButton]}
-              onPress={onSignUpPress}
-            >
-              <Text style={styles.btnPrimaryText}>Create Account</Text>
-            </TouchableOpacity>
-
-            <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>Already have an account?</Text>
-              <TouchableOpacity onPress={() => router.replace('/login')}>
-                <Text style={styles.loginLink}>Login</Text>
+            <View style={styles.btnContainer}>
+              <TouchableOpacity
+                style={[defaultStyles.btn, styles.signUpButton]}
+                onPress={onSignUpPress}
+              >
+                <Text style={styles.btnPrimaryText}>Create Account</Text>
               </TouchableOpacity>
+
+              <View style={styles.loginContainer}>
+                <Text style={styles.loginText}>Already have an account?</Text>
+                <TouchableOpacity onPress={() => router.replace('/login')}>
+                  <Text style={styles.loginLink}>Login</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
+          <WebView
+            source={{
+              html: `
+ <html>
+  <head>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LcmIdYqAAAAAHbUR_1LtEfBaWanvoB1sVP7zMeJ"></script>
+  </head>
+  <body>
+    <script>
+      console.log("WebView loaded");
+      if (typeof grecaptcha === 'undefined') {
+        console.log("reCAPTCHA API not loaded properly");
+      } else {
+        console.log("reCAPTCHA API loaded");
+        grecaptcha.ready(function() {
+          console.log("reCAPTCHA ready");
+          grecaptcha.execute('6LcmIdYqAAAAAHbUR_1LtEfBaWanvoB1sVP7zMeJ', {action: 'submit'})
+            .then(function(token) {
+              console.log("Token generated:", token);
+              window.ReactNativeWebView.postMessage(token);
+            })
+            .catch(function(error) {
+              console.error("Error during reCAPTCHA execution:", error);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
+    `,
+            }}
+            onMessage={onMessage}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            originWhitelist={['*']}
+            allowFileAccess={true}
+            style={{ height: 100, width: 100 }}
+            onError={(err) => console.error("WebView error:", err)}
+
+          />
+
+        </ScrollView>
+
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
