@@ -3,17 +3,27 @@ import useMMKVStorage, { storage } from './useMMKVStorage';
 import api from '@/utils/ApiClient';
 import { User } from '@/constants/Types';
 
-
+interface FormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+}
 
 interface AuthContextType {
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (formatData: FormData, password: string, router: any) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => void;
   isLoading: boolean;
   isSignedIn: boolean;
+  forgotPassword: (e: string) => {}
+  confirmEmail: (e: string, s: string) => {}
 }
+
 
 
 
@@ -27,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Initial loading state is handled by useMMKVStorage
     setIsLoading(false);
-    if(!user?.user_id) {
+    if (!user?.user_id) {
       setIsSignedIn(false);
     } else {
       api.setAuthToken(user?.token);
@@ -39,24 +49,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const response = await api.post<{token: string} | any>('/auth/login', {
-          email,
-          password
+      const response = await api.post<{ token: string } | any>('/auth/login', {
+        email,
+        password
       });
-      if(!response.ok) {
+      if (!response.ok) {
         throw response.data;
       }
-      if(!response.data?.token) {
-        throw {detail: "Error, Try again later."}
+      if (!response.data?.token) {
+        throw { detail: "Error, Try again later." }
       }
       await api.setAuthToken(response.data?.token);
-      const userResponse = await  api.get<User | any>('/auth/me');
-      if(!(userResponse.ok && userResponse.data)) {
-        throw {detail: "Error, Try again later."}
+      const userResponse = await api.get<User | any>('/auth/me');
+      if (!(userResponse.ok && userResponse.data)) {
+        throw { detail: "Error, Try again later." }
       }
       console.log(console.log(JSON.stringify(userResponse.data)));
-      const newUser = {...userResponse.data, token: response.data?.token };
-      
+      const newUser = { ...userResponse.data, token: response.data?.token };
+
       setUser(newUser);
     } catch (error) {
       console.error('Sign in error:', JSON.stringify(error));
@@ -66,13 +76,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const confirmEmail = async (email: string, code: string, router: any) => {
     try {
+      const response = await api.post<{ token: string } | any>(`/auth/verify-email`, {
+        email: email,
+        code: code
+      });
+
+      if (response.ok) {
+        router.push(`/login`)
+      }
+
+    } catch (error) {
+      console.error('Forgot password error:', JSON.stringify(error))
+    }
+  }
+
+
+  const forgotPassword = async (email: string) => {
+    try {
+      const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${email}`);
+
+      if (!response.ok) {
+        throw response.data;
+      }
+      if (!response.data?.token) {
+        throw { detail: "Error, Try again later." }
+      }
+
+    } catch (error) {
+      console.error('Forgot password error:', JSON.stringify(error))
+    }
+  }
+
+  const signUp = async (formData: FormData, captchaToken: string, router: any) => {
+    try {
+
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      const newUser = { email };
-      setIsSignedIn(true);
-      setUser(newUser as User);
+      const response = await api.post<{ token: string } | any>(`/auth/signup?recaptcha=${captchaToken}`, {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        username: `${formData.firstName}${formData.lastName}`,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+      });
+      if (response.ok) {
+        router.push(`/email-verification?email=${formData?.email}`)
+      }
+
     } catch (error) {
       console.error('Sign up error:', error);
       throw error;
@@ -85,8 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = async (email: string) => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-     
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
     } catch (error) {
       console.error('Sign up error:', error);
       throw error;
@@ -101,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail }}>
       {children}
     </AuthContext.Provider>
   );

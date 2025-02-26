@@ -68,7 +68,7 @@ const Layout = () => {
 
   useEffect(() => {
     if (loaded) {
-       SplashScreen.hideAsync();
+      SplashScreen.hideAsync();
     }
   }, [loaded]);
 
@@ -94,6 +94,7 @@ const Layout = () => {
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="registration" options={{ headerShown: false }} />
       <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+      <Stack.Screen name="email-verification" options={{ headerShown: false }} />
       <Stack.Screen name="(chat)" options={{ headerShown: false }} />
       <Stack.Screen
         name="(modal)/settings"
