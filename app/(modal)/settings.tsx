@@ -39,7 +39,9 @@ const Page = () => {
 
   const renderRaw = (item: IItemRaw, index: number) => {
     return (
-      <View style={[styles.raw, rawPage.length - 1 === index && { borderBottomWidth: 0 }]}>
+      <View
+        key={item.id}
+        style={[styles.raw, rawPage.length - 1 === index && { borderBottomWidth: 0 }]}>
         <Button title={item.title} onPress={() => handleInstruction(item.key)} color={Colors.grey} />
       </View>
     )

@@ -22,6 +22,7 @@ interface AuthContextType {
   isSignedIn: boolean;
   forgotPassword: (e: string) => {}
   confirmEmail: (e: string, s: string) => {}
+  updateUser: (formatData: FormData,) => Promise<void>;
 }
 
 
@@ -64,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!(userResponse.ok && userResponse.data)) {
         throw { detail: "Error, Try again later." }
       }
-      console.log(console.log(JSON.stringify(userResponse.data)));
+
       const newUser = { ...userResponse.data, token: response.data?.token };
 
       setUser(newUser);
@@ -134,6 +135,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
 
+  const updateUser = async (formData: FormData, captchaToken: string, router: any) => {
+    try {
+      const response = await api.patch<{ token: string } | any>(`/auth/update-user`, {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+      });
+      if (response.ok) {
+        const newUser = { ...response.data, token: user?.token };
+        setUser(newUser);
+        return response.data;
+      }
+
+    } catch (error) {
+      console.error('updateUser error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
   const resetPassword = async (email: string) => {
     try {
       setIsLoading(true);
@@ -153,7 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
