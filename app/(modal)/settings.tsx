@@ -1,10 +1,25 @@
 import Colors from '@/constants/Colors';
-import { defaultStyles } from '@/constants/Styles';
+
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Button } from 'react-native';
-import { useMMKVString } from 'react-native-mmkv';
+
+import { View, Text, StyleSheet, Button } from 'react-native';
+
+const rawPage = [{
+  id: 1,
+  key: 'profile',
+  title: 'Profile'
+}, {
+  id: 2,
+  key: 'sign_out',
+  title: 'Sign Out'
+},]
+
+interface IItemRaw {
+  id: number,
+  key: string,
+  title: string
+}
 const Page = () => {
 
 
@@ -12,20 +27,41 @@ const Page = () => {
 
   const { signOut } = useAuth();
 
-  
+  const handleInstruction = (type: string) => {
+    switch (type) {
+      case 'profile':
+        return router.push('/profile')
+      case 'sign_out':
+        return signOut()
+    }
+  }
+
+
+  const renderRaw = (item: IItemRaw, index: number) => {
+    return (
+      <View style={[styles.raw, rawPage.length - 1 === index && { borderBottomWidth: 0 }]}>
+        <Button title={item.title} onPress={() => handleInstruction(item.key)} color={Colors.grey} />
+      </View>
+    )
+  }
 
   return (
     <View style={styles.container}>
-      
-      <Button title="Sign Out" onPress={() => signOut()} color={Colors.grey} />
+      {rawPage.map((item, index) => renderRaw(item, index))}
     </View>
   );
 };
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.light.background,
     paddingHorizontal: 20,
     paddingVertical: 20,
+  },
+  raw: {
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderColor: Colors.greyLight
   },
   label: {
     fontSize: 18,
