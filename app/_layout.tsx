@@ -95,6 +95,8 @@ const Layout = () => {
       <Stack.Screen name="registration" options={{ headerShown: false }} />
       <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
       <Stack.Screen name="email-verification" options={{ headerShown: false }} />
+      <Stack.Screen name="profile" options={{ headerShown: false }} />
+
       <Stack.Screen name="(chat)" options={{ headerShown: false }} />
       <Stack.Screen
         name="(modal)/settings"
