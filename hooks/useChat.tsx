@@ -9,6 +9,8 @@ import { Message, Role } from '@/utils/Interfaces';
 import { User } from '@/constants/Types';
 import { processStream } from '@/utils/ChatStream';
 import { Keyboard } from 'react-native';
+import RNFS from 'react-native-fs';
+import * as FileSystem from 'expo-file-system';
 
 polyfillURL();
 polyfillFetch();
@@ -24,7 +26,7 @@ function updateLastItem<T>(
   if (array.length === 0) {
     return array;
   }
-  
+
   return [
     ...array.slice(0, -1),
     updateFn(array[array.length - 1])
@@ -88,11 +90,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     Keyboard.dismiss();
   }, []);
 
-  
-
-
   useEffect(() => {
-    if(currentConversationId) {
+    if (currentConversationId) {
       fetchMessages(currentConversationId);
     }
   }, [currentConversationId]);
@@ -103,100 +102,144 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       content: stream,
       //laoding: isSending
     }))
-  setMessages(_messages);
- }, [stream]);
+    setMessages(_messages);
+  }, [stream]);
 
-  const sendMessage = async (
-    message: string,
-    messageType = 'text',
-    operation = null,
-  ) => {
+
+
+  const saveBase64ToFile = async (base64: string, filename: string) => {
+    const path = FileSystem.documentDirectory + filename;
+    try {
+      await FileSystem.writeAsStringAsync(path, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      return path;
+    } catch (error) {
+      console.error('Error saving file: ', error);
+      throw error;
+    }
+  };
+  const sendMessage = async (message: string, messageType = 'text', operation = null) => {
     setError('');
     setStream('');
     setIntermediate('');
     setIsSending(true);
-    
 
     setMessages((state) => [
       ...state,
       { role: Role.User, content: message || '' },
-      { role: Role.Bot, content: '', /* loading: true  */}
+      { role: Role.Bot, content: '' },
     ]);
 
     const formData = new FormData();
-    let file = null;
-    formData.append(
-      'text',
-      ['text', 'phone'].includes(messageType) && typeof message === 'string'
-        ? message
-        : ''
-    );
-    if (files?.length || messageType === 'audio') {
-      file = ['phone', 'audio'].includes(messageType)
-        ? [
-            new File([message], `recorded-audio.wav`, {
-              type: message?.type || 'audio/wav',
-              lastModified: new Date().getTime()
-            })
-          ]
-        : [...files];
 
-      file.forEach((_file, i) => {
-        formData.append(
-          ['phone', 'audio'].includes(messageType) ? 'audio' : `files`,
-          _file,
-          _file.name
-        );
-      });
+    if (messageType !== 'audio' && messageType !== 'image' && message && typeof message === 'string') {
+      formData.append('text', message);
+    }
+
+    if (files?.length || messageType === 'audio' || messageType === 'image') {
+      let file = null;
+
+      if (message.startsWith('file://')) {
+        try {
+          const filePath = message.replace('file://', '');
+          const fileExists = await checkFileExists(filePath);
+
+          if (!fileExists) {
+            console.error('File does not exist at the specified path');
+            return;
+          }
+
+          const fileData = await RNFS.readFile(filePath, 'base64');
+
+          if (messageType === 'audio') {
+            const savedFilePath = await saveBase64ToFile(fileData, 'audio.m4a');
+            formData.append('audio', {
+              uri: savedFilePath,
+              type: 'audio/x-m4a',
+              name: 'audio.m4a',
+            });
+          }
+          else if (messageType === 'image') {
+            const savedFilePath = await saveBase64ToFile(fileData, 'image.png');
+            formData.append('image', {
+              uri: savedFilePath,
+              type: 'image/png',
+              name: 'image.png',
+            });
+          }
+
+        } catch (error) {
+          console.error('Error fetching the file:', error);
+          return;
+        }
+      } else {
+        if (files && files.length > 0) {
+          file = files[0];
+        } else {
+          console.error('No files found in `files` array');
+          return;
+        }
+
+        if (file && file instanceof File) {
+          if (messageType === 'audio') {
+            formData.append('audio', file, file.name);
+          }
+          else if (messageType === 'image') {
+            formData.append('image', file, file.name);
+          }
+        } else {
+          console.error('Invalid file object:', file);
+          return;
+        }
+      }
       setFiles([]);
     }
 
-    try {
+    if (operation) {
       formData.append('operations', JSON.stringify(operation));
-     
-      formData.append('conversation_id', currentConversationId || '');
-      const _controller = new AbortController();
+    }
+
+    const conversationId = currentConversationId || '';
+    if (conversationId) {
+      formData.append('conversation_id', conversationId);
+    } else {
+      console.error('No conversation ID provided!');
+      return;
+    }
+
+    const _controller = new AbortController();
+
+    try {
       const _response = await fetch(`${BASE_URL}/chat`, {
         method: 'POST',
         headers: {
           Authorization: ' ' + user?.token,
-          'Content-Type': 'application/json',
         },
         body: formData,
         reactNative: { textStreaming: true },
         signal: _controller.signal,
-        
       });
-      // console.log("API response--",  _response);
 
       if (!_response.ok) {
         const errorMessage = await _response.text();
         throw new Error(`Error: ${_response.status} - ${errorMessage}`);
       }
-      // const respBody = await _response.formData();
-      // console.log("API response--",  await _response.formData());
+
       const response = await processStream(
         _response.body,
         setStream,
         handleError,
         setIntermediate
       );
-      
-      try {
-        
-        console.log('update message', response);
-      } catch (parseError) {
-        console.error('Error parsing chat history:', parseError);
-        // console.log('Raw history data:', history);
-      }
+
+      console.log('update message', response);
 
       setInputDisabled(false);
       setPastedActive(false)
-      
-      // updateHistory((state) => state + 1); // update messages
-      // console.log('Full response:', JSON.stringify(response));
+
     } catch (e) {
-      console.error('Error in sendMessageJaiime:', e);
+      console.error('Error in sendMessage:', e);
       console.log({
         title: 'We encountered an error.',
         description: 'Please try again',
@@ -207,8 +250,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsSending(false);
       setInputDisabled(false);
     }
-  
   };
+
+
+  const checkFileExists = async (filePath) => {
+    try {
+      const stats = await RNFS.stat(filePath);
+      console.log('File exists, file stats:', stats);
+      return true;
+    } catch (error) {
+      console.error('Error checking file existence:', error);
+      return false;
+    }
+  };
+
 
   const fetchConversation = async (q?: string) => {
     try {
@@ -221,7 +276,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // throw new Error(response.problem);
       }
       setConversations(response.data || []);
-      if(response.data?.length && response.data[0].id) {
+      if (response.data?.length && response.data[0].id) {
         setCurrentRoom(response.data[0].id);
       }
     } catch (error) {
@@ -244,8 +299,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!response.ok || !response.data) {
         //throw new Error('Failed to fetch messages');
-      } 
-      const messages = response.data.map(m => ({...m, role: `${m.role}` === "assistant" ? Role.Bot : Role.User}))
+      }
+      const messages = response.data.map(m => ({ ...m, role: `${m.role}` === "assistant" ? Role.Bot : Role.User }))
       setMessages(messages || []);
     } catch (error) {
       console.error('Fetch messages error:', error);
@@ -280,7 +335,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const markAsRead = async (conversationId: string) => {
     try {
-    //  console.log('Handle set read');
+      //  console.log('Handle set read');
     } catch (error) {
       console.error('Mark as read error:', error);
       throw error;
@@ -331,7 +386,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         markAsRead,
         setCurrentRoom,
         clearChat,
-        
+
       }}
     >
       {children}

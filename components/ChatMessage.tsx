@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import Colors from '@/constants/Colors';
 import useMarkdownDisplay from '@/hooks/useMarkdownDisplay';
 import { copyImageToClipboard, downloadAndSaveImage, shareImage } from '@/utils/Image';
@@ -17,6 +17,9 @@ import {
 } from 'react-native';
 import * as ContextMenu from 'zeego/context-menu';
 import { useCallback, useEffect, useRef } from 'react';
+import { Audio } from 'expo-av';
+import AntDesign from '@expo/vector-icons/AntDesign';
+import Entypo from '@expo/vector-icons/Entypo';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -24,7 +27,6 @@ interface ChatMessageProps extends Message {
   onPress?: () => void;
 }
 
-const AVATAR_SIZE = 30;
 const IMAGE_PREVIEW_SIZE = 240;
 const BORDER_RADIUS = 15;
 
@@ -58,9 +60,28 @@ const ChatMessage = memo(({
   onLongPress,
   onPress,
 }: ChatMessageProps) => {
+
+  const sound = useRef(new Audio.Sound());
+  const [isPlaying, setIsPlaying] = useState(false);
   const MarkdownDisplay = useMarkdownDisplay();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  
+  const isAudio = (uri: string) => {
+    if (!uri) return false;
+
+    const audioExtensions = ['.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac', '.amr'];
+
+    return audioExtensions.some(ext => uri.toLowerCase().endsWith(ext));
+  };
+
+
+  const isImage = (uri: string) => {
+    if (!uri) return false;
+
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+
+    return imageExtensions.some(ext => uri.toLowerCase().endsWith(ext));
+  };
+
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -76,6 +97,27 @@ const ChatMessage = memo(({
       AccessibilityInfo.announceForAccessibility(message + content);
     }
   }, [content, role, onPress]);
+
+  const playAudio = async () => {
+    try {
+      if (isPlaying) {
+        await sound.current.pauseAsync();
+        setIsPlaying(false);
+      } else {
+        await sound.current.unloadAsync();
+        await sound.current.loadAsync({ uri: content });
+        await sound.current.playAsync();
+        setIsPlaying(true);
+        sound.current.setOnPlaybackStatusUpdate((status) => {
+          if (status.didJustFinish) {
+            setIsPlaying(false);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  };
 
   const renderImage = () => (
     <ContextMenu.Root>
@@ -93,7 +135,7 @@ const ChatMessage = memo(({
             accessibilityLabel={`Image preview. ${prompt}`}
             accessibilityRole="image"
           >
-            <Image 
+            <Image
               source={{ uri: imageUrl }}
               style={styles.previewImage}
               resizeMode="cover"
@@ -103,7 +145,7 @@ const ChatMessage = memo(({
       </ContextMenu.Trigger>
       <ContextMenu.Content>
         {contextItems.map((item) => (
-          <ContextMenu.Item 
+          <ContextMenu.Item
             key={item.id}
             onSelect={() => item.action(imageUrl!)}
           >
@@ -132,14 +174,34 @@ const ChatMessage = memo(({
       accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
       accessibilityRole="text"
     >
-     
+      {isAudio(content) ? (
+        <Pressable style={styles.audioPlayer} onPress={playAudio}>
+          {!isPlaying ? (
+            <View style={styles.audioPlayer}>
+              <AntDesign name="caretright" size={14} color="black" />
+              <Text style={styles.audioText}>Play Audio</Text>
+            </View>
+          ) : (
+            <View style={styles.audioPlayer}>
+              <Entypo name="controller-paus" size={14} color="black" />
+              <Text style={styles.audioText}>Stop Audio</Text>
+            </View>
+          )}
+        </Pressable>
+      ) : isImage(content) ? (
+        <Image
+          source={{ uri: content }}
+          style={styles.previewImage}
+          resizeMode="cover"
+        />
+      ) : (
         <MarkdownDisplay>{content}</MarkdownDisplay>
-      
+      )}
     </Pressable>
   );
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
         styles.container,
         { opacity: fadeAnim },
@@ -166,6 +228,13 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     paddingHorizontal: 16,
     maxWidth: '90%',
+  },
+  audioPlayer: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  audioText: {
+    marginLeft: 9
   },
   botContainer: {
     alignSelf: 'flex-start',
