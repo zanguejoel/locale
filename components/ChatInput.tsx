@@ -15,11 +15,12 @@ import { useRef, useState } from 'react';
 import { BlurView } from 'expo-blur';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { Audio } from 'expo-av';
 
 const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 export type Props = {
-  onShouldSend: (message: string) => void;
+  onShouldSend: (message: string, type?: string) => void;
 };
 
 const ChatInput = ({ onShouldSend }: Props) => {
@@ -27,6 +28,60 @@ const ChatInput = ({ onShouldSend }: Props) => {
   const { bottom } = useSafeAreaInsets();
   const expanded = useSharedValue(0);
   const inputRef = useRef<TextInput>(null);
+
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+
+  const startRecording = async () => {
+    try {
+      const { status } = await Audio.getPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: newStatus } = await Audio.requestPermissionsAsync();
+        if (newStatus !== 'granted') {
+          alert('Microphone permission not granted');
+          return;
+        }
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+        shouldDuckAndroid: true,
+      });
+
+      const newRecording = new Audio.Recording();
+      await newRecording.prepareToRecordAsync(Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY);
+      await newRecording.startAsync();
+
+      setRecording(newRecording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Recording error:', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+
+    setIsRecording(false);
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+
+      if (!uri) {
+        console.error('Failed to retrieve the recording URI.');
+        return;
+      }
+
+      console.log('Audio file saved at:', uri);
+      onShouldSend(uri, 'audio');
+    } catch (err) {
+      console.error('Error stopping the recording:', err);
+    } finally {
+      setRecording(null);
+    }
+  };
 
   const expandItems = () => {
     expanded.value = withTiming(1, { duration: 400 });
@@ -64,9 +119,65 @@ const ChatInput = ({ onShouldSend }: Props) => {
     setMessage('');
   };
 
-  const onSelectCard = (text: string) => {
-    onShouldSend(text);
+  const onSelectFile = () => {
   };
+
+  const pickImageFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, // Дозволяє вибирати тільки зображення
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        console.log('Selected Image URI:', uri);
+        onShouldSend(uri, 'image');
+      }
+    } catch (error) {
+      console.error('Error picking image from gallery:', error);
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission to access camera is required!');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        console.log('Photo taken URI:', uri);
+        onShouldSend(uri, 'image');
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+    }
+  };
+
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+      });
+
+      if (result.canceled) return;
+
+      console.log('Selected document:', result);
+      onShouldSend(result.uri, 'file');
+    } catch (error) {
+      console.error('Error picking document:', error);
+    }
+  };
+
 
   return (
     <BlurView intensity={90} tint="extraLight" style={{ paddingBottom: bottom, paddingTop: 10 }}>
@@ -76,13 +187,15 @@ const ChatInput = ({ onShouldSend }: Props) => {
         </ATouchableOpacity>
 
         <Animated.View style={[styles.buttonView, buttonViewStyle]}>
-          <TouchableOpacity onPress={() => ImagePicker.launchCameraAsync()}>
+          <TouchableOpacity onPress={takePhoto}>
             <Ionicons name="camera-outline" size={24} color={Colors.grey} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => ImagePicker.launchImageLibraryAsync()}>
+
+          <TouchableOpacity onPress={pickImageFromGallery}>
             <Ionicons name="image-outline" size={24} color={Colors.grey} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => DocumentPicker.getDocumentAsync()}>
+
+          <TouchableOpacity onPress={pickDocument}>
             <Ionicons name="folder-outline" size={24} color={Colors.grey} />
           </TouchableOpacity>
         </Animated.View>
@@ -102,8 +215,8 @@ const ChatInput = ({ onShouldSend }: Props) => {
             <Ionicons name="arrow-up-circle" size={30} color={Colors.grey} />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity>
-            <FontAwesome6 name="microphone" size={24} color={Colors.grey} />
+          <TouchableOpacity onPress={isRecording ? stopRecording : startRecording}>
+            <FontAwesome6 name="microphone" size={24} color={isRecording ? Colors.red : Colors.grey} />
           </TouchableOpacity>
         )}
       </View>
