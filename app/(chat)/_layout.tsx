@@ -21,7 +21,7 @@ import * as ContextMenu from 'zeego/context-menu';
 import { useRevenueCat } from '@/providers/RevenueCat';
 import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Swipeable } from 'react-native-gesture-handler';
 
 export const CustomDrawerContent = (props: any) => {
@@ -138,9 +138,26 @@ export const CustomDrawerContent = (props: any) => {
     );
   };
 
-  const filteredConversations = conversations?.filter(
-    c => !query || c.title?.toLowerCase()?.includes(query.toLowerCase())
-  );
+  // Fixed filtering logic to handle null/undefined conversations and titles
+  const filteredConversations = React.useMemo(() => {
+    if (!conversations || !Array.isArray(conversations)) {
+      return [];
+    }
+
+    if (!query) {
+      return conversations;
+    }
+
+    const lowercaseQuery = query.toLowerCase();
+    return conversations.filter(conversation => {
+      // Make sure conversation and title exist
+      if (!conversation) return false;
+
+      // Handle case where title might be null/undefined
+      const title = conversation.title || 'Untitled Chat';
+      return title.toLowerCase().includes(lowercaseQuery);
+    });
+  }, [conversations, query]);
 
   return (
     <View style={styles.drawerContainer}>
@@ -160,13 +177,19 @@ export const CustomDrawerContent = (props: any) => {
               placeholderTextColor={Colors.greyLight}
               underlineColorAndroid="transparent"
               onChangeText={(value) => setQuery(value)}
+              value={query}
             />
+            {query ? (
+              <TouchableOpacity onPress={() => setQuery('')}>
+                <Ionicons name="close-circle" size={18} color={Colors.greyLight} />
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
         <Text style={styles.historyTitle}>Chat History</Text>
       </View>
 
-      {filteredConversations?.length === 0 ? (
+      {filteredConversations.length === 0 ? (
         <View style={styles.emptyStateContainer}>
           <Ionicons name="chatbubble-outline" size={50} color={Colors.greyLight} />
           <Text style={styles.emptyStateText}>No conversations found</Text>
@@ -179,18 +202,18 @@ export const CustomDrawerContent = (props: any) => {
           {...props}
           contentContainerStyle={styles.scrollViewContent}
         >
-          {filteredConversations?.map((chat) => (
+          {filteredConversations.map((chat) => (
             <Swipeable
-              key={chat.id}
-              renderRightActions={() => renderRightActions(chat.id || '')}
+              key={chat?.id || Math.random().toString()}
+              renderRightActions={() => renderRightActions(chat?.id || '')}
               onSwipeableOpen={() => {
                 // Close previously opened swipeable
                 closeOpenSwipeable();
                 // Set this one as the open one
-                setOpenSwipeable(chat.id);
+                setOpenSwipeable(chat?.id);
               }}
               ref={(ref) => {
-                if (chat.id === openSwipeable) {
+                if (chat?.id === openSwipeable) {
                   setOpenSwipeable(ref);
                 }
               }}
@@ -200,10 +223,10 @@ export const CustomDrawerContent = (props: any) => {
                   <Pressable
                     style={({ pressed }) => [
                       styles.chatItem,
-                      chat.id === currentConversationId && styles.activeChatItem,
+                      chat?.id === currentConversationId && styles.activeChatItem,
                       pressed && styles.pressedChatItem,
                     ]}
-                    onPress={() => router.push(`/(chat)/${chat.id}`)}
+                    onPress={() => router.push(`/(chat)/${chat?.id}`)}
                   >
                     <View style={styles.chatItemContent}>
                       <View style={styles.chatIconContainer}>
@@ -211,7 +234,7 @@ export const CustomDrawerContent = (props: any) => {
                       </View>
                       <View style={styles.chatDetails}>
                         <Text style={styles.chatTitle} numberOfLines={1}>
-                          {chat.title || 'Untitled Chat'}
+                          {chat?.title || 'Untitled Chat'}
                         </Text>
                         <Text style={styles.chatTimestamp} numberOfLines={1}>
                           {new Date().toLocaleDateString()}
@@ -220,7 +243,7 @@ export const CustomDrawerContent = (props: any) => {
                       <View style={styles.chatActions}>
                         <Pressable
                           style={styles.actionButton}
-                          onPress={() => onRenameChat(chat.id || '', chat.title || '')}
+                          onPress={() => onRenameChat(chat?.id || '', chat?.title || '')}
                         >
                           <Ionicons name="pencil" size={16} color={Colors.greyLight} />
                         </Pressable>
@@ -232,12 +255,12 @@ export const CustomDrawerContent = (props: any) => {
                   <ContextMenu.Preview>
                     {() => (
                       <View style={styles.contextMenuPreview}>
-                        <Text style={styles.previewTitle}>{chat.title || 'Untitled Chat'}</Text>
+                        <Text style={styles.previewTitle}>{chat?.title || 'Untitled Chat'}</Text>
                       </View>
                     )}
                   </ContextMenu.Preview>
 
-                  <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chat.id || '', chat.title || '')}>
+                  <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chat?.id || '', chat?.title || '')}>
                     <ContextMenu.ItemTitle>Rename</ContextMenu.ItemTitle>
                     <ContextMenu.ItemIcon
                       ios={{
@@ -246,7 +269,7 @@ export const CustomDrawerContent = (props: any) => {
                       }}
                     />
                   </ContextMenu.Item>
-                  <ContextMenu.Item key={'delete'} onSelect={() => onDeleteChat(chat.id || '')} destructive>
+                  <ContextMenu.Item key={'delete'} onSelect={() => onDeleteChat(chat?.id || '')} destructive>
                     <ContextMenu.ItemTitle>Delete</ContextMenu.ItemTitle>
                     <ContextMenu.ItemIcon
                       ios={{
