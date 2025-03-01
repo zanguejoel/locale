@@ -2,10 +2,10 @@ import Colors from '@/constants/Colors';
 import { Text, ScrollView, TouchableOpacity, StyleSheet, View } from 'react-native';
 
 const PredefinedMessages = [
-  { title: 'Stock Price', text: "Get current stock price" },
-  { title: 'Treasury Data', text: 'Analyze treasury data' },
-  { title: 'Company Info', text: "Get company information" },
-  { title: 'Economic Data', text: "Retrieve economic indicators" },
+  { title: 'Stocks', text: "Get current stock prices" },
+  { title: 'News', text: 'Give me a quick news update'},
+  { title: 'Product Roadmap', text: "Create an product roadmap template." },
+  { title: 'Create Agenda', text: "Make an agenda for my next meeting." },
 ];
 
 type Props = {

@@ -57,7 +57,7 @@ const EmailVerification = () => {
                 )}
 
                 <View style={styles.headerContainer}>
-                    <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+                    <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
                     <Text style={styles.title}>Email verification</Text>
                     <Text style={styles.subtitle}>
                         A verification code has been sent to your inbox.

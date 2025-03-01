@@ -16,7 +16,7 @@ export default {
     tabIconDefault: '#ccc',
     tabIconSelected: tintColorDark,
   },
-  primary: '#20AB6E',
+  primary: '#51b0cb',
   lime: '#D7FFD4',
   pink: '#F655FF',
   brown: '#29271D',
@@ -30,5 +30,5 @@ export default {
   grey: '#242026',
   greyLight: '#B8B3BA',
   input: '#EEE9F0',
-  selected: '#F7F2F9',
+  selected: '#e5f3f7',
 };

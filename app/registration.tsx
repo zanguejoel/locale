@@ -152,7 +152,7 @@ const Registration = () => {
           )}
 
           <View style={styles.headerContainer}>
-            <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+            <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>Sign up to get started</Text>
           </View>
@@ -298,8 +298,8 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   logo: {
-    width: 60,
-    height: 60,
+    width: 150,
+    height: 75,
     marginBottom: 16,
   },
   title: {

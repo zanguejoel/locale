@@ -1,4 +1,5 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 import {
   DarkTheme,
   DefaultTheme,
@@ -9,6 +10,7 @@ import { Slot, Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
+import { TouchableOpacity } from "react-native";
 
 import { useColorScheme } from "@/components/useColorScheme";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
@@ -51,6 +53,19 @@ export default function RootLayout() {
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+const CustomBackButton = () => {
+  const router = useRouter();
+
+  return (
+    <TouchableOpacity
+      onPress={() => router.back()}
+      style={{ marginLeft: 8 }}
+    >
+      <Ionicons name="chevron-back" size={24} color={Colors.grey} />
+    </TouchableOpacity>
+  );
+};
+
 const Layout = () => {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -58,8 +73,6 @@ const Layout = () => {
   const { user, isLoading, isSignedIn } = useAuth();
   const segments = useSegments();
   const router = useRouter();
-
-
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -90,12 +103,27 @@ const Layout = () => {
   }
 
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        headerLeft: CustomBackButton,
+        headerStyle: {
+          backgroundColor: Colors.light.background,
+        },
+        headerShadowVisible: false,
+      }}
+    >
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="registration" options={{ headerShown: false }} />
       <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
       <Stack.Screen name="email-verification" options={{ headerShown: false }} />
-      <Stack.Screen name="profile" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="profile"
+        options={{
+          headerTitle: "Profile",
+          presentation: "modal",
+          headerStyle: { backgroundColor: Colors.selected },
+        }}
+      />
 
       <Stack.Screen name="(chat)" options={{ headerShown: false }} />
       <Stack.Screen
@@ -103,9 +131,7 @@ const Layout = () => {
         options={{
           headerTitle: "Settings",
           presentation: "modal",
-          headerShadowVisible: false,
           headerStyle: { backgroundColor: Colors.selected },
-          headerRight: () => <></>,
         }}
       />
       <Stack.Screen

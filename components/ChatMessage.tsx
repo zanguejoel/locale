@@ -9,22 +9,27 @@ import {
   Text,
   StyleSheet,
   Image,
-  ActivityIndicator,
   Pressable,
   Animated,
   AccessibilityInfo,
   Platform,
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import * as ContextMenu from 'zeego/context-menu';
 import { useCallback, useEffect, useRef } from 'react';
 import { Audio } from 'expo-av';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
+  error?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
+  onRetry?: () => void;
+  streamingContent?: boolean; // Add flag for streaming content
 }
 
 const IMAGE_PREVIEW_SIZE = 240;
@@ -51,44 +56,194 @@ const contextItems = [
   },
 ] as const;
 
+
+const LoadingDots = memo(() => {
+  const dotAnimations = [
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current
+  ];
+  const animationsRunning = useRef(false);
+
+  useEffect(() => {
+    console.log('LoadingDots component mounted, starting animations');
+
+    if (animationsRunning.current) {
+      console.log('Animations already running, skipping');
+      return;
+    }
+
+    // Create standalone animations for smoother performance
+    const createDotAnimation = (dot: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.delay(300), // Add consistent delay between cycles
+        ])
+      );
+    };
+
+    // Create and start animations with different delays for a cascading effect
+    const animations = [
+      createDotAnimation(dotAnimations[0], 0),
+      createDotAnimation(dotAnimations[1], 150),
+      createDotAnimation(dotAnimations[2], 300)
+    ];
+
+    animationsRunning.current = true;
+    animations.forEach(anim => anim.start());
+
+    // Cleanup function to stop animations when component unmounts
+    return () => {
+      console.log('LoadingDots component unmounting, stopping animations');
+      animations.forEach(anim => anim.stop());
+      dotAnimations.forEach(dot => dot.setValue(0));
+      animationsRunning.current = false;
+    };
+  }, []);
+
+  const getTranslateY = (dot: Animated.Value) => {
+    return dot.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, -8],
+    });
+  };
+
+  return (
+    <View
+      style={styles.loadingDotsContainer}
+      accessibilityLabel="Loading message"
+      testID="loading-dots-container"
+    >
+      {dotAnimations.map((dot, index) => (
+        <Animated.View
+          key={index}
+          style={[
+            styles.loadingDot,
+            {
+              transform: [{ translateY: getTranslateY(dot) }]
+            }
+          ]}
+          testID={`loading-dot-${index}`}
+        />
+      ))}
+    </View>
+  );
+});
+
 const ChatMessage = memo(({
   content,
   role,
   imageUrl,
   prompt,
-  loading,
+  loading = false,
+  error,
   onLongPress,
   onPress,
+  onRetry,
+  streamingContent = false,
 }: ChatMessageProps) => {
-
   const sound = useRef(new Audio.Sound());
   const [isPlaying, setIsPlaying] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const [contentLoaded, setContentLoaded] = useState(false);
+  const [imageAttempts, setImageAttempts] = useState(0); // Track retry attempts for images
   const MarkdownDisplay = useMarkdownDisplay();
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Force loading state to be a boolean
+  const isLoading = loading === true;
+
   const isAudio = (uri: string) => {
     if (!uri) return false;
-
     const audioExtensions = ['.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac', '.amr'];
-
     return audioExtensions.some(ext => uri.toLowerCase().endsWith(ext));
   };
 
-
   const isImage = (uri: string) => {
     if (!uri) return false;
-
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
-
     return imageExtensions.some(ext => uri.toLowerCase().endsWith(ext));
   };
 
+  // Add subtle pulse animation for streaming content
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, []);
+    if (streamingContent) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.03,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+
+    return () => {
+      Animated.timing(pulseAnim, { toValue: 1, duration: 0, useNativeDriver: true }).stop();
+    };
+  }, [streamingContent]);
+
+  // Add debug logging for props
+  useEffect(() => {
+    console.log(`ChatMessage props - role: ${role}, loading: ${isLoading}, content: ${content?.substring(0, 20)}...`);
+  }, [role, isLoading, content]);
+
+  // Handle fading in content when loaded
+  useEffect(() => {
+    if (!isLoading && !contentLoaded) {
+      console.log('Starting fade-in animation for content');
+      const timer = setTimeout(() => {
+        setContentLoaded(true);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, contentLoaded, fadeAnim]);
+
+  // Reset content loaded state when loading changes
+  useEffect(() => {
+    if (isLoading) {
+      console.log('Loading state activated, resetting content loaded state');
+      setContentLoaded(false);
+      fadeAnim.setValue(0);
+    }
+  }, [isLoading, fadeAnim]);
+
+  // Retry loading image if it fails (up to 3 attempts)
+  useEffect(() => {
+    if (imageLoadError && imageAttempts < 3) {
+      const timer = setTimeout(() => {
+        console.log(`Retrying image load (attempt ${imageAttempts + 1})...`);
+        setImageLoadError(false);
+        setImageAttempts(prev => prev + 1);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [imageLoadError, imageAttempts]);
 
   const handlePress = useCallback(() => {
     onPress?.();
@@ -119,103 +274,228 @@ const ChatMessage = memo(({
     }
   };
 
-  const renderImage = () => (
-    <ContextMenu.Root>
-      <ContextMenu.Trigger>
-        <Link
-          href={`/(chatStack)/(modal)/image/${encodeURIComponent(
-            imageUrl!
-          )}?prompt=${encodeURIComponent(prompt!)}`}
-          asChild
-        >
-          <Pressable
-            onLongPress={onLongPress}
-            onPress={handlePress}
-            accessible={true}
-            accessibilityLabel={`Image preview. ${prompt}`}
-            accessibilityRole="image"
+  const handleImageError = (error: any) => {
+    console.log(`Image failed to load (attempt ${imageAttempts + 1}):`, imageUrl, error?.nativeEvent?.error || '');
+    setImageLoadError(true);
+  };
+
+  const renderImageContent = () => {
+    if (!imageUrl) {
+      return null;
+    }
+
+    if (imageLoadError && imageAttempts >= 3) {
+      return (
+        <View style={styles.imageErrorContainer}>
+          <Ionicons name="image-outline" size={40} color={Colors.grey} />
+          <Text style={styles.imageErrorText}>Failed to load image</Text>
+          <TouchableOpacity
+            style={styles.retryImageButton}
+            onPress={() => {
+              setImageLoadError(false);
+              setImageAttempts(0);
+            }}
           >
+            <Text style={styles.retryImageText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Ensure URL is properly encoded
+    const processedUrl = encodeURI(imageUrl);
+
+    return (
+      <ContextMenu.Root>
+        <ContextMenu.Trigger>
+          <Link
+            href={`/(modal)/image/${encodeURIComponent(processedUrl)}?prompt=${encodeURIComponent(prompt || '')}`}
+            asChild
+          >
+            <Pressable
+              onLongPress={onLongPress}
+              onPress={handlePress}
+              accessible={true}
+              accessibilityLabel={`Image preview. ${prompt}`}
+              accessibilityRole="image"
+              testID="image-preview-pressable"
+            >
+              <View style={styles.imageContainer} testID="image-container">
+                {(imageLoadError || !contentLoaded) && (
+                  <View style={styles.imageLoadingOverlay} testID="image-loading-overlay">
+                    <ActivityIndicator size="large" color={Colors.primary} />
+                    {imageLoadError && <Text style={styles.imageLoadingText}>Retrying...</Text>}
+                  </View>
+                )}
+                <Image
+                  source={{ uri: processedUrl, cache: 'force-cache' }}
+                  style={styles.previewImage}
+                  resizeMode="cover"
+                  onError={handleImageError}
+                  onLoad={() => {
+                    console.log('Image loaded successfully');
+                    setContentLoaded(true);
+                  }}
+                  testID="preview-image"
+                />
+              </View>
+            </Pressable>
+          </Link>
+        </ContextMenu.Trigger>
+        <ContextMenu.Content>
+          {contextItems.map((item) => (
+            <ContextMenu.Item
+              key={item.id}
+              onSelect={() => item.action(processedUrl)}
+            >
+              <ContextMenu.ItemTitle>{item.title}</ContextMenu.ItemTitle>
+              <ContextMenu.ItemIcon
+                ios={{
+                  name: item.systemIcon,
+                  pointSize: 18,
+                }}
+              />
+            </ContextMenu.Item>
+          ))}
+        </ContextMenu.Content>
+      </ContextMenu.Root>
+    );
+  };
+
+  const renderContent = () => {
+    if (error && onRetry) {
+      return (
+        <View style={[styles.contentContainer, role === Role.Bot ? styles.botContent : styles.userContent]}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>Error generating response</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={onRetry} testID="retry-button">
+              <Ionicons name="refresh-outline" size={14} color="white" />
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    // Content is an audio message
+    if (isAudio(content)) {
+      return (
+        <Pressable
+          onLongPress={onLongPress}
+          onPress={handlePress}
+          style={[
+            styles.contentContainer,
+            role === Role.Bot ? styles.botContent : styles.userContent,
+          ]}
+          accessible={true}
+          accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} audio message`}
+          accessibilityRole="button"
+          testID="audio-player-container"
+        >
+          <Pressable style={styles.audioPlayer} onPress={playAudio} testID="audio-play-button">
+            {!isPlaying ? (
+              <View style={styles.audioPlayer}>
+                <AntDesign name="caretright" size={14} color="black" />
+                <Text style={styles.audioText}>Play Audio</Text>
+              </View>
+            ) : (
+              <View style={styles.audioPlayer}>
+                <Entypo name="controller-paus" size={14} color="black" />
+                <Text style={styles.audioText}>Stop Audio</Text>
+              </View>
+            )}
+          </Pressable>
+        </Pressable>
+      );
+    }
+
+    // Content is an image
+    if (isImage(content)) {
+      return (
+        <Pressable
+          onLongPress={onLongPress}
+          onPress={handlePress}
+          style={[
+            styles.contentContainer,
+            role === Role.Bot ? styles.botContent : styles.userContent,
+          ]}
+          accessible={true}
+          accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} image message`}
+          accessibilityRole="image"
+          testID="inline-image-container"
+        >
+          <View style={styles.imageContainer}>
+            {(!contentLoaded || imageLoadError) && (
+              <View style={styles.imageLoadingOverlay}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                {imageLoadError && <Text style={styles.imageLoadingText}>Retrying...</Text>}
+              </View>
+            )}
             <Image
-              source={{ uri: imageUrl }}
+              source={{ uri: encodeURI(content), cache: 'force-cache' }}
               style={styles.previewImage}
               resizeMode="cover"
+              onError={(e) => console.error('Error loading inline image:', e.nativeEvent.error)}
+              onLoad={() => setContentLoaded(true)}
+              testID="inline-image"
             />
-          </Pressable>
-        </Link>
-      </ContextMenu.Trigger>
-      <ContextMenu.Content>
-        {contextItems.map((item) => (
-          <ContextMenu.Item
-            key={item.id}
-            onSelect={() => item.action(imageUrl!)}
-          >
-            <ContextMenu.ItemTitle>{item.title}</ContextMenu.ItemTitle>
-            <ContextMenu.ItemIcon
-              ios={{
-                name: item.systemIcon,
-                pointSize: 18,
-              }}
-            />
-          </ContextMenu.Item>
-        ))}
-      </ContextMenu.Content>
-    </ContextMenu.Root>
-  );
-
-  const renderContent = () => (
-    <Pressable
-      onLongPress={onLongPress}
-      onPress={handlePress}
-      style={[
-        styles.contentContainer,
-        role === Role.Bot ? styles.botContent : styles.userContent,
-      ]}
-      accessible={true}
-      accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
-      accessibilityRole="text"
-    >
-      {isAudio(content) ? (
-        <Pressable style={styles.audioPlayer} onPress={playAudio}>
-          {!isPlaying ? (
-            <View style={styles.audioPlayer}>
-              <AntDesign name="caretright" size={14} color="black" />
-              <Text style={styles.audioText}>Play Audio</Text>
-            </View>
-          ) : (
-            <View style={styles.audioPlayer}>
-              <Entypo name="controller-paus" size={14} color="black" />
-              <Text style={styles.audioText}>Stop Audio</Text>
-            </View>
-          )}
+          </View>
         </Pressable>
-      ) : isImage(content) ? (
-        <Image
-          source={{ uri: content }}
-          style={styles.previewImage}
-          resizeMode="cover"
-        />
-      ) : (
-        <MarkdownDisplay>{content}</MarkdownDisplay>
-      )}
-    </Pressable>
-  );
+      );
+    }
+
+    // Regular text content (markdown)
+    return (
+      <Pressable
+        onLongPress={onLongPress}
+        onPress={handlePress}
+        style={[
+          styles.contentContainer,
+          role === Role.Bot ? styles.botContent : styles.userContent,
+          streamingContent && styles.streamingContent,
+        ]}
+        accessible={true}
+        accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
+        accessibilityRole="text"
+        testID="markdown-container"
+      >
+        <Animated.View
+          style={[
+            styles.markdownContainer,
+            streamingContent && { transform: [{ scale: pulseAnim }] }
+          ]}
+        >
+          <MarkdownDisplay>{content}</MarkdownDisplay>
+        </Animated.View>
+      </Pressable>
+    );
+  };
 
   return (
     <Animated.View
       style={[
         styles.container,
-        { opacity: fadeAnim },
+        { opacity: isLoading ? 1 : fadeAnim },
         role === Role.Bot ? styles.botContainer : styles.userContainer,
       ]}
+      testID={`message-${role === Role.Bot ? 'bot' : 'user'}`}
     >
-
-      {loading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={Colors.primary} size="small" />
+      {isLoading ? (
+        <View
+          style={[
+            styles.contentContainer,
+            styles.loadingContainer,
+            role === Role.Bot ? styles.botContent : styles.userContent,
+            // Make background more transparent when loading
+            { backgroundColor: role === Role.Bot ? 'rgba(240, 240, 240, 0.6)' : 'rgba(200, 230, 255, 0.6)' }
+          ]}
+          testID="loading-animation-container"
+        >
+          <LoadingDots />
         </View>
       ) : (
-        <View style={styles.messageContent}>
-          {content === '' && imageUrl ? renderImage() : renderContent()}
+        <View style={styles.messageContent} testID="message-content">
+          {content === '' && imageUrl ? renderImageContent() : renderContent()}
         </View>
       )}
     </Animated.View>
@@ -227,14 +507,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginVertical: 8,
     paddingHorizontal: 16,
-    maxWidth: '90%',
+    maxWidth: '97%',
   },
   audioPlayer: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    paddingVertical: 8,
   },
   audioText: {
-    marginLeft: 9
+    marginLeft: 9,
+    color: Colors.grey,
   },
   botContainer: {
     alignSelf: 'flex-start',
@@ -248,10 +530,13 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     flex: 1,
+    maxWidth: '100%',
   },
   contentContainer: {
     borderRadius: BORDER_RADIUS,
     padding: 12,
+    minWidth: 60,
+    maxWidth: '100%',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -263,6 +548,15 @@ const styles = StyleSheet.create({
         elevation: 2,
       },
     }),
+  },
+  streamingContent: {
+    borderWidth: 1,
+    borderColor: `${Colors.primary}40`,
+  },
+  markdownContainer: {
+    flex: 1,
+    width: '100%',
+    alignSelf: 'flex-start',
   },
   botContent: {
     backgroundColor: `${Colors.greyLight}30`,
@@ -282,15 +576,114 @@ const styles = StyleSheet.create({
   userText: {
     color: Colors.light,
   },
-  previewImage: {
+  imageContainer: {
+    position: 'relative',
     width: IMAGE_PREVIEW_SIZE,
     height: IMAGE_PREVIEW_SIZE,
     borderRadius: BORDER_RADIUS,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  loading: {
-    height: 30,
+  previewImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: BORDER_RADIUS,
+  },
+  imageLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
     justifyContent: 'center',
-    marginLeft: 8,
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  imageLoadingText: {
+    color: '#ffffff',
+    marginTop: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imageErrorContainer: {
+    width: IMAGE_PREVIEW_SIZE,
+    height: IMAGE_PREVIEW_SIZE,
+    borderRadius: BORDER_RADIUS,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+  },
+  imageErrorText: {
+    color: Colors.grey,
+    marginTop: 8,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  retryImageButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  retryImageText: {
+    color: 'white',
+    fontWeight: '500',
+    fontSize: 13,
+  },
+  loadingContainer: {
+    minHeight: 40,
+    minWidth: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  loadingDotsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 24,
+    width: 80,
+  },
+  loadingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.primary,
+    marginHorizontal: 5,
+  },
+  errorContainer: {
+    alignItems: 'flex-start',
+    width: '100%',
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  retryText: {
+    color: 'white',
+    fontWeight: '500',
+    marginLeft: 4,
+    fontSize: 14,
   },
 });
 

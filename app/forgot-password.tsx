@@ -80,10 +80,7 @@ const ForgotPassword = () => {
     return (
       <View style={styles.container}>
         <View style={styles.successContainer}>
-          <Image
-            source={require('@/assets/images/icon.png')}
-            style={styles.logo}
-          />
+          <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
           <Text style={styles.title}>Check Your Email</Text>
           <Text style={styles.successMessage}>
             We've sent password reset instructions to:
@@ -140,7 +137,7 @@ const ForgotPassword = () => {
         )}
 
         <View style={styles.headerContainer}>
-          <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+          <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
           <Text style={styles.title}>Forgot Password?</Text>
           <Text style={styles.subtitle}>
             Enter your email address to receive password reset instructions
@@ -203,8 +200,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 150,
+    height: 100,
     marginBottom: 20,
   },
   title: {

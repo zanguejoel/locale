@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Animated, Text } from 'react-native';
+import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useChat } from '@/hooks/useChat';
@@ -7,37 +7,158 @@ import ChatMessage from '@/components/ChatMessage';
 import MessageIdeas from '@/components/MessageIdeas';
 import MessageInput from '@/components/ChatInput';
 import { defaultStyles } from '@/constants/Styles';
-import { Message } from '@/utils/Interfaces';
+import { Message, Role } from '@/utils/Interfaces';
 import Colors from '@/constants/Colors';
+import { Ionicons } from '@expo/vector-icons';
 
 const ChatPage = () => {
   const [height, setHeight] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [lastContentHeight, setLastContentHeight] = useState(0);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
   const messageListRef = useRef<FlashList<Message>>(null);
-  const chat = useChat();
-  const { messages, currentConversationId, sendMessage, setCurrentRoom } = chat;
-  let { id } = useLocalSearchParams<{ id: string }>();
+  const scrollPositionRef = useRef(0);
+  const contentHeightRef = useRef(0);
+  const layoutHeightRef = useRef(0);
+  const isManualScrollRef = useRef(false);
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const chat = useChat();
+  const { messages, currentConversationId, sendMessage, setCurrentRoom, isSending, stream } = chat;
+  const { id } = useLocalSearchParams<{ id: string }>();
+
+  // Initial setup when conversation changes
   useEffect(() => {
     if (id) {
       setCurrentRoom(id);
+      setAutoScrollEnabled(true);
     }
   }, [id]);
 
+  // Force scroll to bottom when messages array changes (new message added)
+  useEffect(() => {
+    if (messages.length > 0 && autoScrollEnabled) {
+      scrollToBottomWithDelay(300);
+    }
+  }, [messages.length]);
+
+  // Auto-scroll when streaming content updates
+  useEffect(() => {
+    if (stream && autoScrollEnabled && !isManualScrollRef.current) {
+      scrollToBottomWithDelay(100);
+    }
+  }, [stream]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const onLayout = (event: any) => {
     const { height } = event.nativeEvent.layout;
     setHeight(height / 2);
+    layoutHeightRef.current = height;
+  };
+
+  const isNearBottom = () => {
+    const scrollThreshold = 50; // px from bottom to consider "near bottom"
+    const distanceFromBottom = contentHeightRef.current - (scrollPositionRef.current + layoutHeightRef.current);
+    return distanceFromBottom <= scrollThreshold;
   };
 
   const handleScroll = (event: any) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const isAtBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 20;
+    const scrollY = contentOffset.y;
+    const contentHeight = contentSize.height;
+
+    // Update references for later use
+    scrollPositionRef.current = scrollY;
+    contentHeightRef.current = contentHeight;
+    layoutHeightRef.current = layoutMeasurement.height;
+
+    // Calculate if we're at the bottom
+    const distanceFromBottom = contentHeight - (scrollY + layoutMeasurement.height);
+    const isAtBottom = distanceFromBottom < 20;
+
+    // Show or hide scroll button
     setShowScrollButton(!isAtBottom);
+
+    // Detect user manual scrolling away from bottom
+    if (!isAtBottom && Math.abs(lastContentHeight - contentHeight) < 10) {
+      isManualScrollRef.current = true;
+      setAutoScrollEnabled(false);
+    }
+
+    // If user scrolled to bottom manually, re-enable auto-scroll
+    if (isAtBottom && isManualScrollRef.current) {
+      isManualScrollRef.current = false;
+      setAutoScrollEnabled(true);
+    }
+
+    setLastContentHeight(contentHeight);
+  };
+
+  const scrollToBottomWithDelay = (delay = 100) => {
+    // Clear any existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    // Set new timeout
+    scrollTimeoutRef.current = setTimeout(() => {
+      if (messageListRef.current) {
+        try {
+          messageListRef.current.scrollToEnd({ animated: true });
+          console.log('Scrolled to bottom');
+        } catch (error) {
+          console.error('Failed to scroll to bottom:', error);
+        }
+      }
+    }, delay);
   };
 
   const scrollToBottom = () => {
-    messageListRef.current?.scrollToEnd({ animated: true });
+    isManualScrollRef.current = false;
+    setAutoScrollEnabled(true);
+    scrollToBottomWithDelay(0);
+  };
+
+  // Handle content size changes (when messages load or expand)
+  const handleContentSizeChange = (width, height) => {
+    contentHeightRef.current = height;
+
+    // If auto-scroll is enabled, scroll to bottom when content changes
+    if (autoScrollEnabled && !isManualScrollRef.current && messages.length > 0) {
+      scrollToBottomWithDelay(50);
+    }
+  };
+
+  // Determine which message should show a loading or streaming state
+  const renderItem = ({ item, index }: { item: Message; index: number }) => {
+    // Check if this is the last bot message and we're currently sending
+    const isLastBotMessage =
+      item.role === Role.Bot &&
+      index === messages.length - 1;
+
+    const isLoading = isLastBotMessage && isSending && !stream;
+    const isStreaming = isLastBotMessage && isSending && !!stream;
+
+    return (
+      <ChatMessage
+        {...item}
+        loading={isLoading}
+        streamingContent={isStreaming}
+        onRetry={() => {
+          // Add retry functionality if needed
+          console.log('Retry requested for message');
+        }}
+      />
+    );
   };
 
   return (
@@ -56,19 +177,32 @@ const ChatPage = () => {
           ref={messageListRef}
           initialScrollIndex={0}
           data={messages}
-          renderItem={({ item }) => <ChatMessage {...item} />}
+          renderItem={renderItem}
           estimatedItemSize={400}
           contentContainerStyle={{ paddingTop: 20, paddingBottom: 150 }}
           keyboardDismissMode="on-drag"
           onScroll={handleScroll}
           scrollEventThrottle={16}
+          extraData={[isSending, stream]}
+          onContentSizeChange={handleContentSizeChange}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+            autoscrollToTopThreshold: null,
+          }}
         />
 
         {showScrollButton && (
-          <TouchableOpacity style={styles.scrollButton} onPress={scrollToBottom}>
+          <TouchableOpacity
+            style={styles.scrollButton}
+            onPress={scrollToBottom}
+            accessibilityLabel="Scroll to bottom"
+            accessibilityRole="button"
+            activeOpacity={0.7}
+          >
             <Text style={styles.textScrollDown}>
-              Scroll down
+              {autoScrollEnabled ? 'Scroll down' : 'Auto-scroll disabled'}
             </Text>
+            <Ionicons name="chevron-down" size={16} color={Colors.grey} />
           </TouchableOpacity>
         )}
       </View>
@@ -76,9 +210,19 @@ const ChatPage = () => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={70}
-        style={styles.keyboardAvoidingView}>
+        style={styles.keyboardAvoidingView}
+      >
         {messages.length === 0 && <MessageIdeas onSelectCard={sendMessage} />}
-        <MessageInput onShouldSend={sendMessage} />
+        <MessageInput
+          onShouldSend={(message, type, operation) => {
+            // Make sure auto-scroll is enabled when sending a new message
+            isManualScrollRef.current = false;
+            setAutoScrollEnabled(true);
+            scrollToBottomWithDelay(300);
+            return sendMessage(message, type, operation);
+          }}
+          isLoading={isSending}
+        />
       </KeyboardAvoidingView>
     </View>
   );
@@ -107,18 +251,24 @@ const styles = StyleSheet.create({
   scrollButton: {
     position: 'absolute',
     bottom: 80,
-    width: '100%',
+    right: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(200, 200, 200, 0.4)',
-    padding: 8,
+    backgroundColor: 'rgba(240, 240, 240, 0.9)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
   },
   textScrollDown: {
     fontSize: 12,
-    color: Colors.grey
+    color: Colors.grey,
+    fontWeight: '500',
+    marginRight: 4,
   }
 });
 
