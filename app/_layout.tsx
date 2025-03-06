@@ -130,7 +130,7 @@ const Layout = () => {
         name="(modal)/settings"
         options={{
           headerTitle: "Settings",
-          presentation: "modal",
+          // presentation: "modal",
           headerStyle: { backgroundColor: Colors.selected },
         }}
       />
