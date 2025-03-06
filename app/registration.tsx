@@ -235,7 +235,7 @@ const Registration = () => {
               </View>
             </View>
           </View>
-          <WebView
+          {/* <WebView
             source={{
               html: `
  <html>
@@ -274,7 +274,7 @@ const Registration = () => {
             style={{ height: 100, width: 100 }}
             onError={(err) => console.error("WebView error:", err)}
 
-          />
+          /> */}
 
         </ScrollView>
 

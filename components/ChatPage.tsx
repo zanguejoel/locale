@@ -25,7 +25,7 @@ const ChatPage = () => {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const chat = useChat();
-  const { messages, currentConversationId, sendMessage, setCurrentRoom, isSending, stream } = chat;
+  const { messages, sendMessage, setCurrentRoom, isSending, stream } = chat;
   const { id } = useLocalSearchParams<{ id: string }>();
 
   // Initial setup when conversation changes
@@ -137,10 +137,8 @@ const ChatPage = () => {
       scrollToBottomWithDelay(50);
     }
   };
-
   // Determine which message should show a loading or streaming state
   const renderItem = ({ item, index }: { item: Message; index: number }) => {
-    // Check if this is the last bot message and we're currently sending
     const isLastBotMessage =
       item.role === Role.Bot &&
       index === messages.length - 1;
@@ -153,10 +151,6 @@ const ChatPage = () => {
         {...item}
         loading={isLoading}
         streamingContent={isStreaming}
-        onRetry={() => {
-          // Add retry functionality if needed
-          console.log('Retry requested for message');
-        }}
       />
     );
   };
@@ -187,7 +181,7 @@ const ChatPage = () => {
           onContentSizeChange={handleContentSizeChange}
           maintainVisibleContentPosition={{
             minIndexForVisible: 0,
-            autoscrollToTopThreshold: null,
+            autoscrollToTopThreshold: 0,
           }}
         />
 

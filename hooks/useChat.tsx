@@ -78,7 +78,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [conversations, setConversations] = useMMKVStorage<Conversations[]>('chat_conversations', []);
+  const [conversations, setConversations] = useState([])
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -89,6 +89,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [files, setFiles] = useState([]);
   const [inputDisabled, setInputDisabled] = useState(false);
   const [pastedActive, setPastedActive] = useState(false);
+  const [streamWorking, setStreamWorking] = useState(false);
 
   useEffect(() => {
     fetchConversation();
@@ -207,7 +208,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setStream('');
     setIntermediate('');
     setIsSending(true);
-    console.log(`Sending message: Type=${messageType}, Has content=${!!message}`);
 
     setMessages(prev => [
       ...prev,
@@ -306,6 +306,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const _controller = new AbortController();
     try {
+      for (let [key, value] of formData.entries()) {
+        console.log(`FormData: ${key} =`, value);
+      }
+
       const _response = await fetch(`${BASE_URL}/chat`, {
         method: 'POST',
         headers: {
@@ -323,7 +327,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         _response.body,
         setStream,
         handleError,
-        setIntermediate
+        setIntermediate,
+        setStreamWorking,
       );
       setInputDisabled(false);
       setPastedActive(false);
@@ -335,22 +340,41 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError]);
 
-  const fetchConversation = useCallback(async (q?: string) => {
+  const fetchConversation = useCallback(async (q?: string, limitValue?: number) => {
+    const effectiveLimit = limitValue || 20;
     try {
-      setIsLoading(true);
       await api.setAuthToken(user?.token || '');
-      const response = await api.get<Conversations[]>(`/conversation/search?limit=500${q ? `&q=${q}` : ""}`);
+
+      const response = await api.get<Conversations[]>(
+        `/conversation/search?limit=${effectiveLimit}${q ? `&q=${q}` : ""}`
+      );
+
       if (!response.ok || !response.data) {
-        console.log(JSON.stringify(response.problem));
+        console.error(JSON.stringify(response.problem));
+        return [];
       }
-      setConversations(response.data || []);
-      if (response.data?.length && response.data[0].id) {
-        setCurrentRoom(response.data[0].id);
+      if (effectiveLimit > 20) {
+        setConversations(prev => {
+          const combined = response.data;
+          const unique = combined.filter((item, index, self) =>
+            index === self.findIndex(t => t.id === item.id)
+          );
+          return unique;
+        });
+      } else {
+        setConversations(response.data);
+        if (response.data.length > 0 && response.data[0].id) {
+          // setCurrentRoom(response.data[0].id);
+        }
       }
+      return response.data;
     } catch (error) {
       console.error('Fetch conversations error:', error);
+      return [];
     } finally {
-      setIsLoading(false);
+      if (effectiveLimit === 20) {
+        setIsLoading(false);
+      }
     }
   }, [user]);
 
@@ -524,6 +548,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     renameConversation,
     resetChat,
     createNewConversation,
+    streamWorking,
   }), [
     messages,
     conversations,
@@ -542,6 +567,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     renameConversation,
     resetChat,
     createNewConversation,
+    streamWorking,
   ]);
 
   return (

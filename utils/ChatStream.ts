@@ -16,38 +16,40 @@ export const processStream = async (
   response: ReadableStream<Uint8Array> | null,
   setStream: SetStreamFunction,
   handleError: (error: string) => void,
-  setIntermediate: (value: string) => void
+  setIntermediate: (value: string) => void,
+  setStreamWorking: (v: boolean) => void
 ): Promise<StreamData | null> => {
+  setStreamWorking(true)
   let res: StreamData | null = null;
   let buffer = '';
 
-  if(!response) {
+  if (!response) {
     console.log("Error ----");
     throw "error"
   }
-  
+
   const decoder = new TextDecoder();
 
   const reader = response.getReader();
 
   if (!reader) return null;
-  
 
-  
+
+
   while (true) {
     const { value, done } = await reader.read();
-   
+
     if (done) break;
 
     const chunk = decoder.decode(value, { stream: true });
     buffer += chunk;
 
-      const { results, remaining } = processJSONChunks(buffer);
-      buffer = remaining;
-     
+    const { results, remaining } = processJSONChunks(buffer);
+    buffer = remaining;
+
     for (const line of results) {
       if (line) {
-       
+
         try {
           const data: StreamData = line;
           switch (data.type) {
@@ -80,7 +82,7 @@ export const processStream = async (
       }
     }
   }
-  
+  setStreamWorking(false)
   return res;
 };
 

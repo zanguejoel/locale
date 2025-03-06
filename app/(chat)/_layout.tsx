@@ -1,6 +1,6 @@
 import { Drawer } from 'expo-router/drawer';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
-import { Link, useRouter } from 'expo-router';
+import { Link, useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Image,
@@ -21,7 +21,7 @@ import * as ContextMenu from 'zeego/context-menu';
 import { useRevenueCat } from '@/providers/RevenueCat';
 import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Swipeable } from 'react-native-gesture-handler';
 
 export const CustomDrawerContent = (props: any) => {
@@ -38,16 +38,32 @@ export const CustomDrawerContent = (props: any) => {
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const navigation = useNavigation();
+  const limitRef = useRef(20);
 
-  // Keep track of open swipeable to close on new action
+
   const [openSwipeable, setOpenSwipeable] = useState(null);
 
-  // Show loading indicator when either context loading or local loading is active
   const showLoading = isLoading || localLoading;
 
   useEffect(() => {
-    fetchConversation();
-  }, [])
+    limitRef.current = 20;
+    setHasMore(true);
+    fetchConversation(query, limitRef.current);
+  }, [fetchConversation, query]);
+
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('state', () => {
+      fetchConversation(query, 20);
+      limitRef.current = 20;
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const onDeleteChat = (chatId: string) => {
     Alert.alert('Delete Chat', 'Are you sure you want to delete this chat?', [
@@ -63,7 +79,7 @@ export const CustomDrawerContent = (props: any) => {
             const success = await deleteConversation(chatId);
 
             if (success) {
-              // If the deleted chat was the current one, navigate to new chat
+
               if (chatId === currentConversationId) {
                 router.push('/(chat)/new');
               }
@@ -118,6 +134,28 @@ export const CustomDrawerContent = (props: any) => {
       currentTitle
     );
   };
+  const loadMoreConversations = useCallback(async () => {
+    if (isFetchingMore || !hasMore) return;
+    setIsFetchingMore(true);
+    const newLimit = limitRef.current + 20;
+    const newData = await fetchConversation(query, newLimit);
+
+    if (newData.length < newLimit) {
+      setHasMore(false);
+    }
+    limitRef.current = newLimit;
+    setIsFetchingMore(false);
+  }, [isFetchingMore, hasMore, fetchConversation, query]);
+
+  const handleScroll = ({ nativeEvent }) => {
+    const paddingToBottom = 20;
+    const isCloseToBottom =
+      nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >=
+      nativeEvent.contentSize.height - paddingToBottom;
+    if (isCloseToBottom) {
+      loadMoreConversations();
+    }
+  };
 
   const closeOpenSwipeable = () => {
     if (openSwipeable) {
@@ -142,7 +180,7 @@ export const CustomDrawerContent = (props: any) => {
     );
   };
 
-  // Fixed filtering logic to handle null/undefined conversations and titles
+
   const filteredConversations = React.useMemo(() => {
     if (!conversations || !Array.isArray(conversations)) {
       return [];
@@ -154,10 +192,10 @@ export const CustomDrawerContent = (props: any) => {
 
     const lowercaseQuery = query.toLowerCase();
     return conversations.filter(conversation => {
-      // Make sure conversation and title exist
+
       if (!conversation) return false;
 
-      // Handle case where title might be null/undefined
+
       const title = conversation.title || 'Untitled Chat';
       return title.toLowerCase().includes(lowercaseQuery);
     });
@@ -204,88 +242,93 @@ export const CustomDrawerContent = (props: any) => {
       ) : (
         <DrawerContentScrollView
           {...props}
+          onScroll={handleScroll}
+          scrollEventThrottle={400}
           contentContainerStyle={styles.scrollViewContent}
         >
-          {filteredConversations.map((chat) => (
-            <Swipeable
-              key={chat?.id || Math.random().toString()}
-              renderRightActions={() => renderRightActions(chat?.id || '')}
-              onSwipeableOpen={() => {
-                // Close previously opened swipeable
-                closeOpenSwipeable();
-                // Set this one as the open one
-                setOpenSwipeable(chat?.id);
-              }}
-              ref={(ref) => {
-                if (chat?.id === openSwipeable) {
-                  setOpenSwipeable(ref);
-                }
-              }}
-            >
-              <ContextMenu.Root>
-                <ContextMenu.Trigger>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.chatItem,
-                      chat?.id === currentConversationId && styles.activeChatItem,
-                      pressed && styles.pressedChatItem,
-                    ]}
-                    onPress={() => router.push(`/(chat)/${chat?.id}`)}
-                  >
-                    <View style={styles.chatItemContent}>
-                      <View style={styles.chatIconContainer}>
-                        <Ionicons name="chatbubble" size={18} color={Colors.primary} />
-                      </View>
-                      <View style={styles.chatDetails}>
-                        <Text style={styles.chatTitle} numberOfLines={1}>
-                          {chat?.title || 'Untitled Chat'}
-                        </Text>
-                        <Text style={styles.chatTimestamp} numberOfLines={1}>
-                          {new Date().toLocaleDateString()}
-                        </Text>
-                      </View>
-                      <View style={styles.chatActions}>
-                        <Pressable
-                          style={styles.actionButton}
-                          onPress={() => onRenameChat(chat?.id || '', chat?.title || '')}
-                        >
-                          <Ionicons name="pencil" size={16} color={Colors.greyLight} />
-                        </Pressable>
-                      </View>
-                    </View>
-                  </Pressable>
-                </ContextMenu.Trigger>
-                <ContextMenu.Content>
-                  <ContextMenu.Preview>
-                    {() => (
-                      <View style={styles.contextMenuPreview}>
-                        <Text style={styles.previewTitle}>{chat?.title || 'Untitled Chat'}</Text>
-                      </View>
-                    )}
-                  </ContextMenu.Preview>
+          {filteredConversations.map((chat) => {
 
-                  <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chat?.id || '', chat?.title || '')}>
-                    <ContextMenu.ItemTitle>Rename</ContextMenu.ItemTitle>
-                    <ContextMenu.ItemIcon
-                      ios={{
-                        name: 'pencil',
-                        pointSize: 18,
-                      }}
-                    />
-                  </ContextMenu.Item>
-                  <ContextMenu.Item key={'delete'} onSelect={() => onDeleteChat(chat?.id || '')} destructive>
-                    <ContextMenu.ItemTitle>Delete</ContextMenu.ItemTitle>
-                    <ContextMenu.ItemIcon
-                      ios={{
-                        name: 'trash',
-                        pointSize: 18,
-                      }}
-                    />
-                  </ContextMenu.Item>
-                </ContextMenu.Content>
-              </ContextMenu.Root>
-            </Swipeable>
-          ))}
+            return (
+              <Swipeable
+                key={chat?.id || Math.random().toString()}
+                renderRightActions={() => renderRightActions(chat?.id || '')}
+                onSwipeableOpen={() => {
+                  // Close previously opened swipeable
+                  closeOpenSwipeable();
+                  // Set this one as the open one
+                  setOpenSwipeable(chat?.id);
+                }}
+                ref={(ref) => {
+                  if (chat?.id === openSwipeable) {
+                    setOpenSwipeable(ref);
+                  }
+                }}
+              >
+                <ContextMenu.Root>
+                  <ContextMenu.Trigger>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.chatItem,
+                        chat?.id?.toString() === currentConversationId && styles.activeChatItem,
+                        pressed && styles.pressedChatItem,
+                      ]}
+                      onPress={() => router.push(`/(chat)/${chat?.id}`)}
+                    >
+                      <View style={styles.chatItemContent}>
+                        <View style={styles.chatIconContainer}>
+                          <Ionicons name="chatbubble" size={18} color={Colors.primary} />
+                        </View>
+                        <View style={styles.chatDetails}>
+                          <Text style={styles.chatTitle} numberOfLines={1}>
+                            {chat?.title || 'Untitled Chat'}
+                          </Text>
+                          <Text style={styles.chatTimestamp} numberOfLines={1}>
+                            {new Date().toLocaleDateString()}
+                          </Text>
+                        </View>
+                        <View style={styles.chatActions}>
+                          <Pressable
+                            style={styles.actionButton}
+                            onPress={() => onRenameChat(chat?.id || '', chat?.title || '')}
+                          >
+                            <Ionicons name="pencil" size={16} color={Colors.greyLight} />
+                          </Pressable>
+                        </View>
+                      </View>
+                    </Pressable>
+                  </ContextMenu.Trigger>
+                  <ContextMenu.Content>
+                    <ContextMenu.Preview>
+                      {() => (
+                        <View style={styles.contextMenuPreview}>
+                          <Text style={styles.previewTitle}>{chat?.title || 'Untitled Chat'}</Text>
+                        </View>
+                      )}
+                    </ContextMenu.Preview>
+
+                    <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chat?.id || '', chat?.title || '')}>
+                      <ContextMenu.ItemTitle>Rename</ContextMenu.ItemTitle>
+                      <ContextMenu.ItemIcon
+                        ios={{
+                          name: 'pencil',
+                          pointSize: 18,
+                        }}
+                      />
+                    </ContextMenu.Item>
+                    <ContextMenu.Item key={'delete'} onSelect={() => onDeleteChat(chat?.id || '')} destructive>
+                      <ContextMenu.ItemTitle>Delete</ContextMenu.ItemTitle>
+                      <ContextMenu.ItemIcon
+                        ios={{
+                          name: 'trash',
+                          pointSize: 18,
+                        }}
+                      />
+                    </ContextMenu.Item>
+                  </ContextMenu.Content>
+                </ContextMenu.Root>
+              </Swipeable>
+            )
+          })}
         </DrawerContentScrollView>
       )}
 
@@ -333,6 +376,7 @@ const Layout = () => {
 
   return (
     <Drawer
+
       drawerContent={CustomDrawerContent}
       screenOptions={(navigation) => ({
         headerLeft: () => (
@@ -360,6 +404,7 @@ const Layout = () => {
       })}>
       <Drawer.Screen
         name="new"
+
         getId={() => Math.random().toString()}
         options={{
           title: 'Jaiime AI',
