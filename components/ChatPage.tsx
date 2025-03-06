@@ -187,7 +187,7 @@ const ChatPage = () => {
           onContentSizeChange={handleContentSizeChange}
           maintainVisibleContentPosition={{
             minIndexForVisible: 0,
-            autoscrollToTopThreshold: null,
+            autoscrollToTopThreshold: 0,
           }}
         />
 
