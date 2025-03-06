@@ -330,7 +330,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const _controller = new AbortController();
 
     try {
-      console.log('Sending request to API:', `${BASE_URL}/chat`);
+     //  console.log('Sending request to API:', `${BASE_URL}/chat`);
 
       // Log the formData contents before sending
       for (let [key, value] of formData.entries()) {
@@ -435,7 +435,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       await api.setAuthToken(user?.token || '');
-      const response = await api.get<Conversations[]>(`/conversation/search?limit=500${q ? `&q=${q}` : ""}`);
+      const response = await api.get<Conversations[]>(`/conversation/search?limit=20${q ? `&q=${q}` : ""}`);
 
       if (!response.ok || !response.data) {
         console.log(JSON.stringify(response.problem));
