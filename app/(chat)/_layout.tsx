@@ -21,7 +21,7 @@ import * as ContextMenu from 'zeego/context-menu';
 import { useRevenueCat } from '@/providers/RevenueCat';
 import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Swipeable } from 'react-native-gesture-handler';
 
 export const CustomDrawerContent = (props: any) => {
@@ -44,6 +44,10 @@ export const CustomDrawerContent = (props: any) => {
 
   // Show loading indicator when either context loading or local loading is active
   const showLoading = isLoading || localLoading;
+
+  useEffect(() => {
+    fetchConversation();
+  }, [])
 
   const onDeleteChat = (chatId: string) => {
     Alert.alert('Delete Chat', 'Are you sure you want to delete this chat?', [
