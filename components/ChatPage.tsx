@@ -38,6 +38,7 @@ const ChatPage = () => {
 
   // Force scroll to bottom when messages array changes (new message added)
   useEffect(() => {
+    // console.log(messages[1].files);
     if (messages.length > 0 && autoScrollEnabled) {
       scrollToBottomWithDelay(300);
     }

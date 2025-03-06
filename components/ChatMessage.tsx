@@ -148,6 +148,7 @@ const ChatMessage = memo(({
   prompt,
   loading = false,
   error,
+  files,
   onLongPress,
   onPress,
   onRetry,
@@ -280,7 +281,8 @@ const ChatMessage = memo(({
   };
 
   const renderImageContent = () => {
-    if (!imageUrl) {
+
+    if (!files?.length) {
       return null;
     }
 
@@ -303,7 +305,7 @@ const ChatMessage = memo(({
     }
 
     // Ensure URL is properly encoded
-    const processedUrl = encodeURI(imageUrl);
+    const processedUrl = `https://app-dev.jaiime.com/api/local-media?file=${encodeURI(files[0].file_path)}`;
 
     return (
       <ContextMenu.Root>
@@ -495,7 +497,7 @@ const ChatMessage = memo(({
         </View>
       ) : (
         <View style={styles.messageContent} testID="message-content">
-          {content === '' && imageUrl ? renderImageContent() : renderContent()}
+          {(content === '' && files?.length) ? renderImageContent() : renderContent()}
         </View>
       )}
     </Animated.View>
