@@ -30,6 +30,8 @@ interface ChatMessageProps extends Message {
   onPress?: () => void;
   onRetry?: () => void;
   streamingContent?: boolean; // Add flag for streaming content
+  isSending?: boolean;
+  streamWorking?: boolean
 }
 
 const IMAGE_PREVIEW_SIZE = 240;
@@ -153,6 +155,8 @@ const ChatMessage = memo(({
   onPress,
   onRetry,
   streamingContent = false,
+  isSending,
+  streamWorking,
 }: ChatMessageProps) => {
   const sound = useRef(new Audio.Sound());
   const [isPlaying, setIsPlaying] = useState(false);
@@ -162,6 +166,7 @@ const ChatMessage = memo(({
   const MarkdownDisplay = useMarkdownDisplay();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  console.log('------------isSending--------', isSending)
 
   // Force loading state to be a boolean
   const isLoading = loading === true;
@@ -446,6 +451,7 @@ const ChatMessage = memo(({
       );
     }
 
+    console.log('-----------streamWorking', streamWorking)
     // Regular text content (markdown)
     return (
       <Pressable
@@ -464,7 +470,8 @@ const ChatMessage = memo(({
         <Animated.View
           style={[
             styles.markdownContainer,
-            streamingContent && { transform: [{ scale: pulseAnim }] }
+            streamingContent && { transform: [{ scale: pulseAnim }] },
+            streamingContent && { backgroundColor: `transparent` },
           ]}
         >
           <MarkdownDisplay>{content}</MarkdownDisplay>
@@ -477,7 +484,6 @@ const ChatMessage = memo(({
     <Animated.View
       style={[
         styles.container,
-        { opacity: isLoading ? 1 : fadeAnim },
         role === Role.Bot ? styles.botContainer : styles.userContainer,
       ]}
       testID={`message-${role === Role.Bot ? 'bot' : 'user'}`}
