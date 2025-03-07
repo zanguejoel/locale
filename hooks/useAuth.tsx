@@ -29,7 +29,6 @@ interface AuthContextType {
 
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useMMKVStorage<User | null>('user', null);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,22 +111,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (formData: FormData, captchaToken: string, router: any) => {
     try {
-
       setIsLoading(true);
-      const response = await api.post<{ token: string } | any>(`/auth/signup?recaptcha=${captchaToken}`, {
+
+      const response = await api.post<{ token: string } | any>("/auth/signup", {
         first_name: formData.firstName,
         last_name: formData.lastName,
         username: `${formData.firstName}${formData.lastName}`,
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
+      }, {
+        headers: {
+          "X-Mobile-Recaptcha-Token": "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1",
+          "Content-Type": "application/json",
+        }
       });
+      console.log('-response', response)
       if (response.ok) {
         router.push(`/email-verification?email=${formData?.email}`)
       }
 
     } catch (error) {
-      console.error('Sign up error:', error);
+      console.error("Sign up error:", error);
       throw error;
     } finally {
       setIsLoading(false);
