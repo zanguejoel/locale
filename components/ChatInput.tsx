@@ -216,7 +216,8 @@ const ChatInput = ({ onShouldSend }: Props) => {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity onPress={isRecording ? stopRecording : startRecording}>
-            <FontAwesome6 name="microphone" size={24} color={isRecording ? Colors.red : Colors.grey} />
+            <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : Colors.grey} />
+            {/* <FontAwesome6 name="microphone" size={24} color={isRecording ? Colors.red : Colors.grey} /> */}
           </TouchableOpacity>
         )}
       </View>

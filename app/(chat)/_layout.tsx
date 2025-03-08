@@ -212,6 +212,7 @@ export const CustomDrawerContent = (props: any) => {
       <View style={styles.headerContainer}>
         <View style={styles.searchContainer}>
           <View style={styles.searchSection}>
+            
             <Ionicons style={styles.searchIcon} name="search" size={20} color={Colors.greyLight} />
             <TextInput
               style={styles.input}
@@ -379,13 +380,14 @@ const Layout = () => {
 
       drawerContent={CustomDrawerContent}
       screenOptions={(navigation) => ({
-        headerLeft: () => (
+      /*   headerLeft: () => (
           <TouchableOpacity
             onPress={() => navigation.navigation.toggleDrawer()}
             style={styles.headerButton}>
-            <FontAwesome6 name="bars" size={22} color={Colors.grey} />
+              <Ionicons name="menu-sharp" size={22} color={Colors.grey} />
           </TouchableOpacity>
-        ),
+        ), */
+        headerTintColor: Colors.light.tint,
         headerStyle: {
           backgroundColor: Colors.light.background,
           height: 110,
@@ -398,7 +400,7 @@ const Layout = () => {
         drawerItemStyle: { borderRadius: 12 },
         drawerLabelStyle: { marginLeft: -20 },
         drawerStyle: {
-          width: dimensions.width * 0.86,
+          width: dimensions.width * 0.85,
           backgroundColor: '#FFFFFF',
         },
       })}>
@@ -422,9 +424,9 @@ const Layout = () => {
           headerRight: () => (
             <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
               <Ionicons
-                name="add-circle-outline"
+                name="add"
                 size={24}
-                color={Colors.primary}
+                color={Colors.light.tint}
               />
             </TouchableOpacity>
           ),
@@ -433,15 +435,16 @@ const Layout = () => {
       <Drawer.Screen
         name="[id]"
         options={{
+          title: 'Jaiime AI',
           drawerItemStyle: {
             display: 'none',
           },
           headerRight: () => (
             <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
               <Ionicons
-                name="add-circle-outline"
+                name="add"
                 size={24}
-                color={Colors.primary}
+                color={Colors.light.tint}
               />
             </TouchableOpacity>
           ),

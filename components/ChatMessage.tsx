@@ -166,7 +166,7 @@ const ChatMessage = memo(({
   const MarkdownDisplay = useMarkdownDisplay();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  console.log('------------isSending--------', isSending)
+  // console.log('------------isSending--------', isSending)
 
   // Force loading state to be a boolean
   const isLoading = loading === true;
@@ -209,15 +209,12 @@ const ChatMessage = memo(({
     };
   }, [streamingContent]);
 
-  // Add debug logging for props
-  useEffect(() => {
-    console.log(`ChatMessage props - role: ${role}, loading: ${isLoading}, content: ${content?.substring(0, 20)}...`);
-  }, [role, isLoading, content]);
+ 
 
   // Handle fading in content when loaded
   useEffect(() => {
     if (!isLoading && !contentLoaded) {
-      console.log('Starting fade-in animation for content');
+      // console.log('Starting fade-in animation for content');
       const timer = setTimeout(() => {
         setContentLoaded(true);
         Animated.timing(fadeAnim, {
@@ -451,7 +448,7 @@ const ChatMessage = memo(({
       );
     }
 
-    console.log('-----------streamWorking', streamWorking)
+   //  console.log('-----------streamWorking', streamWorking)
     // Regular text content (markdown)
     return (
       <Pressable
@@ -474,6 +471,7 @@ const ChatMessage = memo(({
             streamingContent && { backgroundColor: `transparent` },
           ]}
         >
+         
           <MarkdownDisplay>{content}</MarkdownDisplay>
         </Animated.View>
       </Pressable>
@@ -537,13 +535,14 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   messageContent: {
-    flex: 1,
+    //flex: 1,
     maxWidth: '100%',
+    
   },
   contentContainer: {
     borderRadius: BORDER_RADIUS,
-    padding: 12,
-    minWidth: 60,
+    paddingHorizontal: 12,
+    // minWidth: 60,
     maxWidth: '100%',
     ...Platform.select({
       ios: {
@@ -562,16 +561,15 @@ const styles = StyleSheet.create({
     borderColor: `${Colors.primary}40`,
   },
   markdownContainer: {
-    flex: 1,
     width: '100%',
     alignSelf: 'flex-start',
   },
   botContent: {
-    backgroundColor: `${Colors.greyLight}30`,
+    backgroundColor: `${Colors.greyLight}20`,
     borderBottomLeftRadius: 4,
   },
   userContent: {
-    backgroundColor: `${Colors.primary}30`,
+    backgroundColor: `${Colors.primary}20`,
     borderBottomRightRadius: 4,
   },
   text: {
@@ -661,7 +659,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: 24,
-    width: 80,
+    width: 60,
   },
   loadingDot: {
     width: 10,

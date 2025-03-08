@@ -80,7 +80,7 @@ const Login = () => {
       )}
       
       <View style={styles.headerContainer}>
-        <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
+        <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Sign in to continue</Text>
       </View>
@@ -171,8 +171,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logo: {
-    width: 150,
-    height: 100,
+    width: 80,
+    height: 80,
     marginBottom: 20,
   },
   title: {

@@ -91,8 +91,8 @@ const useMarkdownDisplay = () => {
     // Base styles
     body: {
       color: Colors.grey,
-      fontSize: 15,
-      lineHeight: 22,
+      fontSize: 14,
+      lineHeight: 24,
       marginTop: 0,
       marginBottom: 0,
       width: '100%',
@@ -108,34 +108,35 @@ const useMarkdownDisplay = () => {
 
     // Headings with proper spacing
     heading1: {
-      fontSize: 22,
+      fontSize: 20,
+      lineHeight: 24,
       fontWeight: 'bold',
-      marginTop: 16,
-      marginBottom: 8,
+      marginTop: 8,
+      marginBottom: 4,
       color: Colors.grey,
       width: '100%',
     },
     heading2: {
       fontSize: 20,
       fontWeight: 'bold',
-      marginTop: 14,
-      marginBottom: 8,
+      marginTop: 8,
+      marginBottom: 4,
       color: Colors.grey,
       width: '100%',
     },
     heading3: {
       fontSize: 18,
       fontWeight: 'bold',
-      marginTop: 12,
-      marginBottom: 6,
+      marginTop: 8,
+      marginBottom: 4,
       color: Colors.grey,
       width: '100%',
     },
     heading4: {
       fontSize: 16,
       fontWeight: 'bold',
-      marginTop: 10,
-      marginBottom: 6,
+      marginTop: 8,
+      marginBottom: 4,
       color: Colors.grey,
       width: '100%',
     },
@@ -143,7 +144,7 @@ const useMarkdownDisplay = () => {
       fontSize: 15,
       fontWeight: 'bold',
       marginTop: 8,
-      marginBottom: 6,
+      marginBottom: 4,
       color: Colors.grey,
       width: '100%',
     },
@@ -151,7 +152,7 @@ const useMarkdownDisplay = () => {
       fontSize: 14,
       fontWeight: 'bold',
       marginTop: 8,
-      marginBottom: 6,
+      marginBottom: 4,
       color: Colors.grey,
       width: '100%',
     },
@@ -324,7 +325,7 @@ const useMarkdownDisplay = () => {
   });
 
   const customRules: RenderRules = {
-    list_item: (node, children, parent, styles) => {
+   /*  list_item: (node, children, parent, styles) => {
       return (
         <View
           key={node.key}
@@ -333,7 +334,7 @@ const useMarkdownDisplay = () => {
           {children}
         </View>
       );
-    },
+    }, */
 
     code_block: (node, children, parent, styles) => {
       return (
@@ -364,7 +365,7 @@ const useMarkdownDisplay = () => {
       additionalRules = {},
     }: MarkdownDisplayProps) => (
       <Markdown
-        rules={{ ...customRules, ...additionalRules }}
+        rules={{ ...additionalRules }}
         onLinkPress={url => handleNavigation(url)}
         style={{...markdownStyles, ...additionalStyles}}
       >
