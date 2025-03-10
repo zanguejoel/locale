@@ -212,7 +212,7 @@ export const CustomDrawerContent = (props: any) => {
       <View style={styles.headerContainer}>
         <View style={styles.searchContainer}>
           <View style={styles.searchSection}>
-            
+
             <Ionicons style={styles.searchIcon} name="search" size={20} color={Colors.greyLight} />
             <TextInput
               style={styles.input}
@@ -380,13 +380,13 @@ const Layout = () => {
 
       drawerContent={CustomDrawerContent}
       screenOptions={(navigation) => ({
-      /*   headerLeft: () => (
-          <TouchableOpacity
-            onPress={() => navigation.navigation.toggleDrawer()}
-            style={styles.headerButton}>
-              <Ionicons name="menu-sharp" size={22} color={Colors.grey} />
-          </TouchableOpacity>
-        ), */
+        /*   headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigation.toggleDrawer()}
+              style={styles.headerButton}>
+                <Ionicons name="menu-sharp" size={22} color={Colors.grey} />
+            </TouchableOpacity>
+          ), */
         headerTintColor: Colors.light.tint,
         headerStyle: {
           backgroundColor: Colors.light.background,

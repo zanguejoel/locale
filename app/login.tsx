@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   StyleSheet,
@@ -31,6 +32,21 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
 
+  useEffect(() => {
+    const loadStoredEmail = async () => {
+      try {
+        const storedEmail = await AsyncStorage.getItem("savedEmail");
+        if (storedEmail) {
+          setEmailAddress(storedEmail);
+          setRememberMe(true);
+        }
+      } catch (error) {
+        console.error("Error loading saved email", error);
+      }
+    };
+
+    loadStoredEmail();
+  }, []);
 
   const validateForm = () => {
     let errors: ErrorType = {};
@@ -52,18 +68,33 @@ const Login = () => {
 
   const onSignInPress = async () => {
     setFormSubmitted(true);
-    
+
     if (validateForm()) {
       try {
         await signIn(emailAddress, password);
+
+        if (rememberMe) {
+          await AsyncStorage.setItem("savedEmail", emailAddress);
+        } else {
+          await AsyncStorage.removeItem("savedEmail");
+        }
       } catch (err: any) {
-        Alert.alert("Error", err?.detail|| "Login failed");
+        Alert.alert("Error", err?.detail || "Login failed");
       }
     }
   };
 
+  const toggleRememberMe = async () => {
+    setRememberMe(!rememberMe);
+    if (!rememberMe) {
+      await AsyncStorage.setItem("savedEmail", emailAddress);
+    } else {
+      await AsyncStorage.removeItem("savedEmail");
+    }
+  };
+
   const handleForgotPassword = () => {
-    router.push('/forgot-password');
+    router.push("/forgot-password");
   };
 
   return (
@@ -73,88 +104,84 @@ const Login = () => {
       style={styles.container}
     >
       <SafeAreaView>
-      {isLoading && (
-        <View style={defaultStyles.loadingOverlay}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-      )}
-      
-      <View style={styles.headerContainer}>
-        <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
-      </View>
+        {isLoading && (
+          <View style={defaultStyles.loadingOverlay}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        )}
 
-      <View style={styles.formContainer}>
-        <CustomInput
-          icon="mail-outline"
-          placeholder="Email"
-          value={emailAddress}
-          onChangeText={(value) => {
-            setEmailAddress(value)
-            validateForm()
-          }}
-          error={!!errors.email}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-
-        <CustomInput
-          icon="lock-closed-outline"
-          placeholder="Password"
-          value={password}
-          onChangeText={(value) => {
-            setPassword(value)
-            validateForm()
-          }}
-          error={!!errors.password}
-          isPassword
-        />
-        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-
-        <View style={styles.optionsContainer}>
-          <TouchableOpacity 
-            style={styles.rememberMeContainer}
-            onPress={() => setRememberMe(!rememberMe)}
-          >
-            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-              {rememberMe && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </View>
-            <Text style={styles.rememberMeText}>Remember me</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={handleForgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+        <View style={styles.headerContainer}>
+          <Image source={require("@/assets/images/icon.png")} style={styles.logo} />
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Sign in to continue</Text>
         </View>
 
-        <View style={styles.btnContainer}>
-          <TouchableOpacity 
-            style={[defaultStyles.btn, styles.signInButton]} 
-            onPress={onSignInPress}
-          >
-            <Text style={styles.btnPrimaryText}>Sign In</Text>
-          </TouchableOpacity>
+        <View style={styles.formContainer}>
+          <CustomInput
+            icon="mail-outline"
+            placeholder="Email"
+            value={emailAddress}
+            onChangeText={(value) => {
+              setEmailAddress(value);
+              if (rememberMe) {
+                AsyncStorage.setItem("savedEmail", value);
+              }
+            }}
+            error={!!errors.email}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.divider} />
+          <CustomInput
+            icon="lock-closed-outline"
+            placeholder="Password"
+            value={password}
+            onChangeText={(value) => {
+              setPassword(value);
+            }}
+            error={!!errors.password}
+            isPassword
+          />
+          {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+
+          <View style={styles.optionsContainer}>
+            <TouchableOpacity style={styles.rememberMeContainer} onPress={toggleRememberMe}>
+              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.rememberMeText}>Remember me</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleForgotPassword}>
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            onPress={() => router.replace('/registration')}
-            style={[defaultStyles.btnSecondary, styles.signUpButton]}
-          >
-            <Text style={[styles.btnPrimaryText, {color: Colors.primary}]}>
-              Create an Account
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.btnContainer}>
+            <TouchableOpacity
+              style={[defaultStyles.btn, styles.signInButton]}
+              onPress={onSignInPress}
+            >
+              <Text style={styles.btnPrimaryText}>Sign In</Text>
+            </TouchableOpacity>
+
+            <View style={styles.dividerContainer}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.divider} />
+            </View>
+
+            <TouchableOpacity
+              onPress={() => router.replace("/registration")}
+              style={[defaultStyles.btnSecondary, styles.signUpButton]}
+            >
+              <Text style={[styles.btnPrimaryText, { color: Colors.primary }]}>
+                Create an Account
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -163,10 +190,10 @@ const Login = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   headerContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 60,
     marginBottom: 40,
   },
@@ -195,15 +222,15 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   optionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginTop: 16,
     marginBottom: 24,
   },
   rememberMeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   checkbox: {
     width: 20,
@@ -212,15 +239,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.grey,
     borderRadius: 4,
     marginRight: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   checkboxChecked: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
   checkmark: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 14,
   },
   rememberMeText: {
@@ -230,41 +257,10 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     color: Colors.primary,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   btnContainer: {
     gap: 16,
-  },
-  signInButton: {
-    height: 50,
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
-  },
-  signUpButton: {
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  btnPrimaryText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.light.background,
-  },
-  dividerText: {
-    color: Colors.grey,
-    paddingHorizontal: 16,
-    fontSize: 14,
   },
 });
 
