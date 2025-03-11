@@ -180,7 +180,7 @@ const ChatInput = ({ onShouldSend }: Props) => {
 
 
   return (
-    <BlurView intensity={90} tint="extraLight" style={{ paddingBottom: bottom, paddingTop: 10 }}>
+    <BlurView intensity={90} tint="extraLight" style={[styles.inputContainer, {paddingBottom: bottom}]}>
       <View style={styles.row}>
         <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
           <Ionicons name="add" size={24} color={Colors.grey} />
@@ -226,6 +226,11 @@ const ChatInput = ({ onShouldSend }: Props) => {
 };
 
 const styles = StyleSheet.create({
+  inputContainer: {paddingTop: 10, borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(230,230,230,0.5)'},
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -239,6 +244,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderColor: Colors.greyLight,
     backgroundColor: Colors.light.background,
+    
   },
   roundBtn: {
     width: 30,
