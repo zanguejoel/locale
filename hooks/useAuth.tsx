@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password: formData.password,
       }, {
         headers: {
-          "X-Mobile-Recaptcha-Token": "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1",
+          "X-Mobile-Recaptcha-Token": process.env.EXPO_PUBLIC_RECAPTCHA_TOKEN,
           "Content-Type": "application/json",
         }
       });
@@ -130,7 +130,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         router.push(`/email-verification?email=${formData?.email}`)
       }
-
     } catch (error) {
       console.error("Sign up error:", error);
       throw error;
