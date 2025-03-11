@@ -209,7 +209,7 @@ const ChatMessage = memo(({
     };
   }, [streamingContent]);
 
- 
+
 
   // Handle fading in content when loaded
   useEffect(() => {
@@ -413,7 +413,6 @@ const ChatMessage = memo(({
       );
     }
 
-    // Content is an image
     if (isImage(content)) {
       return (
         <Pressable
@@ -448,7 +447,7 @@ const ChatMessage = memo(({
       );
     }
 
-   //  console.log('-----------streamWorking', streamWorking)
+    //  console.log('-----------streamWorking', streamWorking)
     // Regular text content (markdown)
     return (
       <Pressable
@@ -471,7 +470,7 @@ const ChatMessage = memo(({
             streamingContent && { backgroundColor: `transparent` },
           ]}
         >
-         
+
           <MarkdownDisplay>{content}</MarkdownDisplay>
         </Animated.View>
       </Pressable>
@@ -537,7 +536,7 @@ const styles = StyleSheet.create({
   messageContent: {
     //flex: 1,
     maxWidth: '100%',
-    
+
   },
   contentContainer: {
     borderRadius: BORDER_RADIUS,

@@ -92,7 +92,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [streamWorking, setStreamWorking] = useState(false);
 
   useEffect(() => {
-    fetchConversation();
+    fetchConversation(null, null, setCurrentRoom);
     Keyboard.dismiss();
   }, []);
 
@@ -294,8 +294,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (operation) {
       formData.append('operations', JSON.stringify(operation));
     }
-
     const conversationId = currentConversationId || '';
+
     if (conversationId) {
       formData.append('conversation_id', conversationId);
     } else {
@@ -340,7 +340,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError]);
 
-  const fetchConversation = useCallback(async (q?: string, limitValue?: number) => {
+  const fetchConversation = useCallback(async (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => {
     const effectiveLimit = limitValue || 20;
     try {
       await api.setAuthToken(user?.token || '');
@@ -364,7 +364,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setConversations(response.data);
         if (response.data.length > 0 && response.data[0].id) {
-          // setCurrentRoom(response.data[0].id);
+          updateCurrentRoom?.(response.data[0].id);
         }
       }
       return response.data;

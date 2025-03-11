@@ -1779,6 +1779,27 @@ PODS:
     - React-perflogger (= 0.76.6)
     - React-utils (= 0.76.6)
   - RevenueCat (5.15.0)
+  - RNCAsyncStorage (1.23.1):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNFlashList (1.7.3):
     - DoubleConversion
     - glog
@@ -2059,6 +2080,7 @@ DEPENDENCIES:
   - "React-utils (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@7.26.7__@types+react@18.3.18_react@18.3.1/node_modules/react-native/ReactCommon/react/utils`)"
   - ReactCodegen (from `build/generated/ios`)
   - "ReactCommon/turbomodule/core (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@7.26.7__@types+react@18.3.18_react@18.3.1/node_modules/react-native/ReactCommon`)"
+  - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNFlashList (from `../node_modules/@shopify/flash-list`)"
   - RNFS (from `../node_modules/react-native-fs`)
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
@@ -2263,6 +2285,8 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.7_@babel+preset-env@7.26.7_@babel+core@7.26.7__@types+react@18.3.18_react@18.3.1/node_modules/react-native/ReactCommon"
+  RNCAsyncStorage:
+    :path: "../node_modules/@react-native-async-storage/async-storage"
   RNFlashList:
     :path: "../node_modules/@shopify/flash-list"
   RNFS:
@@ -2376,6 +2400,10 @@ SPEC CHECKSUMS:
   ReactCodegen: a21c91879d6b73e6b6dc574eb0632e1c3be888d6
   ReactCommon: 832cdd669aeecd430d9ca1975d15676b38d0b263
   RevenueCat: 90e7642834cabc3e04e396117776bfb3f50debbf
+<<<<<<< HEAD
+  RNCAsyncStorage: a927b768986f83467b635cf6d7559e6edb46db7a
+=======
+>>>>>>> dev
   RNFlashList: 2ad2738637fa763b87b763578feab47d3e67c4c1
   RNFS: 4ac0f0ea233904cb798630b3c077808c06931688
   RNGestureHandler: 4dfa0ea7f0cf94b5b1b4f9ea6b40530696846c8c

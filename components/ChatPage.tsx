@@ -21,7 +21,7 @@ const ChatPage = () => {
   const contentHeightRef = useRef(0);
   const layoutHeightRef = useRef(0);
   const isManualScrollRef = useRef(false);
-  const isScrollingRef = useRef(false);
+
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const chat = useChat();
@@ -29,6 +29,7 @@ const ChatPage = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   // Initial setup when conversation changes
+
   useEffect(() => {
     if (id) {
       setCurrentRoom(id);
@@ -138,7 +139,13 @@ const ChatPage = () => {
       scrollToBottomWithDelay(50);
     }
   };
-  // Determine which message should show a loading or streaming state
+
+  useEffect(() => {
+    if (isSending) {
+      messageListRef?.current?.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
+
   const renderItem = ({ item, index }: { item: Message; index: number }) => {
     const isLastBotMessage =
       item.role === Role.Bot &&
@@ -204,13 +211,12 @@ const ChatPage = () => {
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={70}
+        keyboardVerticalOffset={100}
         style={styles.keyboardAvoidingView}
       >
         {messages.length === 0 && <MessageIdeas onSelectCard={sendMessage} />}
         <MessageInput
           onShouldSend={(message, type, operation) => {
-            // Make sure auto-scroll is enabled when sending a new message
             isManualScrollRef.current = false;
             setAutoScrollEnabled(true);
             scrollToBottomWithDelay(300);

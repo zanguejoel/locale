@@ -112,7 +112,6 @@ const Registration = () => {
       ...prev,
       [field]: value
     }));
-    validateForm();
   };
   const onSignUpPress = async () => {
 
