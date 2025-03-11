@@ -11,6 +11,8 @@ export default {
                     kotlinVersion: '1.9.25',
                 },
             },
+            
         ],
+        'onnxruntime-react-native',
     ],
 };
