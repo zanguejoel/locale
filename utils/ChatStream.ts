@@ -17,7 +17,8 @@ export const processStream = async (
   setStream: SetStreamFunction,
   handleError: (error: string) => void,
   setIntermediate: (value: string) => void,
-  setStreamWorking: (v: boolean) => void
+  setStreamWorking: (v: boolean) => void,
+  setAdditionalData?: (a: []) => void
 ): Promise<StreamData | null> => {
   setStreamWorking(true)
   let res: StreamData | null = null;
@@ -38,7 +39,6 @@ export const processStream = async (
 
   while (true) {
     const { value, done } = await reader.read();
-
     if (done) break;
 
     const chunk = decoder.decode(value, { stream: true });
@@ -55,17 +55,21 @@ export const processStream = async (
           switch (data.type) {
             case 'stream':
               if (data.content) {
-
                 setStream((prev) => prev + data.content);
               }
               break;
             case 'state':
               if (data.content) {
+
                 setIntermediate(data.content);
               }
               break;
             case 'final':
               res = data;
+              if (data?.data?.additional_data) {
+                setAdditionalData?.(data?.data?.additional_data)
+              }
+
               // setStream('');
               break;
             case 'error':

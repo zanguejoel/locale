@@ -6,7 +6,6 @@ const Index = () => {
   const { user, isSignedIn } = useAuth();
 
   if (user?.email) {
-    // console.log("User----", user)
     Redirect({ href: "/(chat)/new" });
   } else if (!isSignedIn) {
     Redirect({ href: "/login" });

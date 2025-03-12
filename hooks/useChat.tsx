@@ -91,23 +91,28 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pastedActive, setPastedActive] = useState(false);
   const [streamWorking, setStreamWorking] = useState(false);
 
+  const [additionalData, setAdditionalData] = useState([]);
+
+
   useEffect(() => {
     fetchConversation(null, null, setCurrentRoom);
     Keyboard.dismiss();
   }, []);
 
-/*   useEffect(() => {
-    if (currentConversationId) {
-      fetchMessages(currentConversationId);
-    }
-  }, [currentConversationId]); */
+  /*   useEffect(() => {
+      if (currentConversationId) {
+        fetchMessages(currentConversationId);
+      }
+    }, [currentConversationId]); */
 
   useEffect(() => {
     setMessages(prev => updateLastItem(prev, message => ({
       ...message,
       content: stream,
+      files: additionalData
     })));
-  }, [stream]);
+  }, [stream, additionalData]);
+
 
   const handleSetConversation = (id: string) => {
     setCurrentConversationId(id);
@@ -315,10 +320,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const conv = res.data?.id;
-      if(conv) {
-      formData.append('conversation_id', conv);
-      setConversations(prev => [...prev, res.data]);
-      setCurrentConversationId(conv);
+      if (conv) {
+        formData.append('conversation_id', conv);
+        setConversations(prev => [...prev, res.data]);
+        setCurrentConversationId(conv);
       } else {
         setIsSending(false);
         setInputDisabled(false);
@@ -351,6 +356,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         handleError,
         setIntermediate,
         setStreamWorking,
+        setAdditionalData
       );
       setInputDisabled(false);
       setPastedActive(false);
@@ -386,7 +392,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setConversations(response.data);
         if (response.data.length > 0 && response.data[0].id) {
-         // updateCurrentRoom?.(response.data[0].id);
+          // updateCurrentRoom?.(response.data[0].id);
         }
       }
       return response.data;

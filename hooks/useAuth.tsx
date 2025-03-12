@@ -15,7 +15,7 @@ interface FormData {
 interface AuthContextType {
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (formatData: FormData, password: string, router: any) => Promise<void>;
+  signUp: (formatData: FormData, router: any) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => void;
   isLoading: boolean;
@@ -84,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (response.ok) {
-        router.push(`/login`)
+        router.push(`/success-page`)
       }
 
     } catch (error) {
@@ -109,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const signUp = async (formData: FormData, captchaToken: string, router: any) => {
+  const signUp = async (formData: FormData, router: any) => {
     try {
       setIsLoading(true);
 

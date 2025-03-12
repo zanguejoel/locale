@@ -32,8 +32,9 @@ const EmailVerification = () => {
     const [error, setError] = useState<ErrorType>({});
     const [isSubmitted, setIsSubmitted] = useState(false);
 
-    const handleResetPassword = async () => {
+    const handleConfirm = async () => {
         setIsSubmitted(true);
+
         try {
             await confirmEmail(email, code, router);
         } catch (err: any) {
@@ -82,7 +83,7 @@ const EmailVerification = () => {
                     <View style={styles.btnContainer}>
                         <TouchableOpacity
                             style={[defaultStyles.btn, styles.resetButton]}
-                            onPress={handleResetPassword}
+                            onPress={handleConfirm}
                         >
                             <Text style={styles.buttonText}>Submit</Text>
                         </TouchableOpacity>
