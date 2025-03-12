@@ -103,12 +103,13 @@ const Login = () => {
       keyboardVerticalOffset={70}
       style={styles.container}
     >
-      <SafeAreaView>
-        {isLoading && (
+       {isLoading && (
           <View style={defaultStyles.loadingOverlay}>
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
         )}
+      <SafeAreaView>
+        
 
         <View style={styles.headerContainer}>
           <Image source={require("@/assets/images/icon.png")} style={styles.logo} />

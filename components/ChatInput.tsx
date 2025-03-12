@@ -201,7 +201,7 @@ const ChatInput = ({ onShouldSend }: Props) => {
         </Animated.View>
 
         <TextInput
-          autoFocus
+          // autoFocus
           ref={inputRef}
           placeholder="Message"
           style={styles.messageInput}

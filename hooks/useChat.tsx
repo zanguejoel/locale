@@ -96,11 +96,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     Keyboard.dismiss();
   }, []);
 
-  useEffect(() => {
+/*   useEffect(() => {
     if (currentConversationId) {
       fetchMessages(currentConversationId);
     }
-  }, [currentConversationId]);
+  }, [currentConversationId]); */
 
   useEffect(() => {
     setMessages(prev => updateLastItem(prev, message => ({
@@ -108,6 +108,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       content: stream,
     })));
   }, [stream]);
+
+  const handleSetConversation = (id: string) => {
+    setCurrentConversationId(id);
+    fetchMessages(id);
+  }
 
 
   const optimizeImage = useCallback(async (imagePath: string): Promise<string> => {
@@ -299,9 +304,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (conversationId) {
       formData.append('conversation_id', conversationId);
     } else {
-      setIsSending(false);
-      setInputDisabled(false);
-      return;
+
+      const res = await api.post('/conversation', { title: 'New Chat' });
+      if (!res.ok || !res.data) {
+        throw new Error('Failed to create new conversation');
+      }
+
+      const conv = res.data?.id;
+      if(conv) {
+      formData.append('conversation_id', conv);
+      setConversations(prev => [...prev, res.data]);
+      setCurrentConversationId(conv);
+      } else {
+        setIsSending(false);
+        setInputDisabled(false);
+        throw new Error('Failed to create new conversation');
+      }
     }
 
     const _controller = new AbortController();
@@ -364,7 +382,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setConversations(response.data);
         if (response.data.length > 0 && response.data[0].id) {
-          updateCurrentRoom?.(response.data[0].id);
+         // updateCurrentRoom?.(response.data[0].id);
         }
       }
       return response.data;
@@ -426,7 +444,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const setCurrentRoom = useCallback((conversationId: string) => {
-    setCurrentConversationId(conversationId);
+    handleSetConversation(conversationId);
     markAsRead(conversationId);
   }, [markAsRead]);
 
@@ -456,6 +474,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      setMessages([]);
       if (currentConversationId === conversationId) {
         if (conversations.length > 1) {
           const nextConv = conversations.find(c => c.id !== conversationId);

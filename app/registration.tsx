@@ -139,16 +139,17 @@ const Registration = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
+       {isLoading && (
+            <View style={defaultStyles.loadingOverlay}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          )}
       <SafeAreaView>
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-          {isLoading && (
-            <View style={defaultStyles.loadingOverlay}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-            </View>
-          )}
+         
 
           <View style={styles.headerContainer}>
             <Image source={require('@/assets/images/icon.png')} style={styles.logo} />

@@ -466,7 +466,7 @@ const ChatMessage = memo(({
         <Animated.View
           style={[
             styles.markdownContainer,
-            streamingContent && { transform: [{ scale: pulseAnim }] },
+            streamingContent && { transform: [] },
             streamingContent && { backgroundColor: `transparent` },
           ]}
         >

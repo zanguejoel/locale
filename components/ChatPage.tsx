@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing } from 'react-native';
+import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useChat } from '@/hooks/useChat';
@@ -11,6 +11,7 @@ import { Message, Role } from '@/utils/Interfaces';
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { PanGestureHandler } from 'react-native-gesture-handler';
 
 const ChatPage = () => {
   // States
@@ -81,7 +82,7 @@ const ChatPage = () => {
   // Auto-scroll when streaming content updates
   useEffect(() => {
     if (stream && autoScrollEnabled && !isManualScrollRef.current) {
-      scrollToBottomWithDelay(100);
+      scrollToBottomWithDelay(0);
     }
   }, [stream]);
 
@@ -138,7 +139,7 @@ const ChatPage = () => {
     setLastContentHeight(contentHeight);
   };
 
-  const scrollToBottomWithDelay = (delay = 100) => {
+  const scrollToBottomWithDelay = (delay = 0) => {
     // Clear any existing timeout
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
@@ -169,12 +170,12 @@ const ChatPage = () => {
 
     // If auto-scroll is enabled, scroll to bottom when content changes
     if (autoScrollEnabled && !isManualScrollRef.current && messages.length > 0) {
-      scrollToBottomWithDelay(50);
+      scrollToBottomWithDelay(0);
     }
   };
 
   useEffect(() => {
-    if (isSending) {
+    if (isSending && messageListRef?.current && messages.length) {
       messageListRef?.current?.scrollToEnd({ animated: true });
     }
   }, [messages]);
@@ -222,8 +223,9 @@ const ChatPage = () => {
          <Text style={styles.welcomeText}>How can I assist you today?</Text>
        </Animated.View>
         )}
-
+  <PanGestureHandler>
         <FlashList
+          renderScrollComponent={ScrollView}
           showsVerticalScrollIndicator={false}
           ref={messageListRef}
           initialScrollIndex={0}
@@ -236,12 +238,9 @@ const ChatPage = () => {
           scrollEventThrottle={16}
           extraData={[isSending, stream]}
           onContentSizeChange={handleContentSizeChange}
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
-            autoscrollToTopThreshold: 0,
-          }}
+         
         />
-
+</PanGestureHandler>
         {showScrollButton && (
           <TouchableOpacity
             style={styles.scrollButton}
