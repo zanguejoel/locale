@@ -103,16 +103,16 @@ const Login = () => {
       keyboardVerticalOffset={70}
       style={styles.container}
     >
-       {isLoading && (
-          <View style={defaultStyles.loadingOverlay}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-          </View>
-        )}
+      {isLoading && (
+        <View style={defaultStyles.loadingOverlay}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      )}
       <SafeAreaView>
-        
+
 
         <View style={styles.headerContainer}>
-          <Image source={require("@/assets/images/icon.png")} style={styles.logo} />
+          <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
         </View>
@@ -164,7 +164,7 @@ const Login = () => {
               style={[defaultStyles.btn]}
               onPress={onSignInPress}
             >
-              <Text style={{color: '#fff'}}>Sign In</Text>
+              <Text style={{ color: '#fff' }}>Sign In</Text>
             </TouchableOpacity>
 
             <View style={styles.dividerContainer}>
@@ -199,8 +199,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 150,
+    height: 75,
     marginBottom: 20,
   },
   title: {

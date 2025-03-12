@@ -42,7 +42,6 @@ const Registration = () => {
   const [errors, setErrors] = useState<ErrorType>({});
   const [isValidForm, setIsFormValid] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
@@ -119,17 +118,10 @@ const Registration = () => {
 
     if (validateForm()) {
       try {
-        await signUp(formData, captchaToken, router);
+        await signUp(formData, router);
       } catch (err: any) {
         Alert.alert("Error", err.message || "Registration failed");
       }
-    }
-  };
-
-  const onMessage = (event: any) => {
-    const message = event.nativeEvent.data;
-    if (message) {
-      setCaptchaToken(message);
     }
   };
 
@@ -149,10 +141,8 @@ const Registration = () => {
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-
-
           <View style={styles.headerContainer}>
-            <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+            <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>Sign up to get started</Text>
           </View>
@@ -256,8 +246,8 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 150,
+    height: 75,
     marginBottom: 20,
   },
   title: {

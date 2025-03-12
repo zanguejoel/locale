@@ -198,7 +198,9 @@ const ChatPage = () => {
 
   return (
     <View style={defaultStyles.pageContainer}>
-      <Stack.Screen options={{ headerTitle: () => <></> }} />
+      <Stack.Screen options={{
+        headerTitle: () => <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
+      }} />
 
       <View style={styles.page} onLayout={onLayout}>
         {messages.length === 0 && (
@@ -315,6 +317,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderTopWidth: 1,
     borderTopColor: 'rgba(230,230,230,0.5)',
+  },
+  logo: {
+    width: 110,
+    height: 30
   },
   scrollButton: {
     position: 'absolute',
