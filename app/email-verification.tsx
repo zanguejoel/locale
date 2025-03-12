@@ -26,7 +26,7 @@ const TIMER_DURATION = 60;
 
 const EmailVerification = () => {
     const { isLoading, confirmEmail } = useAuth();
-    const { email } = useLocalSearchParams();
+    const { email, password } = useLocalSearchParams();
 
     const [code, setCode] = useState("");
     const [error, setError] = useState<ErrorType>({});
@@ -36,7 +36,7 @@ const EmailVerification = () => {
         setIsSubmitted(true);
 
         try {
-            await confirmEmail(email, code, router);
+            await confirmEmail(email, code, router, password);
         } catch (err: any) {
             Alert.alert(
                 "Error",
@@ -120,8 +120,8 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
     logo: {
-        width: 80,
-        height: 80,
+        width: 150,
+        height: 75,
         marginBottom: 20,
     },
     title: {

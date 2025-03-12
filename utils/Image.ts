@@ -5,14 +5,17 @@ import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 
 // https://stackoverflow.com/questions/73706343/i-want-to-download-an-image-with-react-native-expo-from-a-url
-export const downloadAndSaveImage = async (imageUrl: string) => {
-  let fileUri = FileSystem.documentDirectory + `${new Date().getTime()}.jpg`;
+export const downloadAndSaveImage = async (imageUrl: string): Promise<any> => {
+  // Create a unique file URI using the current timestamp
+  const fileUri = `${FileSystem.documentDirectory}${Date.now()}.jpg`;
 
   try {
-    const res = await FileSystem.downloadAsync(imageUrl, fileUri);
-    return saveFile(res.uri);
-  } catch (err) {
-    console.error('FS Err: ', err);
+    // Download the image to the file URI
+    const response = await FileSystem.downloadAsync(imageUrl, fileUri);
+    // Save the file and return the result
+    return saveFile(response.uri);
+  } catch (error) {
+    console.error('File system error:', error);
   }
 };
 
