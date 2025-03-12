@@ -21,7 +21,7 @@ interface AuthContextType {
   isLoading: boolean;
   isSignedIn: boolean;
   forgotPassword: (e: string) => {}
-  confirmEmail: (e: string, s: string) => {}
+  confirmEmail: (e: string, s: string, r: any, p: string) => {}
   updateUser: (formatData: FormData,) => Promise<void>;
 }
 
@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const confirmEmail = async (email: string, code: string, router: any) => {
+  const confirmEmail = async (email: string, code: string, router: any, password: string) => {
     try {
       const response = await api.post<{ token: string } | any>(`/auth/verify-email`, {
         email: email,
@@ -84,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (response.ok) {
-        router.push(`/success-page`)
+        router.push(`/success-page?email=${email}&password=${password}`)
       }
 
     } catch (error) {
@@ -127,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       if (response.ok) {
-        router.push(`/email-verification?email=${formData?.email}`)
+        router.push(`/email-verification?email=${formData?.email}&password=${formData.password}`)
       }
     } catch (error) {
       console.error("Sign up error:", error);

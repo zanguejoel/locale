@@ -1,9 +1,10 @@
 import Colors from '@/constants/Colors';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
-import {View, Text, StyleSheet, Pressable, SafeAreaView, Image} from 'react-native';
+import { View, Text, StyleSheet, Pressable, SafeAreaView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import React from "react";
+import { useChat } from '@/hooks/useChat';
 
 const rawPage = [{
   id: 1,
@@ -27,13 +28,19 @@ interface IItemRaw {
 const Page = () => {
   const router = useRouter();
   const { signOut } = useAuth();
+  const { createNewConversation } = useChat();
 
+
+  const handleSignOut = async () => {
+    await createNewConversation()
+    signOut()
+  }
   const handleInstruction = (type: string) => {
     switch (type) {
       case 'profile':
         return router.push('/profile')
       case 'sign_out':
-        return signOut()
+        return handleSignOut()
     }
   }
 
@@ -69,7 +76,7 @@ const Page = () => {
         </View>
 
         <View style={styles.footer}>
-            <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
+          <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
           <Text style={styles.appVersion}>App Version 1.0.0</Text>
         </View>
       </View>

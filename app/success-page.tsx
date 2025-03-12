@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { defaultStyles } from "@/constants/Styles";
 import {
     View,
@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import Colors from "@/constants/Colors";
 import { router, useLocalSearchParams } from "expo-router";
+import { useAuth } from "@/hooks/useAuth";
+import { useChat } from "@/hooks/useChat";
 
 
 interface ErrorType {
@@ -18,33 +20,43 @@ interface ErrorType {
 }
 
 const SuccessPage = () => {
+    const { signIn } = useAuth();
 
-    const handleBackToLogic = () => {
-        router.replace('/login')
+    const { email, password } = useLocalSearchParams();
+    const [isLoading, setLoading] = useState(false)
+    const handleHome = async () => {
+        setLoading(true)
+        try {
+            await signIn(email, password);
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setLoading(false)
+        }
     }
 
-
     return (
-        <View
-            style={styles.container}
-        >
+        <View style={styles.container} >
             <SafeAreaView style={styles.content}>
                 <View style={styles.headerContainer}>
                     <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
-                    <View style={styles.titleContainer}>
-                        <Text style={styles.title}>Success!</Text>
-                        <Text style={styles.subtitle}>
-                            Congratulations, your account has been successfully created.
-                        </Text>
+                    <View style={{ flex: 1, justifyContent: 'center', bottom: 60 }}>
+                        <View style={styles.titleContainer}>
+                            <Text style={styles.title}>Success!</Text>
+                            <Text style={styles.subtitle}>
+                                Congratulations, your account has been successfully created.
+                            </Text>
+                        </View>
                     </View>
+
                 </View>
                 <View style={styles.formContainer}>
                     <View style={styles.btnContainer}>
                         <TouchableOpacity
                             style={[defaultStyles.btn, styles.resetButton]}
-                            onPress={handleBackToLogic}
+                            onPress={handleHome}
                         >
-                            <Text style={styles.buttonText}>Submit</Text>
+                            <Text style={styles.buttonText}>Home</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -63,6 +75,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     headerContainer: {
+        flex: 1,
         alignItems: 'center',
         marginTop: 60,
         marginBottom: 40,
@@ -74,7 +87,6 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
     titleContainer: {
-        marginTop: 50
     },
     logo: {
         width: 150,
