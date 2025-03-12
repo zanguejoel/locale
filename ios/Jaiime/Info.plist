@@ -42,9 +42,33 @@
 		<dict>
 			<key>NSAllowsArbitraryLoads</key>
 			<false/>
+			<key>UIStatusBarStyle</key>
+			<string>UIStatusBarStyleDefault</string>
+			<key>UISupportedInterfaceOrientations</key>
+			<array>
+				<string>UIInterfaceOrientationPortrait</string>
+				<string>UIInterfaceOrientationPortraitUpsideDown</string>
+			</array>
+			<key>UISupportedInterfaceOrientations~ipad</key>
+			<array>
+				<string>UIInterfaceOrientationPortrait</string>
+				<string>UIInterfaceOrientationPortraitUpsideDown</string>
+				<string>UIInterfaceOrientationLandscapeLeft</string>
+				<string>UIInterfaceOrientationLandscapeRight</string>
+			</array>
+			<key>UIUserInterfaceStyle</key>
+			<string>Automatic</string>
+			<key>UIViewControllerBasedStatusBarAppearance</key>
+			<false/>
+			<key>NSMicrophoneUsageDescription</key>
+			<string>This app uses the microphone to record voice messages.</string>
+			<key>NSCameraUsageDescription</key>
+			<string>This app needs access to your camera to take photos.</string>
 			<key>NSAllowsLocalNetworking</key>
 			<true/>
 		</dict>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>This app uses the microphone to record voice messages.</string>
 		<key>NSUserActivityTypes</key>
 		<array>
 			<string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
@@ -75,9 +99,5 @@
 		<string>Automatic</string>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
-		<key>NSMicrophoneUsageDescription</key>
-		<string>This app uses the microphone to record voice messages.</string>
-		<key>NSCameraUsageDescription</key>
-		<string>This app needs access to your camera to take photos.</string>
 	</dict>
 </plist>

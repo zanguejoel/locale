@@ -198,7 +198,7 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
   }
 
   return (
-    <BlurView intensity={90} tint="extraLight" style={{ paddingBottom: bottom, paddingTop: 10 }}>
+    <BlurView intensity={90} tint="extraLight" style={[styles.inputContainer, { paddingBottom: bottom }]}>
       {selectedImage && renderSelectedFile()}
       <View style={styles.row}>
         <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
@@ -220,7 +220,7 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
         </Animated.View>
 
         <TextInput
-          autoFocus
+          // autoFocus
           ref={inputRef}
           placeholder="Message"
           style={styles.messageInput}
@@ -244,6 +244,13 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
 };
 
 const styles = StyleSheet.create({
+  inputContainer: {
+    paddingTop: 10, borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(230,230,230,0.5)'
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -257,6 +264,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderColor: Colors.greyLight,
     backgroundColor: Colors.light.background,
+
   },
   roundBtn: {
     width: 30,

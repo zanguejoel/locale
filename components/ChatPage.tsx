@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text } from 'react-native';
+import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useChat } from '@/hooks/useChat';
@@ -10,20 +10,31 @@ import { defaultStyles } from '@/constants/Styles';
 import { Message, Role } from '@/utils/Interfaces';
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { PanGestureHandler } from 'react-native-gesture-handler';
 
 const ChatPage = () => {
+  // States
   const [height, setHeight] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [lastContentHeight, setLastContentHeight] = useState(0);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+  const [isTypingIndicatorVisible, setIsTypingIndicatorVisible] = useState(false);
+
+  // Animation values
+  const scrollButtonAnimation = useRef(new Animated.Value(0)).current;
+  const logoAnimation = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Refs
   const messageListRef = useRef<FlashList<Message>>(null);
   const scrollPositionRef = useRef(0);
   const contentHeightRef = useRef(0);
   const layoutHeightRef = useRef(0);
   const isManualScrollRef = useRef(false);
-
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Hooks
   const chat = useChat();
   const { messages, sendMessage, setCurrentRoom, isSending, stream, fetchMessages } = chat;
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,20 +45,43 @@ const ChatPage = () => {
       setCurrentRoom(id);
       setAutoScrollEnabled(true);
     }
+    // Entrance animation
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+      easing: Easing.out(Easing.quad),
+    }).start();
   }, [id]);
 
   // Force scroll to bottom when messages array changes (new message added)
-  useEffect(() => {
-    // console.log(messages[1].files);
-    if (messages.length > 0 && autoScrollEnabled) {
-      scrollToBottomWithDelay(300);
-    }
-  }, [messages.length]);
+ // Force scroll to bottom when messages array changes (new message added)
+ useEffect(() => {
+  if (messages.length > 0 && autoScrollEnabled) {
+    scrollToBottomWithDelay(300);
+    
+    // Animate logo out
+    Animated.timing(logoAnimation, {
+      toValue: 0,
+      duration: 400,
+      useNativeDriver: true,
+      easing: Easing.out(Easing.quad)
+    }).start();
+  } else if (messages.length === 0) {
+    // Animate logo in
+    Animated.timing(logoAnimation, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+      easing: Easing.out(Easing.quad)
+    }).start();
+  }
+}, [messages.length]);
 
   // Auto-scroll when streaming content updates
   useEffect(() => {
     if (stream && autoScrollEnabled && !isManualScrollRef.current) {
-      scrollToBottomWithDelay(100);
+      scrollToBottomWithDelay(0);
     }
   }, [stream]);
 
@@ -104,7 +138,7 @@ const ChatPage = () => {
     setLastContentHeight(contentHeight);
   };
 
-  const scrollToBottomWithDelay = (delay = 100) => {
+  const scrollToBottomWithDelay = (delay = 0) => {
     // Clear any existing timeout
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
@@ -134,12 +168,12 @@ const ChatPage = () => {
 
     // If auto-scroll is enabled, scroll to bottom when content changes
     if (autoScrollEnabled && !isManualScrollRef.current && messages.length > 0) {
-      scrollToBottomWithDelay(50);
+      scrollToBottomWithDelay(0);
     }
   };
 
   useEffect(() => {
-    if (isSending) {
+    if (isSending && messageListRef?.current && messages.length) {
       messageListRef?.current?.scrollToEnd({ animated: true });
     }
   }, [messages]);
@@ -166,12 +200,29 @@ const ChatPage = () => {
 
       <View style={styles.page} onLayout={onLayout}>
         {messages.length === 0 && (
-          <View style={[styles.logoContainer, { marginTop: height / 2 - 100 }]}>
-            <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.image} />
-          </View>
+         <Animated.View 
+         style={[
+           styles.logoContainer, 
+           { 
+             marginTop: height / 2 - 100,
+             opacity: logoAnimation,
+             transform: [
+               { scale: logoAnimation },
+               { translateY: logoAnimation.interpolate({
+                 inputRange: [0, 1],
+                 outputRange: [20, 0]
+               })}
+             ]
+           }
+         ]}
+       >
+         <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.image} />
+         <Text style={styles.welcomeText}>How can I assist you today?</Text>
+       </Animated.View>
         )}
-
+  <PanGestureHandler>
         <FlashList
+          renderScrollComponent={ScrollView}
           showsVerticalScrollIndicator={false}
           ref={messageListRef}
           initialScrollIndex={0}
@@ -184,12 +235,9 @@ const ChatPage = () => {
           scrollEventThrottle={16}
           extraData={[isSending, stream]}
           onContentSizeChange={handleContentSizeChange}
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
-            autoscrollToTopThreshold: 0,
-          }}
+         
         />
-
+</PanGestureHandler>
         {showScrollButton && (
           <TouchableOpacity
             style={styles.scrollButton}
@@ -208,9 +256,10 @@ const ChatPage = () => {
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={85}
         style={styles.keyboardAvoidingView}
       >
+        <BlurView intensity={80} tint="light" style={styles.inputBlurContainer}>
         {messages.length === 0 && <MessageIdeas onSelectCard={sendMessage} />}
         <MessageInput
           fetchMessages={fetchMessages}
@@ -222,21 +271,31 @@ const ChatPage = () => {
           }}
           isLoading={isSending}
         />
+         </BlurView>
       </KeyboardAvoidingView>
+     
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  // Logo and welcome
   logoContainer: {
     alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
   },
   image: {
-    width: 90,
-    height: 60,
+    width: 120,
+    height: 80,
     resizeMode: 'cover',
+  },
+  welcomeText: {
+    marginTop: 16,
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#000',
+    textAlign: 'center',
   },
   page: {
     flex: 1,
@@ -246,6 +305,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     width: '100%',
+  },
+  inputBlurContainer: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(230,230,230,0.5)',
   },
   scrollButton: {
     position: 'absolute',
@@ -268,7 +334,8 @@ const styles = StyleSheet.create({
     color: Colors.grey,
     fontWeight: '500',
     marginRight: 4,
-  }
+  },
+  
 });
 
 export default ChatPage;

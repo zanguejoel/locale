@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password: formData.password,
       }, {
         headers: {
-          "X-Mobile-Recaptcha-Token": process.env.EXPO_PUBLIC_RECAPTCHA_TOKEN,
+          "X-Mobile-Recaptcha-Token": "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1",
           "Content-Type": "application/json",
         }
       });
