@@ -160,10 +160,10 @@ const Login = () => {
 
           <View style={styles.btnContainer}>
             <TouchableOpacity
-              style={[defaultStyles.btn, styles.signInButton]}
+              style={[defaultStyles.btn]}
               onPress={onSignInPress}
             >
-              <Text style={styles.btnPrimaryText}>Sign In</Text>
+              <Text style={{color: '#fff'}}>Sign In</Text>
             </TouchableOpacity>
 
             <View style={styles.dividerContainer}>
@@ -174,9 +174,9 @@ const Login = () => {
 
             <TouchableOpacity
               onPress={() => router.replace("/registration")}
-              style={[defaultStyles.btnSecondary, styles.signUpButton]}
+              style={[defaultStyles.btnSecondary]}
             >
-              <Text style={[styles.btnPrimaryText, { color: Colors.primary }]}>
+              <Text style={[{ color: Colors.primary }]}>
                 Create an Account
               </Text>
             </TouchableOpacity>
@@ -262,6 +262,24 @@ const styles = StyleSheet.create({
   btnContainer: {
     gap: 16,
   },
+  dividerContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  divider: {
+    width: 140,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  dividerText: {
+    color: Colors.greyLight,
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 20,
+  }
 });
 
 export default Login;
