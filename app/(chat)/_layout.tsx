@@ -428,6 +428,9 @@ const Layout = () => {
           width: dimensions.width * 0.85,
           backgroundColor: '#FFFFFF',
         },
+        drawerType: 'front',
+        drawerAnimationType: 'slide',
+        drawerAnimationDuration: 300,
       })}>
       <Drawer.Screen
         name="new"
