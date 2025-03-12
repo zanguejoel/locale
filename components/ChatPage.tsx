@@ -186,6 +186,7 @@ const ChatPage = () => {
 
     const isLoading = isLastBotMessage && isSending && !stream;
     const isStreaming = isLastBotMessage && isSending && !!stream;
+
     return (
       <ChatMessage
         {...item}

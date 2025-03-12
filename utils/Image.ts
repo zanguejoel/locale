@@ -12,7 +12,7 @@ export const downloadAndSaveImage = async (imageUrl: string) => {
     const res = await FileSystem.downloadAsync(imageUrl, fileUri);
     return saveFile(res.uri);
   } catch (err) {
-    console.log('FS Err: ', err);
+    console.error('FS Err: ', err);
   }
 };
 
@@ -34,7 +34,7 @@ const saveFile = async (fileUri: string) => {
         }
       }
     } catch (err) {
-      console.log('Save err: ', err);
+      console.error('Save err: ', err);
     }
   } else if (status === 'denied') {
     Alert.alert('please allow permissions to download');
@@ -52,7 +52,7 @@ export const copyImageToClipboard = async (imageUrl: string) => {
 
     await Clipboard.setImageAsync(base64);
   } catch (err) {
-    console.log('FS Err: ', err);
+    console.error('FS Err: ', err);
   }
 };
 

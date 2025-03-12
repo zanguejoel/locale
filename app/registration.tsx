@@ -139,17 +139,17 @@ const Registration = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-       {isLoading && (
-            <View style={defaultStyles.loadingOverlay}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-            </View>
-          )}
+      {isLoading && (
+        <View style={defaultStyles.loadingOverlay}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      )}
       <SafeAreaView>
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
-         
+
 
           <View style={styles.headerContainer}>
             <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
@@ -235,49 +235,7 @@ const Registration = () => {
               </View>
             </View>
           </View>
-          {/* <WebView
-            source={{
-              html: `
- <html>
-  <head>
-    <script src="https://www.google.com/recaptcha/api.js?render=6LcmIdYqAAAAAHbUR_1LtEfBaWanvoB1sVP7zMeJ"></script>
-  </head>
-  <body>
-    <script>
-      console.log("WebView loaded");
-      if (typeof grecaptcha === 'undefined') {
-        console.log("reCAPTCHA API not loaded properly");
-      } else {
-        console.log("reCAPTCHA API loaded");
-        grecaptcha.ready(function() {
-          console.log("reCAPTCHA ready");
-          grecaptcha.execute('6LcmIdYqAAAAAHbUR_1LtEfBaWanvoB1sVP7zMeJ', {action: 'submit'})
-            .then(function(token) {
-              console.log("Token generated:", token);
-              window.ReactNativeWebView.postMessage(token);
-            })
-            .catch(function(error) {
-              console.error("Error during reCAPTCHA execution:", error);
-            });
-        });
-      }
-    </script>
-  </body>
-</html>
-    `,
-            }}
-            onMessage={onMessage}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            originWhitelist={['*']}
-            allowFileAccess={true}
-            style={{ height: 100, width: 100 }}
-            onError={(err) => console.error("WebView error:", err)}
-
-          /> */}
-
         </ScrollView>
-
       </SafeAreaView>
     </KeyboardAvoidingView>
   );

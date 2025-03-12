@@ -91,7 +91,6 @@ const Layout = () => {
     // const notInAuthGroup = ["login", "registration"].includes(segments[0]);
 
     if (user?.email) {
-      // console.log("User----", user)
       router.replace("/(chat)/new");
     } else if (!isSignedIn) {
       router.replace("/login");

@@ -91,6 +91,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pastedActive, setPastedActive] = useState(false);
   const [streamWorking, setStreamWorking] = useState(false);
 
+  const [additionalData, setAdditionalData] = useState([]);
+
+
   useEffect(() => {
     fetchConversation(null, null, setCurrentRoom);
     Keyboard.dismiss();
@@ -106,8 +109,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages(prev => updateLastItem(prev, message => ({
       ...message,
       content: stream,
+      files: additionalData
     })));
-  }, [stream]);
+  }, [stream, additionalData]);
+
 
   const handleSetConversation = (id: string) => {
     setCurrentConversationId(id);
@@ -351,6 +356,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         handleError,
         setIntermediate,
         setStreamWorking,
+        setAdditionalData
       );
       setInputDisabled(false);
       setPastedActive(false);
