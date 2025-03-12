@@ -25,9 +25,8 @@ const ChatPage = () => {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const chat = useChat();
-  const { messages, sendMessage, setCurrentRoom, isSending, stream } = chat;
+  const { messages, sendMessage, setCurrentRoom, isSending, stream, fetchMessages } = chat;
   const { id } = useLocalSearchParams<{ id: string }>();
-
   // Initial setup when conversation changes
 
   useEffect(() => {
@@ -116,7 +115,6 @@ const ChatPage = () => {
       if (messageListRef.current) {
         try {
           messageListRef.current.scrollToEnd({ animated: true });
-          console.log('Scrolled to bottom');
         } catch (error) {
           console.error('Failed to scroll to bottom:', error);
         }
@@ -153,7 +151,6 @@ const ChatPage = () => {
 
     const isLoading = isLastBotMessage && isSending && !stream;
     const isStreaming = isLastBotMessage && isSending && !!stream;
-
     return (
       <ChatMessage
         {...item}
@@ -216,11 +213,12 @@ const ChatPage = () => {
       >
         {messages.length === 0 && <MessageIdeas onSelectCard={sendMessage} />}
         <MessageInput
-          onShouldSend={(message, type, operation) => {
+          fetchMessages={fetchMessages}
+          onShouldSend={(message, type, operation, additionalData) => {
             isManualScrollRef.current = false;
             setAutoScrollEnabled(true);
             scrollToBottomWithDelay(300);
-            return sendMessage(message, type, operation);
+            return sendMessage(message, type, operation, additionalData);
           }}
           isLoading={isSending}
         />
