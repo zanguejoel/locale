@@ -1,126 +1,104 @@
-import { presets } from '@/constants/LocalModels';
-import React, {useState} from 'react';
+/**
+ * Sample React Native App
+ * https://github.com/facebook/react-native
+ *
+ * @format
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  StyleSheet,
-  Text,
-  Button,
-  TextInput,
   SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  useColorScheme,
+  Text,
   View,
 } from 'react-native';
-import RNFS, {
-  DownloadBeginCallbackResult,
-  DownloadProgressCallbackResult,
-} from 'react-native-fs';
-import {Pipeline} from 'react-native-transformers';
+import { pipeline } from '@huggingface/transformers';
 
-export default function App() {
-  const [progress, setProgress] = useState<number>(0);
-  const [input, setInput] = useState<string>('We love local LLM');
-  const [output, setOutput] = useState<string>();
+// const taskDisplayNames = Object.values(Models).map((model) => model.title);
 
-  const loadModel = async (preset: {
-    name: string;
-    model: string;
-    onnx_path: string;
-    options?: any;
-  }) => {
-    console.log('Loading model...');
-    setProgress(0);
+function App(): React.JSX.Element {
+  const isDarkMode = useColorScheme() === 'dark';
+  //const backgroundColor = useColor('background');
+  //const color = useColor('foreground');
+  //const textColor = { color };
 
-    try {
-      await Pipeline.TextGeneration.init(preset.model, preset.onnx_path, {
-        verbose: true,
-        fetch: async (url: string) => {
-          console.log('Downloading... ' + url);
+  const [task, setTask] = useState<string | null>(null);
+  const [settings, setSettings] = useState<object>({});
+  const [params, setParams] = useState<object | null>(null);
+  const [download, setDownload] = useState<object>({});
+  const [isLoading, setLoading] = useState<boolean>(false);
 
-          const localPath = `${RNFS.CachesDirectoryPath}/${url
-            .split('/')
-            .pop()!}`;
+  const backgroundStyle = {  };
 
-          if (await RNFS.exists(localPath)) {
-            console.log('Model already downloaded at: ' + localPath);
-            setProgress(1);
-            return localPath;
-          }
+  useEffect(() => {
+    setDownload({});
+    setLoading(false);
+  }, [task]);
 
-          const downloadResumable = RNFS.downloadFile({
-            fromUrl: url,
-            toFile: localPath,
-            background: true,
-            discretionary: true,
-            cacheable: true,
-            progress: (res: DownloadProgressCallbackResult) => {
-              let progressPercent =
-                (res.bytesWritten / res.contentLength) * 100;
-              setProgress(progressPercent);
-            },
-          });
-
-          await downloadResumable.promise;
-
-          console.log('Downloaded model to ' + localPath);
-          setProgress(1);
-          return localPath;
-        },
-        ...preset.options,
-      });
-
-      console.log('Model loaded successfully');
-    } catch (error) {
-      console.error('Model loading failed:', error);
+  const onProgress  = useCallback((event: any) => {
+    if (event?.file) {
+      const { file, status, progress } = event;
+      setLoading(true);
+      setDownload((prev) => ({
+        ...prev,
+        [file]: { status, progress },
+      }));
     }
-  };
+    if (event?.status === 'ready') {
+      setLoading(false);
+    }
+  }, []);
 
-  const AutoComplete = () => {
-    if (!input) return;
-    Pipeline.TextGeneration.generate(input, setOutput);
-  };
+  const run = useCallback(async (useTask: string, model: string, modelOpt: object, ...args: any[]) => {
+    if (!task || !useTask || !args?.length) return;
+    let pipe;
+    try {
+     // logger.time('LOAD');
+      pipe = await pipeline(useTask, model, { ...modelOpt, progress_callback: onProgress });
+     // logger.timeEnd('LOAD');
+     // logger.time('INFER');
+      const result = await pipe._call(...args);
+     // logger.timeEnd('INFER');
+      await pipe.dispose();
+      //logger.log('Result:', result);
+      return result;
+    } catch (e) {
+      console.error(e.stack);
+      await pipe?.dispose();
+      throw e;
+    }
+  }, [task, onProgress]);
+
+  //const SettingsComponent = Models[task]?.Settings;
+  //const ParametersComponent = Models[task]?.Parameters;
+  //const InteractComponent = Models[task]?.Interact;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text>Select a model</Text>
-      {presets.map(preset => (
-        <Button
-          key={preset.name}
-          title={preset.name}
-          onPress={() => loadModel(preset)}
-        />
-      ))}
-      <Text>Input: </Text>
-      <TextInput
-        value={input}
-        onChangeText={setInput}
-        style={styles.input}
-        placeholder="Type something..."
-      />
-      <Text>Output: {output || 'No output yet'}</Text>
-
-      {/* Display progress */}
-      <View style={styles.progressContainer}>
-        <Text>{`Download Progress: ${(progress * 100).toFixed(2)}%`}</Text>
-      </View>
-
-      <Button title="Run" onPress={AutoComplete} />
+    <SafeAreaView style={backgroundStyle}>
+ 
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        style={backgroundStyle}>
+        <Text>okk</Text>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'gray',
-    padding: 8,
-    marginVertical: 8,
-    width: '80%',
-  },
-  progressContainer: {
-    marginVertical: 8,
+    paddingTop: 20,
+    paddingBottom: 80,
   },
 });
+
+export default App;

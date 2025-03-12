@@ -1,6 +1,8 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Redirect } from 'expo-router';
 import 'react-native-gesture-handler';
+import applyGlobalPolyfills from "./prolly" // <-- Change the path
+applyGlobalPolyfills()
 
 const Index = () => {
   const { user, isSignedIn } = useAuth();
