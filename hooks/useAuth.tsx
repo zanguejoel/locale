@@ -126,7 +126,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           "Content-Type": "application/json",
         }
       });
-      console.log('-response', response)
       if (response.ok) {
         router.push(`/email-verification?email=${formData?.email}`)
       }

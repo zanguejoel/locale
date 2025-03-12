@@ -13,10 +13,11 @@ import {
   Alert,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
-import { FontAwesome6 } from '@expo/vector-icons';
+
 import * as ContextMenu from 'zeego/context-menu';
 import { useRevenueCat } from '@/providers/RevenueCat';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +42,8 @@ export const CustomDrawerContent = (props: any) => {
   const [page, setPage] = useState(1);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const navigation = useNavigation();
   const limitRef = useRef(20);
 
@@ -164,6 +167,22 @@ export const CustomDrawerContent = (props: any) => {
     }
   };
 
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      limitRef.current = 20;
+      setHasMore(true);
+      await fetchConversation(query, limitRef.current);
+    } catch (error) {
+      console.error("Error refreshing:", error);
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+
+      }, 1000)
+    }
+  };
+
   const renderRightActions = (chatId: string) => {
     return (
       <View style={styles.swipeActionContainer}>
@@ -246,6 +265,12 @@ export const CustomDrawerContent = (props: any) => {
           onScroll={handleScroll}
           scrollEventThrottle={400}
           contentContainerStyle={styles.scrollViewContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+            />
+          }
         >
           {filteredConversations.map((chat) => {
 
@@ -270,7 +295,7 @@ export const CustomDrawerContent = (props: any) => {
                     <Pressable
                       style={({ pressed }) => [
                         styles.chatItem,
-                        chat?.id?.toString() === currentConversationId && styles.activeChatItem,
+                        chat?.id?.toString() === currentConversationId?.toString() && styles.activeChatItem,
                         pressed && styles.pressedChatItem,
                       ]}
                       onPress={() => router.push(`/(chat)/${chat?.id}`)}
@@ -403,6 +428,9 @@ const Layout = () => {
           width: dimensions.width * 0.85,
           backgroundColor: '#FFFFFF',
         },
+        drawerType: 'front',
+        drawerAnimationType: 'slide',
+        drawerAnimationDuration: 300,
       })}>
       <Drawer.Screen
         name="new"

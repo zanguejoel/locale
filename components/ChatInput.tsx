@@ -1,6 +1,6 @@
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -16,14 +16,16 @@ import { BlurView } from 'expo-blur';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
+import AntDesign from '@expo/vector-icons/AntDesign';
 
 const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 export type Props = {
   onShouldSend: (message: string, type?: string) => void;
+  fetchMessages?: () => void
 };
 
-const ChatInput = ({ onShouldSend }: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
   const [message, setMessage] = useState('');
   const { bottom } = useSafeAreaInsets();
   const expanded = useSharedValue(0);
@@ -31,6 +33,7 @@ const ChatInput = ({ onShouldSend }: Props) => {
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [selectedImage, setSelectedImage] = useState('');
 
   const startRecording = async () => {
     try {
@@ -74,7 +77,6 @@ const ChatInput = ({ onShouldSend }: Props) => {
         return;
       }
 
-      console.log('Audio file saved at:', uri);
       onShouldSend(uri, 'audio');
     } catch (err) {
       console.error('Error stopping the recording:', err);
@@ -115,25 +117,29 @@ const ChatInput = ({ onShouldSend }: Props) => {
   };
 
   const onSend = () => {
-    onShouldSend(message);
+    if (selectedImage) {
+      onShouldSend(selectedImage?.uri, 'image', null, message);
+      fetchMessages?.()
+    } else {
+      onShouldSend(message);
+    }
+    setSelectedImage('')
     setMessage('');
-  };
 
-  const onSelectFile = () => {
   };
 
   const pickImageFromGallery = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images, // Дозволяє вибирати тільки зображення
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 1,
       });
 
       if (!result.canceled) {
-        const uri = result.assets[0].uri;
-        console.log('Selected Image URI:', uri);
-        onShouldSend(uri, 'image');
+        const assets = result.assets[0];
+        setSelectedImage(assets)
+        // onShouldSend(assets.uri, 'image');
       }
     } catch (error) {
       console.error('Error picking image from gallery:', error);
@@ -155,7 +161,6 @@ const ChatInput = ({ onShouldSend }: Props) => {
 
       if (!result.canceled) {
         const uri = result.assets[0].uri;
-        console.log('Photo taken URI:', uri);
         onShouldSend(uri, 'image');
       }
     } catch (error) {
@@ -171,16 +176,30 @@ const ChatInput = ({ onShouldSend }: Props) => {
 
       if (result.canceled) return;
 
-      console.log('Selected document:', result);
       onShouldSend(result.uri, 'file');
     } catch (error) {
       console.error('Error picking document:', error);
     }
   };
 
+  const renderSelectedFile = () => {
+    return (
+      <View style={styles.selectedFileContainer}>
+        <AntDesign onPress={() => setSelectedImage('')} name="closecircleo" style={styles.closeIcon} size={14} color={Colors.red} />
+        <Image
+          source={{ uri: selectedImage?.uri, cache: 'force-cache' }}
+          style={styles.previewImage}
+          resizeMode="cover"
+          onError={(e) => console.error('Error loading inline image:', e.nativeEvent.error)}
+          testID="inline-image"
+        />
+      </View>
+    )
+  }
 
   return (
-    <BlurView intensity={90} tint="extraLight" style={[styles.inputContainer, {paddingBottom: bottom}]}>
+    <BlurView intensity={90} tint="extraLight" style={[styles.inputContainer, { paddingBottom: bottom }]}>
+      {selectedImage && renderSelectedFile()}
       <View style={styles.row}>
         <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
           <Ionicons name="add" size={24} color={Colors.grey} />
@@ -217,7 +236,6 @@ const ChatInput = ({ onShouldSend }: Props) => {
         ) : (
           <TouchableOpacity onPress={isRecording ? stopRecording : startRecording}>
             <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : Colors.grey} />
-            {/* <FontAwesome6 name="microphone" size={24} color={isRecording ? Colors.red : Colors.grey} /> */}
           </TouchableOpacity>
         )}
       </View>
@@ -226,11 +244,13 @@ const ChatInput = ({ onShouldSend }: Props) => {
 };
 
 const styles = StyleSheet.create({
-  inputContainer: {paddingTop: 10, borderTopLeftRadius: 24,
+  inputContainer: {
+    paddingTop: 10, borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(230,230,230,0.5)'},
+    borderTopColor: 'rgba(230,230,230,0.5)'
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -244,7 +264,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderColor: Colors.greyLight,
     backgroundColor: Colors.light.background,
-    
+
   },
   roundBtn: {
     width: 30,
@@ -259,5 +279,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  previewImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+  },
+  selectedFileContainer: {
+    marginBottom: 4,
+    marginLeft: 16,
+  },
+  closeIcon: {
+    left: 33,
+    top: 2,
+    zIndex: 1000
+  }
 });
 export default ChatInput;

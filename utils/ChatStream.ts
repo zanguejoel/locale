@@ -24,7 +24,7 @@ export const processStream = async (
   let buffer = '';
 
   if (!response) {
-    console.log("Error ----");
+    console.error("Error ----");
     throw "error"
   }
 
@@ -55,7 +55,7 @@ export const processStream = async (
           switch (data.type) {
             case 'stream':
               if (data.content) {
-                console.log(`Raw line: ${data.content}`);
+
                 setStream((prev) => prev + data.content);
               }
               break;
@@ -70,14 +70,14 @@ export const processStream = async (
               break;
             case 'error':
               if (data.error) {
-                console.log(`\nError occurred: ${data.error}`);
+                console.error(`\nError occurred: ${data.error}`);
                 handleError(data.error);
               }
               break;
           }
         } catch (e) {
-          console.log(`\nError parsing JSON: ${e instanceof Error ? e.message : String(e)}`);
-          console.log(`Raw line: ${line}`);
+          console.error(`\nError parsing JSON: ${e instanceof Error ? e.message : String(e)}`);
+          console.error(`Raw line: ${line}`);
         }
       }
     }

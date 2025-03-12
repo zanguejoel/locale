@@ -32,6 +32,8 @@ interface ChatMessageProps extends Message {
   streamingContent?: boolean; // Add flag for streaming content
   isSending?: boolean;
   streamWorking?: boolean
+  sendingText?: string
+  imageData?: string
 }
 
 const IMAGE_PREVIEW_SIZE = 240;
@@ -68,10 +70,8 @@ const LoadingDots = memo(() => {
   const animationsRunning = useRef(false);
 
   useEffect(() => {
-    console.log('LoadingDots component mounted, starting animations');
 
     if (animationsRunning.current) {
-      console.log('Animations already running, skipping');
       return;
     }
 
@@ -107,7 +107,6 @@ const LoadingDots = memo(() => {
 
     // Cleanup function to stop animations when component unmounts
     return () => {
-      console.log('LoadingDots component unmounting, stopping animations');
       animations.forEach(anim => anim.stop());
       dotAnimations.forEach(dot => dot.setValue(0));
       animationsRunning.current = false;
@@ -157,6 +156,7 @@ const ChatMessage = memo(({
   streamingContent = false,
   isSending,
   streamWorking,
+  imageData
 }: ChatMessageProps) => {
   const sound = useRef(new Audio.Sound());
   const [isPlaying, setIsPlaying] = useState(false);
@@ -166,7 +166,6 @@ const ChatMessage = memo(({
   const MarkdownDisplay = useMarkdownDisplay();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  // console.log('------------isSending--------', isSending)
 
   // Force loading state to be a boolean
   const isLoading = loading === true;
@@ -177,7 +176,7 @@ const ChatMessage = memo(({
     return audioExtensions.some(ext => uri.toLowerCase().endsWith(ext));
   };
 
-  const isImage = (uri: string) => {
+  const isImage = (uri?: string) => {
     if (!uri) return false;
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
     return imageExtensions.some(ext => uri.toLowerCase().endsWith(ext));
@@ -214,7 +213,6 @@ const ChatMessage = memo(({
   // Handle fading in content when loaded
   useEffect(() => {
     if (!isLoading && !contentLoaded) {
-      // console.log('Starting fade-in animation for content');
       const timer = setTimeout(() => {
         setContentLoaded(true);
         Animated.timing(fadeAnim, {
@@ -230,7 +228,6 @@ const ChatMessage = memo(({
   // Reset content loaded state when loading changes
   useEffect(() => {
     if (isLoading) {
-      console.log('Loading state activated, resetting content loaded state');
       setContentLoaded(false);
       fadeAnim.setValue(0);
     }
@@ -240,7 +237,6 @@ const ChatMessage = memo(({
   useEffect(() => {
     if (imageLoadError && imageAttempts < 3) {
       const timer = setTimeout(() => {
-        console.log(`Retrying image load (attempt ${imageAttempts + 1})...`);
         setImageLoadError(false);
         setImageAttempts(prev => prev + 1);
       }, 1500);
@@ -278,9 +274,24 @@ const ChatMessage = memo(({
   };
 
   const handleImageError = (error: any) => {
-    console.log(`Image failed to load (attempt ${imageAttempts + 1}):`, imageUrl, error?.nativeEvent?.error || '');
     setImageLoadError(true);
   };
+
+  const instructionForImageChatDisplay = () => {
+    if (isImage(imageData)) {
+      return encodeURI(imageData)
+    } else if (content !== '' && files?.length) {
+      return files[0]?.s3_url
+    }
+  }
+
+  const instructionForTextInImageChat = () => {
+    if (isImage(content)) {
+      return content
+    } else {
+      return content
+    }
+  }
 
   const renderImageContent = () => {
 
@@ -337,7 +348,6 @@ const ChatMessage = memo(({
                   resizeMode="cover"
                   onError={handleImageError}
                   onLoad={() => {
-                    console.log('Image loaded successfully');
                     setContentLoaded(true);
                   }}
                   testID="preview-image"
@@ -413,7 +423,7 @@ const ChatMessage = memo(({
       );
     }
 
-    if (isImage(content)) {
+    if (isImage(imageData) || (content !== '' && files?.length)) {
       return (
         <Pressable
           onLongPress={onLongPress}
@@ -435,7 +445,7 @@ const ChatMessage = memo(({
               </View>
             )}
             <Image
-              source={{ uri: encodeURI(content), cache: 'force-cache' }}
+              source={{ uri: instructionForImageChatDisplay(), cache: 'force-cache' }}
               style={styles.previewImage}
               resizeMode="cover"
               onError={(e) => console.error('Error loading inline image:', e.nativeEvent.error)}
@@ -443,11 +453,12 @@ const ChatMessage = memo(({
               testID="inline-image"
             />
           </View>
+          <MarkdownDisplay>{instructionForTextInImageChat()}</MarkdownDisplay>
+
         </Pressable>
       );
     }
 
-    //  console.log('-----------streamWorking', streamWorking)
     // Regular text content (markdown)
     return (
       <Pressable
