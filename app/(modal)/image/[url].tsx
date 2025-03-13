@@ -1,7 +1,15 @@
-import { Ionicons, Octicons } from '@expo/vector-icons';
+import { AntDesign, Ionicons, Octicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Pressable,
+  ActivityIndicator,
+  Animated,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ImageZoom } from '@likashefqet/react-native-image-zoom';
 import { downloadAndSaveImage, shareImage } from '@/utils/Image';
@@ -10,22 +18,48 @@ import {
   BottomSheetModalProvider,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import Colors from '@/constants/Colors';
 import { defaultStyles } from '@/constants/Styles';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-root-toast';
 import { RootSiblingParent } from 'react-native-root-siblings';
 
+
 const Page = () => {
   const { url, prompt } = useLocalSearchParams<{ url: string; prompt?: string }>();
   const { bottom } = useSafeAreaInsets();
 
+  const [isProcessLoading, setProcessLoading] = useState(false);
+  const [isImageSaved, setImageSaved] = useState(false);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isImageSaved) {
+      fadeAnim.setValue(0);
+
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setTimeout(() => {
+          Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            setImageSaved(false);
+          });
+        }, 1500);
+      });
+    }
+  }, [isImageSaved]);
+
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['40%'], []);
-  const handlePresentModalPress = useCallback(() => {
-    bottomSheetModalRef.current?.present();
-  }, []);
+
 
   const handleCloseModalPress = useCallback(() => {
     bottomSheetModalRef.current?.dismiss();
@@ -44,6 +78,51 @@ const Page = () => {
     });
   };
 
+  const handleDownload = async (imgUrl: string) => {
+    setProcessLoading(true);
+    try {
+      await downloadAndSaveImage(imgUrl);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProcessLoading(false);
+      setImageSaved(true);
+    }
+  };
+
+  const handleShareFile = async (url: string) => {
+    setProcessLoading(true);
+
+    try {
+      await shareImage(url as string)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setProcessLoading(false);
+    }
+  }
+
+  const renderImageSavedTitle = () => {
+    if (!isImageSaved) return null;
+
+    return (
+      <Animated.View style={[styles.loadingContainer, { opacity: fadeAnim }]}>
+        <Text style={styles.titleImageSaved}>Image saved !</Text>
+      </Animated.View>
+    );
+  };
+
+  const renderLoading = () => {
+    if (!isProcessLoading) return null;
+
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator color={Colors.primary} size={'small'} />
+        <Text style={styles.titleProcess}>Processing...</Text>
+      </View>
+    );
+  };
+
   return (
     <RootSiblingParent>
       <BottomSheetModalProvider>
@@ -51,7 +130,13 @@ const Page = () => {
           <Stack.Screen
             options={{
               headerRight: () => (
-                <></>
+                <AntDesign
+                  onPress={() => router.back()}
+                  name="closecircleo"
+                  style={styles.closeIcon}
+                  size={24}
+                  color={Colors.dark.text}
+                />
               ),
             }}
           />
@@ -67,26 +152,23 @@ const Page = () => {
             resizeMode="contain"
           />
 
-          <BlurView
-            intensity={95}
-            tint={'dark'}
-            style={[styles.blurview, { paddingBottom: bottom }]}>
+          {renderLoading()}
+
+          {renderImageSavedTitle()}
+
+          <BlurView intensity={95} tint={'dark'} style={[styles.blurview, { paddingBottom: bottom }]}>
             <View style={styles.row}>
-              {/* <TouchableOpacity style={{ alignItems: 'center' }}>
-                <Ionicons name="chatbubble-ellipses-outline" size={24} color="white" />
-                <Text style={styles.btnText}>Edit</Text>
-              </TouchableOpacity> */}
-              {/* <TouchableOpacity style={{ alignItems: 'center' }}>
-                <Ionicons name="brush-outline" size={24} color="white" />
-                <Text style={styles.btnText}>Select</Text>
-              </TouchableOpacity> */}
               <TouchableOpacity
                 style={{ alignItems: 'center', flex: 1 }}
-                onPress={() => downloadAndSaveImage(url)}>
+                onPress={() => handleDownload(url as string)}
+              >
                 <Octicons name="download" size={24} color="white" />
                 <Text style={styles.btnText}>Save</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={{ alignItems: 'center', flex: 1 }} onPress={() => shareImage(url)}>
+              <TouchableOpacity
+                style={{ alignItems: 'center', flex: 1 }}
+                onPress={() => handleShareFile(url)}
+              >
                 <Octicons name="share" size={24} color="white" />
                 <Text style={styles.btnText}>Share</Text>
               </TouchableOpacity>
@@ -99,7 +181,8 @@ const Page = () => {
           index={0}
           snapPoints={snapPoints}
           backgroundStyle={{ backgroundColor: Colors.grey }}
-          handleIndicatorStyle={{ backgroundColor: Colors.greyLight }}>
+          handleIndicatorStyle={{ backgroundColor: Colors.greyLight }}
+        >
           <View style={[styles.modalContainer, { paddingBottom: bottom, flex: 1 }]}>
             <BottomSheetScrollView>
               <View style={{ flex: 1 }}>
@@ -114,7 +197,8 @@ const Page = () => {
             </BottomSheetScrollView>
             <TouchableOpacity
               style={[defaultStyles.btn, { backgroundColor: '#fff', marginTop: 16 }]}
-              onPress={onCopyPrompt}>
+              onPress={onCopyPrompt}
+            >
               <Text style={styles.buttonText}>Copy</Text>
             </TouchableOpacity>
           </View>
@@ -127,14 +211,33 @@ const Page = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#000',
   },
   blurview: {
     width: '100%',
     position: 'absolute',
     bottom: 0,
+  },
+  loadingContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10000,
+  },
+  titleProcess: {
+    marginTop: 10,
+    color: '#fff',
+    fontSize: 12,
+  },
+  titleImageSaved: {
+    marginTop: 10,
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   row: {
     flexDirection: 'row',
@@ -156,6 +259,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
   },
+  closeIcon: {},
   titleText: {
     color: '#fff',
     fontSize: 20,
@@ -173,7 +277,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   closeBtn: {
-    backgroundColor: Colors.dark,
     borderRadius: 20,
     height: 26,
     width: 26,
@@ -181,4 +284,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
 export default Page;

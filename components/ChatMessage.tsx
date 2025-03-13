@@ -593,6 +593,7 @@ const styles = StyleSheet.create({
     color: Colors.light,
   },
   imageContainer: {
+    marginTop: 12,
     position: 'relative',
     width: IMAGE_PREVIEW_SIZE,
     height: IMAGE_PREVIEW_SIZE,
