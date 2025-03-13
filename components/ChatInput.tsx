@@ -34,7 +34,6 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
-
   const startRecording = async () => {
     try {
       const { status } = await Audio.getPermissionsAsync();
@@ -178,7 +177,6 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
 
       if (result.canceled) return;
       const assets = result.assets[0];
-
       setSelectedImage(assets)
 
       // onShouldSend(result.uri, 'file');

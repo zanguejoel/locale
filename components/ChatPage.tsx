@@ -196,6 +196,8 @@ const ChatPage = () => {
     );
   };
 
+  const CustomView = Platform.OS === 'ios' ? PanGestureHandler : View
+
   return (
     <View style={defaultStyles.pageContainer}>
       <Stack.Screen options={{
@@ -226,7 +228,7 @@ const ChatPage = () => {
             <Text style={styles.welcomeText}>How can I assist you today?</Text>
           </Animated.View>
         )}
-        <PanGestureHandler>
+        <CustomView>
           <FlatList
             showsVerticalScrollIndicator={false}
             ref={messageListRef}
@@ -240,7 +242,7 @@ const ChatPage = () => {
             onContentSizeChange={handleContentSizeChange}
 
           />
-        </PanGestureHandler>
+        </CustomView>
         {showScrollButton && (
           <TouchableOpacity
             style={styles.scrollButton}
