@@ -13,11 +13,15 @@ import {
   Platform,
   ScrollView,
   SafeAreaView,
+  Modal,
+  FlatList,
+  TextInput,
 } from "react-native";
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import WebView from "react-native-webview";
+import { Ionicons } from "@expo/vector-icons";
 
 interface ErrorType {
   firstName?: string;
@@ -37,11 +41,39 @@ interface FormData {
   confirmPassword: string;
 }
 
+interface CountryCode {
+  name: string;
+  code: string;
+  dial_code: string;
+  flag: string;
+}
+
+// Sample country codes (you can expand this list)
+const countryCodes: CountryCode[] = [
+  { name: "United States", code: "US", dial_code: "+1", flag: "🇺🇸" },
+  { name: "United Kingdom", code: "GB", dial_code: "+44", flag: "🇬🇧" },
+  { name: "Canada", code: "CA", dial_code: "+1", flag: "🇨🇦" },
+  { name: "Australia", code: "AU", dial_code: "+61", flag: "🇦🇺" },
+  { name: "India", code: "IN", dial_code: "+91", flag: "🇮🇳" },
+  { name: "Nigeria", code: "NG", dial_code: "+234", flag: "🇳🇬" },
+  { name: "Kenya", code: "KE", dial_code: "+254", flag: "🇰🇪" },
+  { name: "France", code: "FR", dial_code: "+33", flag: "🇫🇷" },
+  { name: "Germany", code: "DE", dial_code: "+49", flag: "🇩🇪" },
+  { name: "Japan", code: "JP", dial_code: "+81", flag: "🇯🇵" },
+  { name: "China", code: "CN", dial_code: "+86", flag: "🇨🇳" },
+  { name: "Mexico", code: "MX", dial_code: "+52", flag: "🇲🇽" },
+  { name: "Brazil", code: "BR", dial_code: "+55", flag: "🇧🇷" },
+  { name: "South Africa", code: "ZA", dial_code: "+27", flag: "🇿🇦" },
+];
+
 const Registration = () => {
   const { signUp, isLoading } = useAuth();
   const [errors, setErrors] = useState<ErrorType>({});
   const [isValidForm, setIsFormValid] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [showCountryModal, setShowCountryModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode>(countryCodes[0]);
 
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
@@ -52,10 +84,10 @@ const Registration = () => {
     confirmPassword: "",
   });
 
-
   const validateForm = () => {
     let errors: ErrorType = {};
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    // Using a more flexible regex for international phone numbers
+    const phoneRegex = /^\d{4,15}$/;
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
     // Validate first name
@@ -79,10 +111,11 @@ const Registration = () => {
       errors.email = "Email is invalid";
     }
 
-    // Validate phone
-    if (!formData.phone) {
+    // Validate phone - checking only the number part without the country code
+    const phoneWithoutCode = formData.phone.replace(/\D/g, '');
+    if (!phoneWithoutCode) {
       errors.phone = "Phone number is required";
-    } else if (!phoneRegex.test(formData.phone)) {
+    } else if (!phoneRegex.test(phoneWithoutCode)) {
       errors.phone = "Please enter a valid phone number";
     }
 
@@ -107,24 +140,62 @@ const Registration = () => {
   };
 
   const handleInputChange = (field: keyof FormData, value: string) => {
+    if (field === "phone") {
+      // Format the phone number with spaces or dashes
+      value = formatPhoneNumber(value);
+    }
+    
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   };
-  const onSignUpPress = async () => {
 
+  // Format phone number as user types
+  const formatPhoneNumber = (input: string) => {
+    // Remove all non-digits
+    const phoneDigits = input.replace(/\D/g, '');
+    
+    // Format based on length patterns (customize this based on your needs)
+    if (phoneDigits.length <= 3) {
+      return phoneDigits;
+    } else if (phoneDigits.length <= 6) {
+      return `${phoneDigits.slice(0, 3)} ${phoneDigits.slice(3)}`;
+    } else {
+      return `${phoneDigits.slice(0, 3)} ${phoneDigits.slice(3, 6)} ${phoneDigits.slice(6, 10)}`;
+    }
+  };
+
+  const selectCountry = (country: CountryCode) => {
+    setSelectedCountry(country);
+    setShowCountryModal(false);
+  };
+
+  const filteredCountries = searchQuery 
+    ? countryCodes.filter(country => 
+        country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        country.dial_code.includes(searchQuery)
+      )
+    : countryCodes;
+
+  const onSignUpPress = async () => {
     setFormSubmitted(true);
 
     if (validateForm()) {
       try {
-        await signUp(formData, router);
+        // Combine the country code with the phone number
+        const completePhoneNumber = `${selectedCountry.dial_code}${formData.phone.replace(/\D/g, '')}`;
+        const updatedFormData = {
+          ...formData,
+          phone: completePhoneNumber
+        };
+        
+         await signUp(updatedFormData, router);
       } catch (err: any) {
-        Alert.alert("Error", err.message || "Registration failed");
+        Alert.alert("Error", err || "Registration failed");
       }
     }
   };
-
 
   return (
     <KeyboardAvoidingView
@@ -179,14 +250,28 @@ const Registration = () => {
             />
             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-            <CustomInput
-              icon="call-outline"
-              placeholder="Phone Number"
-              value={formData.phone}
-              onChangeText={(value) => handleInputChange("phone", value)}
-              error={!!errors.phone}
-              keyboardType="phone-pad"
-            />
+            {/* Custom Phone Input with Country Code Selector */}
+            <View style={styles.phoneContainer}>
+              <TouchableOpacity 
+                style={styles.countrySelector}
+                onPress={() => setShowCountryModal(true)}
+              >
+                <Text style={styles.countryFlag}>{selectedCountry.flag}</Text>
+                <Text style={styles.countryCode}>{selectedCountry.dial_code}</Text>
+                <Ionicons name="chevron-down" size={16} color={Colors.grey} />
+              </TouchableOpacity>
+              
+              <View style={[styles.phoneInputContainer, !!errors.phone && styles.inputError]}>
+                <Ionicons name="call-outline" size={20} color={Colors.grey} style={styles.phoneIcon} />
+                <TextInput
+                  style={styles.phoneInput}
+                  placeholder="Phone Number"
+                  value={formData.phone}
+                  onChangeText={(value) => handleInputChange("phone", value)}
+                  keyboardType="phone-pad"
+                />
+              </View>
+            </View>
             {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
             <CustomInput
@@ -227,6 +312,50 @@ const Registration = () => {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Country Code Modal */}
+      <Modal
+        visible={showCountryModal}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Country Code</Text>
+              <TouchableOpacity onPress={() => setShowCountryModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.grey} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color={Colors.grey} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search country or code"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+            
+            <FlatList
+              data={filteredCountries}
+              keyExtractor={(item) => item.code}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.countryItem}
+                  onPress={() => selectCountry(item)}
+                >
+                  <Text style={styles.countryFlag}>{item.flag}</Text>
+                  <Text style={styles.countryName}>{item.name}</Text>
+                  <Text style={styles.countryDialCode}>{item.dial_code}</Text>
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -243,12 +372,11 @@ const styles = StyleSheet.create({
   headerContainer: {
     alignItems: 'center',
     marginTop: 40,
-    marginBottom: 30,
+    marginBottom: 20,
   },
   logo: {
-    width: 150,
-    height: 75,
-    marginBottom: 20,
+    width: 180,
+    height: 100,
   },
   title: {
     fontSize: 28,
@@ -262,6 +390,48 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     paddingHorizontal: 24,
+  },
+  phoneContainer: {
+    flexDirection: 'row',
+    marginTop: 16,
+  },
+  countrySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E1E1E1',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    marginRight: 8,
+  },
+  countryFlag: {
+    fontSize: 18,
+    marginRight: 4,
+  },
+  countryCode: {
+    marginRight: 4,
+    fontSize: 14,
+  },
+  phoneInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E1E1E1',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+  },
+  phoneIcon: {
+    marginRight: 8,
+  },
+  phoneInput: {
+    flex: 1,
+    height: 45,
+    fontSize: 14,
+  },
+  inputError: {
+    borderColor: Colors.red,
   },
   errorText: {
     color: Colors.red,
@@ -297,6 +467,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    height: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.primary,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.grey,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    marginBottom: 16,
+    height: 45,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+  },
+  countryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  countryName: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  countryDialCode: {
+    fontSize: 16,
+    color: Colors.grey,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#f0f0f0',
   },
 });
 

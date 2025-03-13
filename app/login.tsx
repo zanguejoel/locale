@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,10 +13,14 @@ import {
   Image,
   Platform,
   SafeAreaView,
+  Animated,
+  Easing,
 } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
+import * as Haptics from 'expo-haptics';
 
 interface ErrorType {
   email?: string;
@@ -32,7 +36,277 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
 
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const colorAnim = useRef(new Animated.Value(0)).current;
+  const dotOpacity1 = useRef(new Animated.Value(0.3)).current;
+  const dotOpacity2 = useRef(new Animated.Value(0.3)).current;
+  const dotOpacity3 = useRef(new Animated.Value(0.3)).current;
+  const bubbleScale1 = useRef(new Animated.Value(0)).current;
+  const bubbleScale2 = useRef(new Animated.Value(0)).current;
+  const bubbleScale3 = useRef(new Animated.Value(0)).current;
+  const bubbleScale4 = useRef(new Animated.Value(0)).current;
+  const bubbleScale5 = useRef(new Animated.Value(0)).current;
+  const bubbleScale6 = useRef(new Animated.Value(0)).current;
+  // Removed rotation animation
+
+  // Interpolate background color
+  const backgroundColorInterpolation = colorAnim.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: ['rgba(255, 255, 255, 1)', 'rgba(250, 250, 255, 1)', 'rgba(255, 255, 255, 1)'],
+  });
+  
+  // No rotation animation needed anymore
+
+  // Setup animations
   useEffect(() => {
+    // Initial fade and slide in animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Background color animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(colorAnim, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(colorAnim, {
+          toValue: 2,
+          duration: 4000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(colorAnim, {
+          toValue: 0,
+          duration: 4000,
+          useNativeDriver: false,
+        }),
+      ])
+    ).start();
+
+    // Chat ellipsis animation
+    const animateDots = () => {
+      Animated.loop(
+        Animated.sequence([
+          // First dot
+          Animated.sequence([
+            Animated.timing(dotOpacity1, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dotOpacity1, {
+              toValue: 0.3,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]),
+          // Second dot
+          Animated.sequence([
+            Animated.timing(dotOpacity2, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dotOpacity2, {
+              toValue: 0.3,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]),
+          // Third dot
+          Animated.sequence([
+            Animated.timing(dotOpacity3, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dotOpacity3, {
+              toValue: 0.3,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      ).start();
+    };
+
+    // No rotation animation needed anymore
+
+    // Bubble animations
+    const animateBubbles = () => {
+      // First bubble
+      Animated.sequence([
+        Animated.timing(bubbleScale1, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.back(1.5)),
+        }),
+        Animated.delay(1000),
+        Animated.timing(bubbleScale1, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(2000),
+      ]).start(() => {
+        bubbleScale1.setValue(0);
+        setTimeout(animateBubble1, 1000);
+      });
+    };
+
+    const animateBubble1 = () => {
+      Animated.sequence([
+        Animated.timing(bubbleScale1, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.back(1.5)),
+        }),
+        Animated.delay(1000),
+        Animated.timing(bubbleScale1, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        bubbleScale1.setValue(0);
+        setTimeout(animateBubble1, 3000);
+      });
+    };
+
+    const animateBubble2 = () => {
+      setTimeout(() => {
+        Animated.sequence([
+          Animated.timing(bubbleScale2, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+            easing: Easing.out(Easing.back(1.5)),
+          }),
+          Animated.delay(1000),
+          Animated.timing(bubbleScale2, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          bubbleScale2.setValue(0);
+          setTimeout(animateBubble2, 4000);
+        });
+      }, 1500);
+    };
+
+    const animateBubble3 = () => {
+      setTimeout(() => {
+        Animated.sequence([
+          Animated.timing(bubbleScale3, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+            easing: Easing.out(Easing.back(1.5)),
+          }),
+          Animated.delay(1000),
+          Animated.timing(bubbleScale3, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          bubbleScale3.setValue(0);
+          setTimeout(animateBubble3, 5000);
+        });
+      }, 3000);
+    };
+    
+    // Additional bubbles
+    const animateBubble4 = () => {
+      setTimeout(() => {
+        Animated.sequence([
+          Animated.timing(bubbleScale4, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+            easing: Easing.out(Easing.back(1.5)),
+          }),
+          Animated.delay(800),
+          Animated.timing(bubbleScale4, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          bubbleScale4.setValue(0);
+          setTimeout(animateBubble4, 3500);
+        });
+      }, 800);
+    };
+
+    const animateBubble5 = () => {
+      setTimeout(() => {
+        Animated.sequence([
+          Animated.timing(bubbleScale5, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+            easing: Easing.out(Easing.back(1.5)),
+          }),
+          Animated.delay(1200),
+          Animated.timing(bubbleScale5, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          bubbleScale5.setValue(0);
+          setTimeout(animateBubble5, 4200);
+        });
+      }, 2000);
+    };
+
+    const animateBubble6 = () => {
+      setTimeout(() => {
+        Animated.sequence([
+          Animated.timing(bubbleScale6, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+            easing: Easing.out(Easing.back(1.5)),
+          }),
+          Animated.delay(1500),
+          Animated.timing(bubbleScale6, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          bubbleScale6.setValue(0);
+          setTimeout(animateBubble6, 4800);
+        });
+      }, 3800);
+    };
+
+    animateDots();
+    animateBubbles();
+    animateBubble2();
+    animateBubble3();
+    animateBubble4();
+    animateBubble5();
+    animateBubble6();
+
     const loadStoredEmail = async () => {
       try {
         const storedEmail = await AsyncStorage.getItem("savedEmail");
@@ -67,6 +341,7 @@ const Login = () => {
   };
 
   const onSignInPress = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setFormSubmitted(true);
 
     if (validateForm()) {
@@ -85,6 +360,7 @@ const Login = () => {
   };
 
   const toggleRememberMe = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRememberMe(!rememberMe);
     if (!rememberMe) {
       await AsyncStorage.setItem("savedEmail", emailAddress);
@@ -94,114 +370,171 @@ const Login = () => {
   };
 
   const handleForgotPassword = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push("/forgot-password");
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={70}
-      style={styles.container}
-    >
-      {isLoading && (
-        <View style={defaultStyles.loadingOverlay}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-      )}
-      <SafeAreaView>
-
-
-        <View style={styles.headerContainer}>
-          <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          <CustomInput
-            icon="mail-outline"
-            placeholder="Email"
-            value={emailAddress}
-            onChangeText={(value) => {
-              setEmailAddress(value);
-              if (rememberMe) {
-                AsyncStorage.setItem("savedEmail", value);
-              }
-            }}
-            error={!!errors.email}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-
-          <CustomInput
-            icon="lock-closed-outline"
-            placeholder="Password"
-            value={password}
-            onChangeText={(value) => {
-              setPassword(value);
-            }}
-            error={!!errors.password}
-            isPassword
-          />
-          {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-
-          <View style={styles.optionsContainer}>
-            <TouchableOpacity style={styles.rememberMeContainer} onPress={toggleRememberMe}>
-              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-              <Text style={styles.rememberMeText}>Remember me</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={handleForgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+    <Animated.View style={[styles.container, { backgroundColor: backgroundColorInterpolation }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={70}
+        style={styles.keyboardView}
+      >
+        {isLoading && (
+          <View style={defaultStyles.loadingOverlay}>
+            <ActivityIndicator size="large" color={Colors.primary} />
           </View>
+        )}
+        <SafeAreaView>
+          <Animated.View 
+            style={[
+              styles.headerContainer, 
+              { 
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }] 
+              }
+            ]}
+          >
+            <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
+            
+{/* No orbit animation anymore */}
+            
+            {/* Chat bubbles animation */}
+            <View style={styles.bubbleContainer}>
+              <Animated.View style={[styles.bubble, { transform: [{ scale: bubbleScale1 }] }]}>
+                <Ionicons name="browsers-outline" size={24} color={Colors.primary} />
+              </Animated.View>
+              <Animated.View style={[styles.bubble, styles.bubble2, { transform: [{ scale: bubbleScale2 }] }]}>
+                <Ionicons name="server-outline" size={22} color="#6C63FF" />
+              </Animated.View>
+              <Animated.View style={[styles.bubble, styles.bubble3, { transform: [{ scale: bubbleScale3 }] }]}>
+                <Ionicons name="flash-outline" size={20} color="#4CD964" />
+              </Animated.View>
+              <Animated.View style={[styles.bubble, styles.bubble4, { transform: [{ scale: bubbleScale4 }] }]}>
+                <Ionicons name="bulb-outline" size={18} color="#FF9500" />
+              </Animated.View>
+              <Animated.View style={[styles.bubble, styles.bubble5, { transform: [{ scale: bubbleScale5 }] }]}>
+                <Ionicons name="analytics-outline" size={18} color="#FF2D55" />
+              </Animated.View>
+              <Animated.View style={[styles.bubble, styles.bubble6, { transform: [{ scale: bubbleScale6 }] }]}>
+                <Ionicons name="planet-outline" size={16} color="#5AC8FA" />
+              </Animated.View>
+            </View>
+            
+            <Text style={styles.title}>Welcome Back</Text>
+            
+            {/* Animated typing dots */}
+            <View style={styles.typingContainer}>
+              <Text style={styles.subtitle}>Sign in to continue</Text>
+              <View style={styles.typingDots}>
+                <Animated.View style={[styles.typingDot, { opacity: dotOpacity1 }]} />
+                <Animated.View style={[styles.typingDot, { opacity: dotOpacity2 }]} />
+                <Animated.View style={[styles.typingDot, { opacity: dotOpacity3 }]} />
+              </View>
+            </View>
+          </Animated.View>
 
-          <View style={styles.btnContainer}>
-            <TouchableOpacity
-              style={[defaultStyles.btn]}
-              onPress={onSignInPress}
-            >
-              <Text style={{ color: '#fff' }}>Sign In</Text>
-            </TouchableOpacity>
+          <Animated.View 
+            style={[
+              styles.formContainer, 
+              { 
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }] 
+              }
+            ]}
+          >
+            <CustomInput
+              icon="mail-outline"
+              placeholder="Email"
+              value={emailAddress}
+              onChangeText={(value) => {
+                setEmailAddress(value);
+                if (rememberMe) {
+                  AsyncStorage.setItem("savedEmail", value);
+                }
+              }}
+              error={!!errors.email}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-            <View style={styles.dividerContainer}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.divider} />
+            <CustomInput
+              icon="lock-closed-outline"
+              placeholder="Password"
+              value={password}
+              onChangeText={(value) => {
+                setPassword(value);
+              }}
+              error={!!errors.password}
+              isPassword
+            />
+            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+
+            <View style={styles.optionsContainer}>
+              <TouchableOpacity style={styles.rememberMeContainer} onPress={toggleRememberMe}>
+                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                  {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+                <Text style={styles.rememberMeText}>Remember me</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={handleForgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              onPress={() => router.replace("/registration")}
-              style={[defaultStyles.btnSecondary]}
-            >
-              <Text style={[{ color: Colors.primary }]}>
-                Create an Account
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+            <View style={styles.btnContainer}>
+              <TouchableOpacity
+                style={[defaultStyles.btn, styles.signInButton]}
+                onPress={onSignInPress}
+              >
+                <Text style={{ color: '#fff' }}>Sign In</Text>
+                <Ionicons name="arrow-forward-outline" size={18} color="#fff" />
+              </TouchableOpacity>
+
+              <View style={styles.dividerContainer}>
+                <View style={styles.divider} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.divider} />
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  router.replace("/registration");
+                }}
+                style={[defaultStyles.btnSecondary, styles.createAccountButton]}
+              >
+                <Text style={[{ color: Colors.primary }]}>
+                  Create an Account
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+  },
+  keyboardView: {
+    flex: 1,
   },
   headerContainer: {
     alignItems: "center",
     marginTop: 60,
     marginBottom: 40,
+    position: "relative",
   },
   logo: {
-    width: 150,
-    height: 75,
-    marginBottom: 20,
+    width: 180,
+    height: 100,
   },
   title: {
     fontSize: 28,
@@ -209,9 +542,27 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     marginBottom: 8,
   },
+  typingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   subtitle: {
     fontSize: 16,
     color: Colors.grey,
+    marginRight: 8,
+  },
+  typingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  typingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+    marginHorizontal: 2,
   },
   formContainer: {
     paddingHorizontal: 24,
@@ -263,6 +614,17 @@ const styles = StyleSheet.create({
   btnContainer: {
     gap: 16,
   },
+  signInButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  createAccountButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   dividerContainer: {
     display: 'flex',
     flexDirection: 'row',
@@ -280,7 +642,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 20,
-  }
+  },
+  bubbleContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    zIndex: -1,
+  },
+  bubble: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    right: -10,
+    top: 20,
+  },
+  bubble2: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    left: 0,
+    top: 50,
+  },
+  bubble3: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    left: 40,
+    top: 90,
+  },
+  bubble4: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    right: 30,
+    top: 80,
+  },
+  bubble5: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    right: 70,
+    top: 30,
+  },
+  bubble6: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    left: 70,
+    top: 40,
+  },
+  // Removed orbit-related styles
 });
 
 export default Login;

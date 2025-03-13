@@ -27,7 +27,7 @@ const SuccessPage = () => {
     const handleHome = async () => {
         setLoading(true)
         try {
-            await signIn(email, password);
+            await signIn(decodeURIComponent(`${email}`), decodeURIComponent(`${password}`));
         } catch (err) {
             console.error(err)
         } finally {
