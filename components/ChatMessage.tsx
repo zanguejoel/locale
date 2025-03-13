@@ -669,15 +669,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 24,
-    width: 60,
   },
   loadingDot: {
-    width: 10,
-    height: 10,
+    width: 7,
+    height: 7,
     borderRadius: 5,
     backgroundColor: Colors.primary,
-    marginHorizontal: 5,
+    marginHorizontal: 3,
   },
   errorContainer: {
     alignItems: 'flex-start',
