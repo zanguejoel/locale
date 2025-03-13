@@ -6,14 +6,15 @@ import { Alert } from 'react-native';
 
 // https://stackoverflow.com/questions/73706343/i-want-to-download-an-image-with-react-native-expo-from-a-url
 export const downloadAndSaveImage = async (imageUrl: string): Promise<any> => {
-  // Create a unique file URI using the current timestamp
+
   const fileUri = `${FileSystem.documentDirectory}${Date.now()}.jpg`;
 
   try {
-    // Download the image to the file URI
+
     const response = await FileSystem.downloadAsync(imageUrl, fileUri);
-    // Save the file and return the result
-    return saveFile(response.uri);
+
+    await saveFile(response.uri);
+
   } catch (error) {
     console.error('File system error:', error);
   }
@@ -60,5 +61,18 @@ export const copyImageToClipboard = async (imageUrl: string) => {
 };
 
 export const shareImage = async (imageUrl: string) => {
-  Sharing.shareAsync(imageUrl);
+  try {
+
+    const fileUri = FileSystem.documentDirectory + `${Date.now()}.jpg`;
+
+    const downloadResult = await FileSystem.downloadAsync(imageUrl, fileUri);
+
+    await Sharing.shareAsync(downloadResult.uri, {
+      mimeType: 'image/jpeg',
+      dialogTitle: 'Share Image',
+      UTI: 'public.image',
+    });
+  } catch (error) {
+    console.error('Error sharing image:', error);
+  }
 };

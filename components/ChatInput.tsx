@@ -160,8 +160,10 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
       });
 
       if (!result.canceled) {
-        const uri = result.assets[0].uri;
-        onShouldSend(uri, 'image');
+        const assets = result.assets[0];
+        setSelectedImage(assets)
+
+        // onShouldSend(uri, 'image');
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -175,8 +177,11 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
       });
 
       if (result.canceled) return;
+      const assets = result.assets[0];
 
-      onShouldSend(result.uri, 'file');
+      setSelectedImage(assets)
+
+      // onShouldSend(result.uri, 'file');
     } catch (error) {
       console.error('Error picking document:', error);
     }
