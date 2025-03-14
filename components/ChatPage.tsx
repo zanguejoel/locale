@@ -171,12 +171,13 @@ const ChatPage = () => {
   };
   useEffect(() => {
     if (isSending && messageListRef?.current && messages.length) {
-      const extraOffset = 50;
-      const targetOffset = Math.max(
-        contentHeightRef.current - layoutHeightRef.current - extraOffset,
-        0
-      );
-      messageListRef.current.scrollToOffset({ offset: targetOffset, animated: true });
+      // const extraOffset = 50;
+      // const targetOffset = Math.max(
+      //   contentHeightRef.current - layoutHeightRef.current - extraOffset,
+      //   0
+      // );
+      // messageListRef.current.scrollToOffset({ offset: targetOffset, animated: true });
+      scrollToBottom()
     }
   }, [messages, isSending]);
   const renderItem = ({ item, index }: { item: Message; index: number }) => {
