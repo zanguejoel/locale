@@ -68,15 +68,16 @@ const Layout = () => {
           width: dimensions.width * 0.85,
           backgroundColor: '#FFFFFF',
         },
-        drawerType: 'front',
-        drawerAnimationType: 'slide',
-        drawerAnimationDuration: 300,
+        drawerType: 'slide',
+
       })}>
       <Drawer.Screen
+
         name="new"
 
         getId={() => Math.random().toString()}
         options={{
+
           title: 'Jaiime AI',
           headerTitle: () => (
             <View style={styles.headerTitleContainer}>

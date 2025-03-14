@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Swipeable } from 'react-native-gesture-handler';
+import { FlashList } from '@shopify/flash-list';
 
 
 export const CustomDrawerContent = (props: any) => {
@@ -45,7 +46,8 @@ export const CustomDrawerContent = (props: any) => {
     const [hasMore, setHasMore] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isLoadingDisplayChats, setLoadingDisplayChats] = useState(true);
-
+    const [openSwipeableId, setOpenSwipeableId] = useState(null);
+    const swipeableRef = useRef(null);
     const navigation = useNavigation();
     const limitRef = useRef(20);
 
@@ -54,48 +56,11 @@ export const CustomDrawerContent = (props: any) => {
 
     const showLoading = isLoading || localLoading;
 
-
-    console.log('viewRef.curre')
     const [layoutInfo, setLayoutInfo] = useState({
         x: 0, y: 0, width: 0, height: 0,
         pageX: 0, pageY: 0
     });
     const viewRef = useRef<View>(null);
-
-
-    // useEffect(() => {
-    //     // Щойно відрендерилось, робимо вимір
-    //     if (viewRef.current) {
-    //         viewRef.current.measure((x, y, width, height, pageX, pageY) => {
-    //             console.log('measure() ->', { x, y, width, height, pageX, pageY });
-    //             // x, y — позиція відносно батька
-    //             // pageX, pageY — абсолютна позиція на екрані
-    //         });
-    //     }
-    // }, [viewRef.current]);
-    const handleLayout = (event: LayoutChangeEvent) => {
-        // Дані з onLayout (локальні координати)
-        const { x, y, width, height } = event.nativeEvent.layout;
-
-        // Тепер, щоб отримати абсолютні координати екрану, викликаємо measure
-        // Робимо це в setTimeout(...,0), бо іноді потрібно дочекатись оновлення лейаута
-        setTimeout(() => {
-            viewRef.current?.measure(
-                (fx, fy, w, h, px, py) => {
-                    // fx, fy, w, h – теж локальні, px, py – глобальні на екрані
-                    setLayoutInfo({
-                        x: fx,
-                        y: fy,
-                        width: w,
-                        height: h,
-                        pageX: px,
-                        pageY: py
-                    });
-                }
-            );
-        }, 0);
-    };
-
 
     useEffect(() => {
         limitRef.current = 20;
@@ -105,19 +70,12 @@ export const CustomDrawerContent = (props: any) => {
 
     useEffect(() => {
         if (drawerStatus === 'open') {
-            setTimeout(() => {
-                setLoadingDisplayChats(false)
-            }, 1000)
+            setLoadingDisplayChats(false)
         } else {
             setLoadingDisplayChats(true)
 
         }
     }, [drawerStatus])
-
-    useEffect(() => {
-
-        console.log('Drawer layout changed =>', layoutInfo);
-    }, [layoutInfo]);
 
     useEffect(() => {
         const unsubscribe = navigation.addListener('state', () => {
@@ -220,12 +178,7 @@ export const CustomDrawerContent = (props: any) => {
         }
     };
 
-    const closeOpenSwipeable = () => {
-        if (openSwipeable) {
-            openSwipeable.close();
-            setOpenSwipeable(null);
-        }
-    };
+
 
     const onRefresh = async () => {
         setIsRefreshing(true);
@@ -241,22 +194,6 @@ export const CustomDrawerContent = (props: any) => {
 
             }, 1000)
         }
-    };
-
-    const renderRightActions = (chatId: string) => {
-        return (
-            <View style={styles.swipeActionContainer}>
-                <TouchableOpacity
-                    style={styles.deleteAction}
-                    onPress={() => {
-                        closeOpenSwipeable();
-                        onDeleteChat(chatId);
-                    }}
-                >
-                    <Ionicons name="trash-outline" size={24} color="#fff" />
-                </TouchableOpacity>
-            </View>
-        );
     };
 
 
@@ -279,6 +216,136 @@ export const CustomDrawerContent = (props: any) => {
             return title.toLowerCase().includes(lowercaseQuery);
         });
     }, [conversations, query]);
+
+
+    const closeOpenSwipeable = useCallback(() => {
+        if (swipeableRef.current) {
+            swipeableRef.current.close();
+            swipeableRef.current = null;
+        }
+        setOpenSwipeableId(null);
+    }, []);
+
+    const renderRightActions = useCallback(
+        (chatId) => (
+            <View style={styles.swipeActionsContainer}>
+                <Pressable
+                    style={styles.swipeDeleteButton}
+                    onPress={() => {
+                        onDeleteChat(chatId);
+                        closeOpenSwipeable();
+                    }}
+                >
+                    <Ionicons name="trash" size={20} color="white" />
+                </Pressable>
+            </View>
+        ),
+        [closeOpenSwipeable, onDeleteChat]
+    );
+
+    const renderItem = useCallback(({ item }) => {
+        const chatId = item?.id || '';
+        const chatTitle = item?.title || 'Untitled Chat';
+
+        return (
+            <Swipeable
+                key={chatId}
+                ref={(ref) => {
+                    if (chatId === openSwipeableId) {
+                        swipeableRef.current = ref;
+                    }
+                }}
+                renderRightActions={() => renderRightActions(chatId)}
+                onSwipeableOpen={() => {
+                    closeOpenSwipeable();
+                    setOpenSwipeableId(chatId);
+                }}
+            >
+                <ContextMenu.Root>
+                    <ContextMenu.Trigger>
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.chatItem,
+                                chatId.toString() === currentConversationId?.toString() && styles.activeChatItem,
+                                pressed && styles.pressedChatItem,
+                            ]}
+                            onPress={() => router.push(`/(chat)/${chatId}`)}
+                        >
+                            <View style={styles.chatItemContent}>
+                                <View style={styles.chatIconContainer}>
+                                    <Ionicons name="chatbubble" size={18} color={Colors.primary} />
+                                </View>
+                                <View style={styles.chatDetails}>
+                                    <Text style={styles.chatTitle} numberOfLines={1}>
+                                        {chatTitle}
+                                    </Text>
+                                    <Text style={styles.chatTimestamp} numberOfLines={1}>
+                                        {new Date().toLocaleDateString()}
+                                    </Text>
+                                </View>
+                                <View style={styles.chatActions}>
+                                    <Pressable
+                                        style={styles.actionButton}
+                                        onPress={() => onRenameChat(chatId, chatTitle)}
+                                    >
+                                        <Ionicons name="pencil" size={16} color={Colors.greyLight} />
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </Pressable>
+                    </ContextMenu.Trigger>
+
+                    <ContextMenu.Content>
+                        <ContextMenu.Preview>
+                            {() => (
+                                <View style={styles.contextMenuPreview}>
+                                    <Text style={styles.previewTitle}>{chatTitle}</Text>
+                                </View>
+                            )}
+                        </ContextMenu.Preview>
+
+                        <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chatId, chatTitle)}>
+                            <ContextMenu.ItemTitle>Rename</ContextMenu.ItemTitle>
+                            <ContextMenu.ItemIcon
+                                ios={{
+                                    name: 'pencil',
+                                    pointSize: 18,
+                                }}
+                            />
+                        </ContextMenu.Item>
+
+                        <ContextMenu.Item key={'delete'} onSelect={() => onDeleteChat(chatId)} destructive>
+                            <ContextMenu.ItemTitle>Delete</ContextMenu.ItemTitle>
+                            <ContextMenu.ItemIcon
+                                ios={{
+                                    name: 'trash',
+                                    pointSize: 18,
+                                }}
+                            />
+                        </ContextMenu.Item>
+                    </ContextMenu.Content>
+                </ContextMenu.Root>
+            </Swipeable>
+        );
+    }, [
+        closeOpenSwipeable,
+        currentConversationId,
+        onDeleteChat,
+        onRenameChat,
+        openSwipeableId,
+        renderRightActions,
+        router
+    ]);
+
+    const keyExtractor = useCallback((item) => item?.id?.toString(), []);
+
+    if (isLoadingDisplayChats) {
+        return (
+            <View style={styles.loaderContainer}>
+                <ActivityIndicator size="small" />
+            </View>
+        );
+    }
 
     return (
         <View
@@ -322,106 +389,23 @@ export const CustomDrawerContent = (props: any) => {
                     </Text>
                 </View>
             ) : (
-                <DrawerContentScrollView
-                    {...props}
+                <FlashList
+                    data={filteredConversations}
+                    keyExtractor={keyExtractor}
+                    renderItem={renderItem}
                     onScroll={handleScroll}
-                    scrollEventThrottle={400}
-                    contentContainerStyle={styles.scrollViewContent}
+                    scrollEventThrottle={16}
                     refreshControl={
                         <RefreshControl
                             refreshing={isRefreshing}
                             onRefresh={onRefresh}
                         />
                     }
-                >
-                    {isLoadingDisplayChats ? <View><ActivityIndicator size={'small'} /></View> :
-                        <>
-                            {filteredConversations.map((chat) => {
-
-                                return (
-                                    <Swipeable
-                                        key={chat?.id || Math.random().toString()}
-                                        renderRightActions={() => renderRightActions(chat?.id || '')}
-                                        onSwipeableOpen={() => {
-                                            // Close previously opened swipeable
-                                            closeOpenSwipeable();
-                                            // Set this one as the open one
-                                            setOpenSwipeable(chat?.id);
-                                        }}
-                                        ref={(ref) => {
-                                            if (chat?.id === openSwipeable) {
-                                                setOpenSwipeable(ref);
-                                            }
-                                        }}
-                                    >
-                                        <ContextMenu.Root>
-                                            <ContextMenu.Trigger>
-                                                <Pressable
-                                                    style={({ pressed }) => [
-                                                        styles.chatItem,
-                                                        chat?.id?.toString() === currentConversationId?.toString() && styles.activeChatItem,
-                                                        pressed && styles.pressedChatItem,
-                                                    ]}
-                                                    onPress={() => router.push(`/(chat)/${chat?.id}`)}
-                                                >
-                                                    <View style={styles.chatItemContent}>
-                                                        <View style={styles.chatIconContainer}>
-                                                            <Ionicons name="chatbubble" size={18} color={Colors.primary} />
-                                                        </View>
-                                                        <View style={styles.chatDetails}>
-                                                            <Text style={styles.chatTitle} numberOfLines={1}>
-                                                                {chat?.title || 'Untitled Chat'}
-                                                            </Text>
-                                                            <Text style={styles.chatTimestamp} numberOfLines={1}>
-                                                                {new Date().toLocaleDateString()}
-                                                            </Text>
-                                                        </View>
-                                                        <View style={styles.chatActions}>
-                                                            <Pressable
-                                                                style={styles.actionButton}
-                                                                onPress={() => onRenameChat(chat?.id || '', chat?.title || '')}
-                                                            >
-                                                                <Ionicons name="pencil" size={16} color={Colors.greyLight} />
-                                                            </Pressable>
-                                                        </View>
-                                                    </View>
-                                                </Pressable>
-                                            </ContextMenu.Trigger>
-                                            <ContextMenu.Content>
-                                                <ContextMenu.Preview>
-                                                    {() => (
-                                                        <View style={styles.contextMenuPreview}>
-                                                            <Text style={styles.previewTitle}>{chat?.title || 'Untitled Chat'}</Text>
-                                                        </View>
-                                                    )}
-                                                </ContextMenu.Preview>
-
-                                                <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chat?.id || '', chat?.title || '')}>
-                                                    <ContextMenu.ItemTitle>Rename</ContextMenu.ItemTitle>
-                                                    <ContextMenu.ItemIcon
-                                                        ios={{
-                                                            name: 'pencil',
-                                                            pointSize: 18,
-                                                        }}
-                                                    />
-                                                </ContextMenu.Item>
-                                                <ContextMenu.Item key={'delete'} onSelect={() => onDeleteChat(chat?.id || '')} destructive>
-                                                    <ContextMenu.ItemTitle>Delete</ContextMenu.ItemTitle>
-                                                    <ContextMenu.ItemIcon
-                                                        ios={{
-                                                            name: 'trash',
-                                                            pointSize: 18,
-                                                        }}
-                                                    />
-                                                </ContextMenu.Item>
-                                            </ContextMenu.Content>
-                                        </ContextMenu.Root>
-                                    </Swipeable>
-                                )
-                            })}
-                        </>
-                    }
-                </DrawerContentScrollView>
+                    onEndReached={loadMoreConversations}
+                    onEndReachedThreshold={0.5}
+                    contentContainerStyle={styles.scrollViewContent}
+                    style={{ flex: 1 }}
+                />
             )}
 
             <View style={[styles.footerContainer, { paddingBottom: 10 + bottom }]}>
