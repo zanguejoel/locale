@@ -209,68 +209,69 @@ const ChatPage = () => {
         headerTitleAlign: 'center',
         headerTitle: () => <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
       }} />
-
-      <View style={styles.page} onLayout={onLayout}>
-        {messages.length === 0 && (
-          <Animated.View
-            style={[
-              styles.logoContainer,
-              {
-                marginTop: height / 2 - 100,
-                opacity: logoAnimation,
-                transform: [
-                  { scale: logoAnimation },
-                  {
-                    translateY: logoAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [20, 0]
-                    })
-                  }
-                ]
-              }
-            ]}
-          >
-            <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.image} />
-            <Text style={styles.welcomeText}>How can I assist you today?</Text>
-          </Animated.View>
-        )}
-        <CustomView>
-          <FlatList
-            showsVerticalScrollIndicator={false}
-            ref={messageListRef}
-            data={messages}
-            renderItem={renderItem}
-            contentContainerStyle={{ paddingTop: 20 }}
-            keyboardDismissMode="on-drag"
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            extraData={[isSending, stream]}
-            onContentSizeChange={handleContentSizeChange}
-
-          />
-        </CustomView>
-        {showScrollButton && (
-          <TouchableOpacity
-            style={styles.scrollButton}
-            onPress={scrollToBottom}
-            accessibilityLabel="Scroll to bottom"
-            accessibilityRole="button"
-            activeOpacity={0.7}
-          >
-            <Text style={styles.textScrollDown}>
-              {autoScrollEnabled ? 'Scroll down' : 'Auto-scroll disabled'}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color={Colors.grey} />
-          </TouchableOpacity>
-        )}
-      </View>
-
       <KeyboardAvoidingView
 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={85}
         style={styles.keyboardAvoidingView}
       >
+
+        <View style={styles.page} onLayout={onLayout}>
+          {messages.length === 0 && (
+            <Animated.View
+              style={[
+                styles.logoContainer,
+                {
+                  marginTop: height / 2 - 100,
+                  opacity: logoAnimation,
+                  transform: [
+                    { scale: logoAnimation },
+                    {
+                      translateY: logoAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0]
+                      })
+                    }
+                  ]
+                }
+              ]}
+            >
+              <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.image} />
+              <Text style={styles.welcomeText}>How can I assist you today?</Text>
+            </Animated.View>
+          )}
+          <CustomView>
+            <FlatList
+              showsVerticalScrollIndicator={false}
+              ref={messageListRef}
+              data={messages}
+              renderItem={renderItem}
+              contentContainerStyle={{ paddingTop: 20 }}
+              keyboardDismissMode="on-drag"
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              extraData={[isSending, stream]}
+              onContentSizeChange={handleContentSizeChange}
+
+            />
+          </CustomView>
+          {showScrollButton && (
+            <TouchableOpacity
+              style={styles.scrollButton}
+              onPress={scrollToBottom}
+              accessibilityLabel="Scroll to bottom"
+              accessibilityRole="button"
+              activeOpacity={0.7}
+            >
+              <Text style={styles.textScrollDown}>
+                {autoScrollEnabled ? 'Scroll down' : 'Auto-scroll disabled'}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={Colors.grey} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+
         <BlurView intensity={80} tint="light" style={styles.inputBlurContainer}>
           {messages.length === 0 && <MessageIdeas onSelectCard={sendMessage} />}
           <MessageInput
@@ -311,7 +312,6 @@ const styles = StyleSheet.create({
   },
   page: {
     flex: 1,
-    paddingBottom: 80,
   },
   keyboardAvoidingView: {
     position: 'absolute',
