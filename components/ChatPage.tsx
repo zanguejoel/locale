@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList } from 'react-native';
+import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useChat } from '@/hooks/useChat';
@@ -9,10 +9,11 @@ import MessageInput from '@/components/ChatInput';
 import { defaultStyles } from '@/constants/Styles';
 import { Message, Role } from '@/utils/Interfaces';
 import Colors from '@/constants/Colors';
-import { Ionicons } from '@expo/vector-icons';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useRoute } from '@react-navigation/native';
+import { ImagePickerAsset } from 'expo-image-picker';
 
 const ChatPage = () => {
   const { params } = useRoute();
@@ -22,7 +23,7 @@ const ChatPage = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [lastContentHeight, setLastContentHeight] = useState(0);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
-  const [isTypingIndicatorVisible, setIsTypingIndicatorVisible] = useState(false);
+
 
   // Animation values
   const scrollButtonAnimation = useRef(new Animated.Value(0)).current;
@@ -43,6 +44,23 @@ const ChatPage = () => {
 
 
   const id = params?.id
+
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<ImagePickerAsset>(null);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -175,12 +193,6 @@ const ChatPage = () => {
   };
   useEffect(() => {
     if (isSending && messageListRef?.current && messages.length) {
-      // const extraOffset = 50;
-      // const targetOffset = Math.max(
-      //   contentHeightRef.current - layoutHeightRef.current - extraOffset,
-      //   0
-      // );
-      // messageListRef.current.scrollToOffset({ offset: targetOffset, animated: true });
       scrollToBottom()
     }
   }, [messages, isSending]);
@@ -203,6 +215,29 @@ const ChatPage = () => {
 
   const CustomView = Platform.OS === 'ios' ? PanGestureHandler : View
 
+  const KeyboardVisibleStyle = {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0
+  }
+
+  const renderSelectedFile = () => {
+    return (
+      <View style={styles.selectedFileContainer}>
+        <AntDesign onPress={() => setSelectedImage('')} name="closecircleo" style={styles.closeIcon} size={14} color={Colors.red} />
+        <Image
+          source={{ uri: selectedImage?.uri, cache: 'force-cache' }}
+          style={styles.previewImage}
+          resizeMode="cover"
+          onError={(e) => console.error('Error loading inline image:', e.nativeEvent.error)}
+          testID="inline-image"
+        />
+      </View>
+    )
+  }
+
+
   return (
     <View style={defaultStyles.pageContainer}>
       <Stack.Screen options={{
@@ -210,12 +245,15 @@ const ChatPage = () => {
         headerTitle: () => <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
       }} />
       <KeyboardAvoidingView
-
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={85}
-        style={styles.keyboardAvoidingView}
-      >
+        style={[
+          styles.keyboardAvoidingView,
+          isKeyboardVisible && KeyboardVisibleStyle,
+          isSending && KeyboardVisibleStyle,
 
+        ]}
+      >
         <View style={styles.page} onLayout={onLayout}>
           {messages.length === 0 && (
             <Animated.View
@@ -240,13 +278,14 @@ const ChatPage = () => {
               <Text style={styles.welcomeText}>How can I assist you today?</Text>
             </Animated.View>
           )}
-          <CustomView>
+          <CustomView style={{ flex: 1 }}>
             <FlatList
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1, paddingTop: 20 }}
               showsVerticalScrollIndicator={false}
               ref={messageListRef}
               data={messages}
               renderItem={renderItem}
-              contentContainerStyle={{ paddingTop: 20 }}
               keyboardDismissMode="on-drag"
               onScroll={handleScroll}
               scrollEventThrottle={16}
@@ -270,11 +309,12 @@ const ChatPage = () => {
             </TouchableOpacity>
           )}
         </View>
-
-
-        <BlurView intensity={80} tint="light" style={styles.inputBlurContainer}>
-          {messages.length === 0 && <MessageIdeas onSelectCard={sendMessage} />}
+        {messages.length === 0 && <MessageIdeas onSelectCard={sendMessage} />}
+        {selectedImage && renderSelectedFile()}
+        <BlurView intensity={80} tint="light" style={[styles.inputBlurContainer]}>
           <MessageInput
+            setSelectedImage={setSelectedImage}
+            selectedImage={selectedImage}
             fetchMessages={fetchMessages}
             onShouldSend={(message, type, operation, additionalData) => {
               isManualScrollRef.current = false;
@@ -298,6 +338,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  selectedFileContainer: {
+    marginBottom: 4,
+    marginLeft: 16,
+  },
+  previewImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+  },
   image: {
     width: 120,
     height: 80,
@@ -314,12 +363,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   keyboardAvoidingView: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    width: '100%',
+    flex: 1,
   },
   inputBlurContainer: {
+    width: '100%',
+    height: 90,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
@@ -352,6 +400,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginRight: 4,
   },
+  closeIcon: {
+    left: 33,
+    top: 2,
+    zIndex: 1000
+  }
 
 });
 

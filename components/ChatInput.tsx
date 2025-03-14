@@ -10,22 +10,24 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FontAwesome6 } from '@expo/vector-icons';
+
 import { useRef, useState } from 'react';
 import { BlurView } from 'expo-blur';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
-import AntDesign from '@expo/vector-icons/AntDesign';
+
 
 const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 export type Props = {
   onShouldSend: (message: string, type?: string) => void;
   fetchMessages?: () => void
+  selectedImage?: ImagePicker.ImagePickerAsset
+  setSelectedImage?: (a: ImagePicker.ImagePickerAsset) => void
 };
 
-const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage }: Props) => {
   const [message, setMessage] = useState('');
   const { bottom } = useSafeAreaInsets();
   const expanded = useSharedValue(0);
@@ -33,7 +35,6 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedImage, setSelectedImage] = useState('');
   const startRecording = async () => {
     try {
       const { status } = await Audio.getPermissionsAsync();
@@ -123,7 +124,7 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
     } else {
       onShouldSend(message);
     }
-    setSelectedImage('')
+    setSelectedImage?.('')
     setMessage('');
 
   };
@@ -138,7 +139,7 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
 
       if (!result.canceled) {
         const assets = result.assets[0];
-        setSelectedImage(assets)
+        setSelectedImage?.(assets)
         // onShouldSend(assets.uri, 'image');
       }
     } catch (error) {
@@ -161,7 +162,7 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
 
       if (!result.canceled) {
         const assets = result.assets[0];
-        setSelectedImage(assets)
+        setSelectedImage?.(assets)
 
         // onShouldSend(uri, 'image');
       }
@@ -186,28 +187,16 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
     }
   };
 
-  const renderSelectedFile = () => {
-    return (
-      <View style={styles.selectedFileContainer}>
-        <AntDesign onPress={() => setSelectedImage('')} name="closecircleo" style={styles.closeIcon} size={14} color={Colors.red} />
-        <Image
-          source={{ uri: selectedImage?.uri, cache: 'force-cache' }}
-          style={styles.previewImage}
-          resizeMode="cover"
-          onError={(e) => console.error('Error loading inline image:', e.nativeEvent.error)}
-          testID="inline-image"
-        />
-      </View>
-    )
-  }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+    <View
+      style={[styles.container,
+      ]}
     >
-      <BlurView intensity={90} tint="extraLight" style={[styles.inputContainer, { paddingBottom: bottom }]}>
-        {selectedImage && renderSelectedFile()}
+      <BlurView intensity={90} tint="extraLight" style={[
+        styles.inputContainer,
+        { paddingBottom: bottom },
+      ]}>
         <View style={styles.row}>
           <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
             <Ionicons name="add" size={24} color={Colors.grey} />
@@ -248,7 +237,7 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
           )}
         </View>
       </BlurView>
-    </KeyboardAvoidingView>
+    </View>
 
   );
 };
@@ -266,6 +255,7 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(230,230,230,0.5)'
   },
   row: {
+
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
