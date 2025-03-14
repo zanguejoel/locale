@@ -3,13 +3,17 @@ import useMMKVStorage, { storage } from './useMMKVStorage';
 import api from '@/utils/ApiClient';
 import { User } from '@/constants/Types';
 
-interface FormData {
+export interface FormData {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   password: string;
   confirmPassword: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  state?: string
 }
 
 interface AuthContextType {
@@ -78,12 +82,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const confirmEmail = async (email: string, code: string, router: any, password: string) => {
     try {
-      console.log("User email -------", email)
       const response = await api.post<{ token: string } | any>(`/auth/verify-email`, {
         email: email,
         code: code
       });
-      
+
       if (response.ok) {
         router.replace(`/success-page?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`)
       } else {
@@ -116,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (formData: FormData, router: any) => {
     try {
       setIsLoading(true);
-     
+
       const response = await api.post<{ token: string } | any>("/auth/signup", {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -151,6 +154,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.patch<{ token: string } | any>(`/auth/update-user`, {
         first_name: formData.firstName,
         last_name: formData.lastName,
+        address: formData.address,
+        city: formData.city,
+        postal_code: formData.postalCode,
+        state: formData.state
+
+
       });
       if (response.ok) {
         const newUser = { ...response.data, token: user?.token };

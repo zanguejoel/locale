@@ -1,23 +1,18 @@
 import Colors from "@/constants/Colors";
-import { useAuth } from "@/hooks/useAuth";
+import { FormData, useAuth } from "@/hooks/useAuth";
 import React, { useState } from "react";
 import {
   View,
   StyleSheet,
   Text,
   SafeAreaView,
-  Modal,
-  TextInput,
   TouchableOpacity,
   ScrollView,
-  Image
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
+import EditProfileModal from "@/components/modals/EditProfileModal/EditProfileModal";
 
-interface FormData {
-  firstName?: string;
-  lastName?: string;
-}
+
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -25,6 +20,10 @@ const Profile = () => {
   const [formData, setFormData] = useState<FormData>({
     firstName: user?.first_name,
     lastName: user?.last_name,
+    address: user?.address,
+    city: user?.city,
+    postalCode: user?.postal_code,
+    state: user?.state
   });
 
   const handleInputChange = (field: keyof FormData, value: string) => {
@@ -41,7 +40,12 @@ const Profile = () => {
       { label: "Email", value: user?.email, icon: "mail-outline" },
       { label: "Phone", value: user?.phone, icon: "call-outline" },
       { label: "Birth Date", value: user?.date_of_birth, icon: "calendar-outline" },
+      { label: "Street Address", value: user?.address, icon: "home-outline" },
+      { label: "City", value: user?.city, icon: "map-outline" },
+      { label: "State", value: user?.state, icon: "globe-outline" },
+      { label: "Postal Code", value: user?.postal_code, icon: "business-outline" },
     ];
+
 
     return userData.map((item, index) => (
       <View key={index} style={[styles.infoCard, userData.length - 1 === index && { marginBottom: 0 }]}>
@@ -94,62 +98,22 @@ const Profile = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Modal for editing profile */}
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsModalVisible(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Profile</Text>
-              <TouchableOpacity
-                onPress={() => setIsModalVisible(false)}
-                style={styles.closeButton}
-              >
-                <Ionicons name="close" size={24} color={Colors.grey} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>First Name</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.firstName}
-                onChangeText={(value) => handleInputChange("firstName", value)}
-                placeholder="Enter your first name"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Last Name</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.lastName}
-                onChangeText={(value) => handleInputChange("lastName", value)}
-                placeholder="Enter your last name"
-              />
-            </View>
-
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSave}
-            >
-              <Text style={styles.saveButtonText}>Save Changes</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <EditProfileModal
+        isModalVisible={isModalVisible}
+        setIsModalVisible={setIsModalVisible}
+        handleInputChange={handleInputChange}
+        formData={formData}
+        handleSave={handleSave}
+      />
     </SafeAreaView>
+
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    marginBottom: 80,
     backgroundColor: '#FFFFFF',
   },
   scrollView: {
@@ -257,40 +221,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  modalBackground: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    width: '85%',
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.grey,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 13,
-    color: Colors.greyLight,
-    marginBottom: 6,
-  },
   input: {
     backgroundColor: '#F9F9F9',
     borderWidth: 1,
@@ -299,18 +229,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
-  },
-  saveButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
   },
 });
 
