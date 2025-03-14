@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   },
   scrollButton: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 0,
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
