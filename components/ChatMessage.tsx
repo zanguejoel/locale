@@ -15,6 +15,9 @@ import {
   Platform,
   TouchableOpacity,
   ActivityIndicator,
+  Clipboard,
+  Share,
+  Alert
 } from 'react-native';
 import * as ContextMenu from 'zeego/context-menu';
 import { useCallback, useEffect, useRef } from 'react';
@@ -208,8 +211,6 @@ const ChatMessage = memo(({
     };
   }, [streamingContent]);
 
-
-
   // Handle fading in content when loaded
   useEffect(() => {
     if (!isLoading && !contentLoaded) {
@@ -251,6 +252,48 @@ const ChatMessage = memo(({
       AccessibilityInfo.announceForAccessibility(message + content);
     }
   }, [content, role, onPress]);
+
+  // Function to handle copying the message content
+  const handleCopyText = useCallback(() => {
+    Clipboard.setString(content);
+    // Optional feedback to user
+    if (Platform.OS === 'ios') {
+      AccessibilityInfo.announceForAccessibility('Message copied to clipboard');
+    } else {
+      Alert.alert('Copied', 'Message copied to clipboard');
+    }
+  }, [content]);
+
+  // Function to handle sharing the message content
+  const handleShareText = useCallback(async () => {
+    try {
+      const result = await Share.share({
+        message: content,
+      });
+    } catch (error) {
+      console.error('Error sharing message:', error);
+    }
+  }, [content]);
+
+  // Function to show the text context menu
+  const showTextContextMenu = useCallback(() => {
+    if (onLongPress) {
+      onLongPress();
+    }
+    
+    // For platforms with ActionSheet but without context menu (older Android versions)
+    if (Platform.OS === 'android' && !ContextMenu.isAvailable) {
+      Alert.alert(
+        'Message Options', 
+        '', 
+        [
+          { text: 'Copy', onPress: handleCopyText },
+          { text: 'Share', onPress: handleShareText },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+    }
+  }, [onLongPress, handleCopyText, handleShareText]);
 
   const playAudio = async () => {
     try {
@@ -294,7 +337,6 @@ const ChatMessage = memo(({
   }
 
   const renderImageContent = () => {
-
     if (!files?.length) {
       return null;
     }
@@ -454,38 +496,89 @@ const ChatMessage = memo(({
             />
           </View>
           <MarkdownDisplay>{instructionForTextInImageChat()}</MarkdownDisplay>
-
         </Pressable>
       );
     }
 
-    // Regular text content (markdown)
-    return (
-      <Pressable
-        onLongPress={onLongPress}
-        onPress={handlePress}
-        style={[
-          styles.contentContainer,
-          role === Role.Bot ? styles.botContent : styles.userContent,
-          streamingContent && styles.streamingContent,
-        ]}
-        accessible={true}
-        accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
-        accessibilityRole="text"
-        testID="markdown-container"
-      >
-        <Animated.View
+    // Regular text content (markdown) with context menu
+    if (ContextMenu) {
+      return (
+        <ContextMenu.Root>
+          <ContextMenu.Trigger>
+            <Pressable
+              onLongPress={showTextContextMenu}
+              onPress={handlePress}
+              style={[
+                styles.contentContainer,
+                role === Role.Bot ? styles.botContent : styles.userContent,
+                streamingContent && styles.streamingContent,
+              ]}
+              accessible={true}
+              accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
+              accessibilityRole="text"
+              testID="markdown-container"
+            >
+              <Animated.View
+                style={[
+                  styles.markdownContainer,
+                  streamingContent && { transform: [] },
+                  streamingContent && { backgroundColor: `transparent` },
+                ]}
+              >
+                <MarkdownDisplay>{content}</MarkdownDisplay>
+              </Animated.View>
+            </Pressable>
+          </ContextMenu.Trigger>
+          <ContextMenu.Content>
+            <ContextMenu.Item key='copy-text' onSelect={handleCopyText}>
+              <ContextMenu.ItemTitle>Copy</ContextMenu.ItemTitle>
+              <ContextMenu.ItemIcon
+                ios={{
+                  name: 'doc.on.doc',
+                  pointSize: 18,
+                }}
+              />
+            </ContextMenu.Item>
+            <ContextMenu.Item key='share-text' onSelect={handleShareText}>
+              <ContextMenu.ItemTitle>Share</ContextMenu.ItemTitle>
+              <ContextMenu.ItemIcon
+                ios={{
+                  name: 'square.and.arrow.up',
+                  pointSize: 18,
+                }}
+              />
+            </ContextMenu.Item>
+          </ContextMenu.Content>
+        </ContextMenu.Root>
+      );
+    } else {
+      // Fallback for devices without ContextMenu support
+      return (
+        <Pressable
+          onLongPress={showTextContextMenu}
+          onPress={handlePress}
           style={[
-            styles.markdownContainer,
-            streamingContent && { transform: [] },
-            streamingContent && { backgroundColor: `transparent` },
+            styles.contentContainer,
+            role === Role.Bot ? styles.botContent : styles.userContent,
+            streamingContent && styles.streamingContent,
           ]}
+          accessible={true}
+          accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
+          accessibilityRole="text"
+          testID="markdown-container"
         >
-
-          <MarkdownDisplay>{content}</MarkdownDisplay>
-        </Animated.View>
-      </Pressable>
-    );
+          <Animated.View
+            style={[
+              styles.markdownContainer,
+              streamingContent && { transform: [] },
+              streamingContent && { backgroundColor: `transparent` },
+            ]}
+          >
+            <MarkdownDisplay>{content}</MarkdownDisplay>
+          </Animated.View>
+        </Pressable>
+      );
+    }
   };
 
   return (
@@ -547,7 +640,6 @@ const styles = StyleSheet.create({
   messageContent: {
     //flex: 1,
     maxWidth: '100%',
-
   },
   contentContainer: {
     borderRadius: BORDER_RADIUS,
