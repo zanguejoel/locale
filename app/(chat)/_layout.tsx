@@ -67,7 +67,18 @@ const Layout = () => {
         drawerType: 'slide',
       }}
     >
-      <Drawer.Screen name="new" component={ChatPage} options={{ title: 'Jaiime AI' }} />
+      <Drawer.Screen name="new" component={ChatPage} options={{
+        title: 'Jaiime AI',
+        headerRight: () => (
+          <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
+            <Ionicons
+              name="add"
+              size={24}
+              color={Colors.light.tint}
+            />
+          </TouchableOpacity>
+        ),
+      }} />
 
       <Drawer.Screen name="[id]"
 
