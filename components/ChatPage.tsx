@@ -51,9 +51,11 @@ const ChatPage = () => {
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
       setKeyboardVisible(true);
+      scrollToBottom();
     });
     const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
       setKeyboardVisible(false);
+     // scrollToBottom();
     });
 
     return () => {
@@ -249,8 +251,8 @@ const ChatPage = () => {
         keyboardVerticalOffset={85}
         style={[
           styles.keyboardAvoidingView,
-          isKeyboardVisible && KeyboardVisibleStyle,
-          isSending && KeyboardVisibleStyle,
+         /*  isKeyboardVisible && KeyboardVisibleStyle,
+          isSending && KeyboardVisibleStyle, */
 
         ]}
       >
@@ -303,7 +305,7 @@ const ChatPage = () => {
               activeOpacity={0.7}
             >
               <Text style={styles.textScrollDown}>
-                {autoScrollEnabled ? 'Scroll down' : 'Auto-scroll disabled'}
+                {autoScrollEnabled ? 'Scroll down' : 'Scroll to bottom'}
               </Text>
               <Ionicons name="chevron-down" size={16} color={Colors.grey} />
             </TouchableOpacity>

@@ -145,12 +145,12 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    marginBottom: 90,
+    marginBottom: 80,
   },
   logo: {
     width: 150,
     height: 75,
-    marginBottom: 16,
+    marginBottom: 10,
   },
   appLogoText: {
     fontSize: 24,
