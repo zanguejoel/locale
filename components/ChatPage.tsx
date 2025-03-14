@@ -202,6 +202,7 @@ const ChatPage = () => {
   return (
     <View style={defaultStyles.pageContainer}>
       <Stack.Screen options={{
+        headerTitleAlign: 'center',
         headerTitle: () => <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
       }} />
 
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: 110,
-    height: 30
+    height: 30,
   },
   scrollButton: {
     position: 'absolute',
