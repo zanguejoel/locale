@@ -302,7 +302,7 @@ const ChatMessage = memo(({
         setIsPlaying(false);
       } else {
         await sound.current.unloadAsync();
-        await sound.current.loadAsync({ uri: content });
+        await sound.current.loadAsync({ uri: content || files[0]?.s3_url });
         await sound.current.playAsync();
         setIsPlaying(true);
         sound.current.setOnPlaybackStatusUpdate((status) => {
@@ -418,6 +418,37 @@ const ChatMessage = memo(({
     );
   };
 
+  const renderAudio = () => {
+    return (
+      <Pressable
+      onLongPress={onLongPress}
+      onPress={handlePress}
+      style={[
+        styles.contentContainer,
+        role === Role.Bot ? styles.botContent : styles.userContent,
+      ]}
+      accessible={true}
+      accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} audio message`}
+      accessibilityRole="button"
+      testID="audio-player-container"
+    >
+      <Pressable style={styles.audioPlayer} onPress={playAudio} testID="audio-play-button">
+        {!isPlaying ? (
+          <View style={styles.audioPlayer}>
+            <AntDesign name="caretright" size={14} color="black" />
+            <Text style={styles.audioText}>Play Audio</Text>
+          </View>
+        ) : (
+          <View style={styles.audioPlayer}>
+            <Entypo name="controller-paus" size={14} color="black" />
+            <Text style={styles.audioText}>Stop Audio</Text>
+          </View>
+        )}
+      </Pressable>
+    </Pressable>
+    )
+  };
+
   const renderContent = () => {
     if (error && onRetry) {
       return (
@@ -433,76 +464,13 @@ const ChatMessage = memo(({
       );
     }
 
-    // Content is an audio message
-    if (isAudio(content)) {
-      return (
-        <Pressable
-          onLongPress={onLongPress}
-          onPress={handlePress}
-          style={[
-            styles.contentContainer,
-            role === Role.Bot ? styles.botContent : styles.userContent,
-          ]}
-          accessible={true}
-          accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} audio message`}
-          accessibilityRole="button"
-          testID="audio-player-container"
-        >
-          <Pressable style={styles.audioPlayer} onPress={playAudio} testID="audio-play-button">
-            {!isPlaying ? (
-              <View style={styles.audioPlayer}>
-                <AntDesign name="caretright" size={14} color="black" />
-                <Text style={styles.audioText}>Play Audio</Text>
-              </View>
-            ) : (
-              <View style={styles.audioPlayer}>
-                <Entypo name="controller-paus" size={14} color="black" />
-                <Text style={styles.audioText}>Stop Audio</Text>
-              </View>
-            )}
-          </Pressable>
-        </Pressable>
-      );
-    }
-
-    if (isImage(imageData) || (content !== '' && files?.length)) {
-      return (
-        <Pressable
-          onLongPress={onLongPress}
-          onPress={handlePress}
-          style={[
-            styles.contentContainer,
-            role === Role.Bot ? styles.botContent : styles.userContent,
-          ]}
-          accessible={true}
-          accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} image message`}
-          accessibilityRole="image"
-          testID="inline-image-container"
-        >
-          <View style={styles.imageContainer}>
-            {(!contentLoaded || imageLoadError) && (
-              <View style={styles.imageLoadingOverlay}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-                {imageLoadError && <Text style={styles.imageLoadingText}>Retrying...</Text>}
-              </View>
-            )}
-            <Image
-              source={{ uri: instructionForImageChatDisplay(), cache: 'force-cache' }}
-              style={styles.previewImage}
-              resizeMode="cover"
-              onError={(e) => console.error('Error loading inline image:', e.nativeEvent.error)}
-              onLoad={() => setContentLoaded(true)}
-              testID="inline-image"
-            />
-          </View>
-          <MarkdownDisplay>{instructionForTextInImageChat()}</MarkdownDisplay>
-        </Pressable>
-      );
-    }
+   
+  
 
     // Regular text content (markdown) with context menu
     if (ContextMenu) {
       return (
+        <>
         <ContextMenu.Root>
           <ContextMenu.Trigger>
             <Pressable
@@ -550,10 +518,17 @@ const ChatMessage = memo(({
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
+        {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+          renderAudio()
+        )}
+
+        {(isImage(content) || files?.[0]?.file_type === 'img') && renderImageContent()}
+        </>
       );
     } else {
       // Fallback for devices without ContextMenu support
       return (
+        <>
         <Pressable
           onLongPress={showTextContextMenu}
           onPress={handlePress}
@@ -577,10 +552,14 @@ const ChatMessage = memo(({
             <MarkdownDisplay>{content}</MarkdownDisplay>
           </Animated.View>
         </Pressable>
-      );
-    }
-  };
+        {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+          renderAudio()
+        )}
 
+        {(isImage(content) || files?.[0]?.file_type === 'img') && renderImageContent()}
+     </>)
+  };
+}
   return (
     <Animated.View
       style={[
@@ -604,7 +583,7 @@ const ChatMessage = memo(({
         </View>
       ) : (
         <View style={styles.messageContent} testID="message-content">
-          {(content === '' && files?.length) ? renderImageContent() : renderContent()}
+         {renderContent()}
         </View>
       )}
     </Animated.View>
