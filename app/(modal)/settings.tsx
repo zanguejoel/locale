@@ -1,7 +1,7 @@
 import Colors from '@/constants/Colors';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, SafeAreaView, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import React from "react";
 import { useChat } from '@/hooks/useChat';
@@ -68,18 +68,17 @@ const Page = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView style={styles.container}>
         <View style={styles.contentContainer}>
           <View style={styles.menuContainer}>
             {rawPage.map((item, index) => renderRaw(item, index))}
           </View>
+          <View style={styles.footer}>
+            <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
+            <Text style={styles.appVersion}>App Version 1.0.0</Text>
+          </View>
         </View>
-
-        <View style={styles.footer}>
-          <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
-          <Text style={styles.appVersion}>App Version 1.0.0</Text>
-        </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -93,13 +92,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    justifyContent: 'space-between',
   },
   contentContainer: {
     paddingTop: 20,
+    flex: 1,
   },
   menuContainer: {
-    backgroundColor: '#FFFFFF',
+    minHeight: 600,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: {

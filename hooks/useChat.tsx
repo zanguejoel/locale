@@ -122,22 +122,30 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const optimizeImage = useCallback(async (imagePath: string): Promise<string> => {
     try {
+      if (
+        Platform.OS === 'android' &&
+        !imagePath.startsWith('file://') &&
+        !imagePath.startsWith('content://')
+      ) {
+        imagePath = 'file://' + imagePath;
+      }
 
       const fileInfo = await FileSystem.getInfoAsync(imagePath, { size: true });
-
-
       if (!fileInfo.exists) {
-        throw new Error(`File does not exist at path: ${imagePath}`);
+        throw new Error(`${imagePath}`);
       }
-      if (fileInfo.size && fileInfo.size <= MAX_IMAGE_SIZE) {
 
+      if (fileInfo.size && fileInfo.size <= MAX_IMAGE_SIZE) {
         return imagePath;
       }
 
       let actions = [];
       if (fileInfo.size && fileInfo.size > MAX_IMAGE_SIZE * 1.5) {
-        actions.push({ resize: { width: MAX_IMAGE_DIMENSION, height: MAX_IMAGE_DIMENSION } });
+        actions.push({
+          resize: { width: MAX_IMAGE_DIMENSION, height: MAX_IMAGE_DIMENSION },
+        });
       }
+
       let compression = 0.8;
       if (fileInfo.size && fileInfo.size > MAX_IMAGE_SIZE * 3) {
         compression = 0.6;
@@ -148,8 +156,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         actions,
         { compress: compression, format: ImageManipulator.SaveFormat.JPEG }
       );
-      const optimizedInfo = await FileSystem.getInfoAsync(result.uri, { size: true });
 
+      const optimizedInfo = await FileSystem.getInfoAsync(result.uri, { size: true });
       if (optimizedInfo.size && optimizedInfo.size > MAX_IMAGE_SIZE) {
         const finalResult = await ImageManipulator.manipulateAsync(
           result.uri,

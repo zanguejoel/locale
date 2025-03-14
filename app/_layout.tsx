@@ -128,11 +128,14 @@ const Layout = () => {
       />
 
       <Stack.Screen name="(chat)" options={{ headerShown: false }} />
+
       <Stack.Screen
         name="(modal)/settings"
         options={{
           headerTitle: "Settings",
           // presentation: "modal",
+          headerTitleAlign: 'center',
+          headerTitleStyle: { color: Colors.light.text },
           headerStyle: { backgroundColor: Colors.selected },
         }}
       />

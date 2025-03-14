@@ -1,6 +1,6 @@
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -34,7 +34,6 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
-
   const startRecording = async () => {
     try {
       const { status } = await Audio.getPermissionsAsync();
@@ -117,6 +116,7 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
   };
 
   const onSend = () => {
+    Keyboard.dismiss();
     if (selectedImage) {
       onShouldSend(selectedImage?.uri, 'image', null, message);
       fetchMessages?.()
@@ -178,7 +178,6 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
 
       if (result.canceled) return;
       const assets = result.assets[0];
-
       setSelectedImage(assets)
 
       // onShouldSend(result.uri, 'file');
@@ -203,52 +202,62 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
   }
 
   return (
-    <BlurView intensity={90} tint="extraLight" style={[styles.inputContainer, { paddingBottom: bottom }]}>
-      {selectedImage && renderSelectedFile()}
-      <View style={styles.row}>
-        <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
-          <Ionicons name="add" size={24} color={Colors.grey} />
-        </ATouchableOpacity>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <BlurView intensity={90} tint="extraLight" style={[styles.inputContainer, { paddingBottom: bottom }]}>
+        {selectedImage && renderSelectedFile()}
+        <View style={styles.row}>
+          <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
+            <Ionicons name="add" size={24} color={Colors.grey} />
+          </ATouchableOpacity>
 
-        <Animated.View style={[styles.buttonView, buttonViewStyle]}>
-          <TouchableOpacity onPress={takePhoto}>
-            <Ionicons name="camera-outline" size={24} color={Colors.grey} />
-          </TouchableOpacity>
+          <Animated.View style={[styles.buttonView, buttonViewStyle]}>
+            <TouchableOpacity onPress={takePhoto}>
+              <Ionicons name="camera-outline" size={24} color={Colors.grey} />
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={pickImageFromGallery}>
-            <Ionicons name="image-outline" size={24} color={Colors.grey} />
-          </TouchableOpacity>
+            <TouchableOpacity onPress={pickImageFromGallery}>
+              <Ionicons name="image-outline" size={24} color={Colors.grey} />
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={pickDocument}>
-            <Ionicons name="folder-outline" size={24} color={Colors.grey} />
-          </TouchableOpacity>
-        </Animated.View>
+            <TouchableOpacity onPress={pickDocument}>
+              <Ionicons name="folder-outline" size={24} color={Colors.grey} />
+            </TouchableOpacity>
+          </Animated.View>
 
-        <TextInput
-          // autoFocus
-          ref={inputRef}
-          placeholder="Message"
-          style={styles.messageInput}
-          onFocus={collapseItems}
-          onChangeText={onChangeText}
-          value={message}
-          multiline
-        />
-        {message.length > 0 ? (
-          <TouchableOpacity onPress={onSend}>
-            <Ionicons name="arrow-up-circle" size={30} color={Colors.grey} />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={isRecording ? stopRecording : startRecording}>
-            <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : Colors.grey} />
-          </TouchableOpacity>
-        )}
-      </View>
-    </BlurView>
+          <TextInput
+            // autoFocus
+            ref={inputRef}
+            placeholder="Message"
+            style={styles.messageInput}
+            onFocus={collapseItems}
+            onChangeText={onChangeText}
+            value={message}
+            multiline
+          />
+          {message.length > 0 ? (
+            <TouchableOpacity onPress={onSend}>
+              <Ionicons name="arrow-up-circle" size={30} color={Colors.grey} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={isRecording ? stopRecording : startRecording}>
+              <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : Colors.grey} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </BlurView>
+    </KeyboardAvoidingView>
+
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFF'
+  },
   inputContainer: {
     paddingTop: 10, borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
