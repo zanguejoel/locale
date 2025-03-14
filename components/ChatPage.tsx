@@ -12,8 +12,11 @@ import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { PanGestureHandler } from 'react-native-gesture-handler';
+import { useRoute } from '@react-navigation/native';
 
 const ChatPage = () => {
+  const { params } = useRoute();
+
   // States
   const [height, setHeight] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -37,8 +40,9 @@ const ChatPage = () => {
   // Hooks
   const chat = useChat();
   const { messages, sendMessage, setCurrentRoom, isSending, stream, fetchMessages } = chat;
-  const { id } = useLocalSearchParams<{ id: string }>();
-  // Initial setup when conversation changes
+
+
+  const id = params?.id
 
   useEffect(() => {
     if (id) {

@@ -128,6 +128,7 @@ const Layout = () => {
       />
 
       <Stack.Screen name="(chat)" options={{ headerShown: false }} />
+
       <Stack.Screen
         name="(modal)/settings"
         options={{

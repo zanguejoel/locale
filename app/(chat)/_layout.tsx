@@ -1,4 +1,4 @@
-import { Drawer } from 'expo-router/drawer';
+
 import { useRouter } from 'expo-router';
 
 import {
@@ -13,14 +13,18 @@ import {
 } from 'react-native';
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
-
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useChat } from '@/hooks/useChat';
 import React from 'react';
 
 import { CustomDrawerContent } from '@/components/ChatCustomDrawerContent';
+import ChatPage from './new';
+import ChatPageId from '../../components/ChatPage';
+
+const Drawer = createDrawerNavigator();
 
 const Layout = () => {
-  const dimensions = useWindowDimensions();
+
   const router = useRouter();
   const { createNewConversation, resetChat } = useChat();
 
@@ -42,54 +46,34 @@ const Layout = () => {
   };
 
   return (
-    <Drawer
-      drawerContent={CustomDrawerContent}
-      screenOptions={(navigation) => ({
-        /*   headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => navigation.navigation.toggleDrawer()}
-              style={styles.headerButton}>
-                <Ionicons name="menu-sharp" size={22} color={Colors.grey} />
-            </TouchableOpacity>
-          ), */
+    <Drawer.Navigator
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
+      screenOptions={{
+        drawerActiveBackgroundColor: '#selectedColor',
+        drawerActiveTintColor: '#000',
+        drawerInactiveTintColor: '#000',
         headerTintColor: Colors.light.tint,
         headerStyle: {
           backgroundColor: Colors.light.background,
           height: 110,
         },
         headerShadowVisible: true,
-        drawerActiveBackgroundColor: Colors.selected,
-        drawerActiveTintColor: '#000',
-        drawerInactiveTintColor: '#000',
         overlayColor: 'rgba(0, 0, 0, 0.2)',
         drawerItemStyle: { borderRadius: 12 },
         drawerLabelStyle: { marginLeft: -20 },
         drawerStyle: {
-          width: dimensions.width * 0.85,
           backgroundColor: '#FFFFFF',
         },
         drawerType: 'slide',
+      }}
+    >
+      <Drawer.Screen name="new" component={ChatPage} options={{ title: 'Jaiime AI' }} />
 
-      })}>
-      <Drawer.Screen
+      <Drawer.Screen name="[id]"
 
-        name="new"
 
-        getId={() => Math.random().toString()}
-        options={{
-
+        component={ChatPageId} options={{
           title: 'Jaiime AI',
-          headerTitle: () => (
-            <View style={styles.headerTitleContainer}>
-              <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.headerLogo} />
-              <Text style={styles.headerTitle}>Jaiime AI</Text>
-            </View>
-          ),
-          drawerIcon: () => (
-            <View style={styles.drawerIconContainer}>
-              <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.drawerIcon} />
-            </View>
-          ),
           headerRight: () => (
             <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
               <Ionicons
@@ -99,27 +83,9 @@ const Layout = () => {
               />
             </TouchableOpacity>
           ),
-        }}
-      />
-      <Drawer.Screen
-        name="[id]"
-        options={{
-          title: 'Jaiime AI',
-          drawerItemStyle: {
-            display: 'none',
-          },
-          headerRight: () => (
-            <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
-              <Ionicons
-                name="add"
-                size={24}
-                color={Colors.light.tint}
-              />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-    </Drawer>
+        }} />
+
+    </Drawer.Navigator>
   );
 };
 

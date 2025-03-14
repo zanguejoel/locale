@@ -1,6 +1,6 @@
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, Keyboard } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -116,6 +116,7 @@ const ChatInput = ({ onShouldSend, fetchMessages }: Props) => {
   };
 
   const onSend = () => {
+    Keyboard.dismiss();
     if (selectedImage) {
       onShouldSend(selectedImage?.uri, 'image', null, message);
       fetchMessages?.()

@@ -1,5 +1,5 @@
 
-import { DrawerContentScrollView, useDrawerStatus } from '@react-navigation/drawer';
+import { useDrawerProgress, useDrawerStatus } from '@react-navigation/drawer';
 import { Link, useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -23,11 +23,15 @@ import { useChat } from '@/hooks/useChat';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Swipeable } from 'react-native-gesture-handler';
 import { FlashList } from '@shopify/flash-list';
+import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
 
 
 export const CustomDrawerContent = (props: any) => {
     const drawerStatus = useDrawerStatus();
     const { bottom } = useSafeAreaInsets();
+    const progressDrawer = useDrawerProgress()
+    const [isShowData, setShowData] = useState(false)
+
     const {
         conversations,
         currentConversationId,
@@ -47,19 +51,13 @@ export const CustomDrawerContent = (props: any) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isLoadingDisplayChats, setLoadingDisplayChats] = useState(true);
     const [openSwipeableId, setOpenSwipeableId] = useState(null);
+
     const swipeableRef = useRef(null);
     const navigation = useNavigation();
     const limitRef = useRef(20);
 
-
-    const [openSwipeable, setOpenSwipeable] = useState(null);
-
     const showLoading = isLoading || localLoading;
 
-    const [layoutInfo, setLayoutInfo] = useState({
-        x: 0, y: 0, width: 0, height: 0,
-        pageX: 0, pageY: 0
-    });
     const viewRef = useRef<View>(null);
 
     useEffect(() => {
@@ -67,6 +65,17 @@ export const CustomDrawerContent = (props: any) => {
         setHasMore(true);
         fetchConversation(query, limitRef.current);
     }, [fetchConversation, query]);
+
+    useAnimatedReaction(
+        () => progressDrawer.value,
+        (currentValue) => {
+            if (currentValue >= 0.9) {
+                runOnJS(setShowData)(true);
+            } else {
+                runOnJS(setShowData)(false);
+            }
+        }
+    );
 
     useEffect(() => {
         if (drawerStatus === 'open') {
@@ -379,35 +388,37 @@ export const CustomDrawerContent = (props: any) => {
                 </View>
                 <Text style={styles.historyTitle}>Chat History</Text>
             </View>
-
-            {filteredConversations.length === 0 ? (
-                <View style={styles.emptyStateContainer}>
-                    <Ionicons name="chatbubble-outline" size={50} color={Colors.greyLight} />
-                    <Text style={styles.emptyStateText}>No conversations found</Text>
-                    <Text style={styles.emptyStateSubText}>
-                        {query ? 'Try a different search term' : 'Start a new chat to begin'}
-                    </Text>
-                </View>
-            ) : (
-                <FlashList
-                    data={filteredConversations}
-                    keyExtractor={keyExtractor}
-                    renderItem={renderItem}
-                    onScroll={handleScroll}
-                    scrollEventThrottle={16}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={isRefreshing}
-                            onRefresh={onRefresh}
+            {!isShowData ? <></> :
+                <>
+                    {filteredConversations.length === 0 ? (
+                        <View style={styles.emptyStateContainer}>
+                            <Ionicons name="chatbubble-outline" size={50} color={Colors.greyLight} />
+                            <Text style={styles.emptyStateText}>No conversations found</Text>
+                            <Text style={styles.emptyStateSubText}>
+                                {query ? 'Try a different search term' : 'Start a new chat to begin'}
+                            </Text>
+                        </View>
+                    ) : (
+                        <FlashList
+                            data={filteredConversations}
+                            keyExtractor={keyExtractor}
+                            renderItem={renderItem}
+                            onScroll={handleScroll}
+                            scrollEventThrottle={16}
+                            refreshControl={
+                                <RefreshControl
+                                    refreshing={isRefreshing}
+                                    onRefresh={onRefresh}
+                                />
+                            }
+                            onEndReached={loadMoreConversations}
+                            onEndReachedThreshold={0.5}
+                            contentContainerStyle={styles.scrollViewContent}
+                            style={{ flex: 1 }}
                         />
-                    }
-                    onEndReached={loadMoreConversations}
-                    onEndReachedThreshold={0.5}
-                    contentContainerStyle={styles.scrollViewContent}
-                    style={{ flex: 1 }}
-                />
-            )}
-
+                    )}
+                </>
+            }
             <View style={[styles.footerContainer, { paddingBottom: 10 + bottom }]}>
                 <Link href="/(modal)/settings" asChild>
                     <TouchableOpacity style={styles.footer}>
