@@ -78,17 +78,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const confirmEmail = async (email: string, code: string, router: any, password: string) => {
     try {
+      console.log("User email -------", email)
       const response = await api.post<{ token: string } | any>(`/auth/verify-email`, {
         email: email,
         code: code
       });
-
+      
       if (response.ok) {
-        router.push(`/success-page?email=${email}&password=${password}`)
+        router.replace(`/success-page?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`)
+      } else {
+        throw JSON.stringify(response.data.detail)
       }
 
     } catch (error) {
       console.error('Forgot password error:', JSON.stringify(error))
+      throw error
     }
   }
 
@@ -112,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (formData: FormData, router: any) => {
     try {
       setIsLoading(true);
-
+     
       const response = await api.post<{ token: string } | any>("/auth/signup", {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -120,17 +124,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
+        confirmPassword: formData.confirmPassword
       }, {
         headers: {
           "X-Mobile-Recaptcha-Token": "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1",
           "Content-Type": "application/json",
         }
       });
+      // console.log('APL--------', JSON.stringify(response.data));
       if (response.ok) {
-        router.push(`/email-verification?email=${formData?.email}&password=${formData.password}`)
+        router.push(`/email-verification?email=${encodeURIComponent(formData?.email)}&password=${encodeURIComponent(formData.password)}`)
+      } else {
+        throw JSON.stringify(response.data.detail)
       }
     } catch (error) {
-      console.error("Sign up error:", error);
+      console.error("Sign up error: ", error);
       throw error;
     } finally {
       setIsLoading(false);

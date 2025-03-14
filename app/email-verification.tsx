@@ -36,11 +36,11 @@ const EmailVerification = () => {
         setIsSubmitted(true);
 
         try {
-            await confirmEmail(email, code, router, password);
+            await confirmEmail(decodeURIComponent(`${email}`), code, router, decodeURIComponent(`${password}`));
         } catch (err: any) {
             Alert.alert(
                 "Error",
-                err.message || "Failed to send reset instructions. Please try again."
+                err || "Failed to send reset instructions. Please try again."
             );
         }
     };
@@ -67,7 +67,7 @@ const EmailVerification = () => {
 
                 <View style={styles.formContainer}>
                     <CustomInput
-                        icon="mail-outline"
+                        icon="code-outline"
                         placeholder="Enter your code"
                         value={code}
                         onChangeText={(text) => {
@@ -75,8 +75,8 @@ const EmailVerification = () => {
                         }}
                         error={!!error.code}
                         autoCapitalize="none"
-                        keyboardType="email-address"
-                        autoComplete="email"
+                        keyboardType="numeric"
+                        // autoComplete="email"
                     />
                     {error.code && <Text style={styles.errorText}>{error.code}</Text>}
 
