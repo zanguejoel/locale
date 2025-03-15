@@ -16,6 +16,7 @@ import { BlurView } from 'expo-blur';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
+import { isLoaded } from 'expo-font';
 
 
 const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
@@ -24,10 +25,11 @@ export type Props = {
   onShouldSend: (message: string, type?: string) => void;
   fetchMessages?: () => void
   selectedImage?: ImagePicker.ImagePickerAsset
-  setSelectedImage?: (a: ImagePicker.ImagePickerAsset) => void
+  setSelectedImage?: (a: ImagePicker.ImagePickerAsset) => void,
+  isLoading?: boolean
 };
 
-const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage }: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading}: Props) => {
   const [message, setMessage] = useState('');
   const { bottom } = useSafeAreaInsets();
   const expanded = useSharedValue(0);
@@ -227,12 +229,12 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             multiline
           />
           {message.length > 0 ? (
-            <TouchableOpacity onPress={onSend}>
-              <Ionicons name="arrow-up-circle" size={30} color={Colors.grey} />
+            <TouchableOpacity disabled={isLoading} onPress={onSend}>
+              <Ionicons name="arrow-up-circle" size={30} color={isLoading? Colors.greyLight :Colors.grey} />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={isRecording ? stopRecording : startRecording}>
-              <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : Colors.grey} />
+            <TouchableOpacity disabled={isLoading} onPress={isRecording ? stopRecording : startRecording}>
+              <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : (isLoading? Colors.greyLight :Colors.grey)} />
             </TouchableOpacity>
           )}
         </View>
