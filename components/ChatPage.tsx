@@ -55,7 +55,7 @@ const ChatPage = () => {
     });
     const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
       setKeyboardVisible(false);
-     // scrollToBottom();
+      // scrollToBottom();
     });
 
     return () => {
@@ -251,8 +251,8 @@ const ChatPage = () => {
         keyboardVerticalOffset={85}
         style={[
           styles.keyboardAvoidingView,
-         /*  isKeyboardVisible && KeyboardVisibleStyle,
-          isSending && KeyboardVisibleStyle, */
+          // isKeyboardVisible && KeyboardVisibleStyle,
+          isSending && KeyboardVisibleStyle,
 
         ]}
       >
