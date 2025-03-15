@@ -17,7 +17,8 @@ import {
   ActivityIndicator,
   Clipboard,
   Share,
-  Alert
+  Alert,
+  I18nManager
 } from 'react-native';
 import * as ContextMenu from 'zeego/context-menu';
 import { useCallback, useEffect, useRef } from 'react';
@@ -321,6 +322,7 @@ const ChatMessage = memo(({
   };
 
   const instructionForImageChatDisplay = () => {
+
     if (isImage(imageData)) {
       return encodeURI(imageData)
     } else if (content !== '' && files?.length) {
@@ -337,9 +339,9 @@ const ChatMessage = memo(({
   }
 
   const renderImageContent = () => {
-    if (!files?.length) {
-      return null;
-    }
+
+  
+   
 
     if (imageLoadError && imageAttempts >= 3) {
       return (
@@ -360,7 +362,7 @@ const ChatMessage = memo(({
     }
 
     // Ensure URL is properly encoded
-    const processedUrl = `https://app-dev.jaiime.com/api/local-media?file=${encodeURI(files[0].file_path)}`;
+    const processedUrl = imageData ?  instructionForImageChatDisplay() : `https://app-dev.jaiime.com/api/local-media?file=${encodeURI(files[0].file_path)}`;
 
     return (
       <ContextMenu.Root>
@@ -450,6 +452,8 @@ const ChatMessage = memo(({
   };
 
   const renderContent = () => {
+
+    
     if (error && onRetry) {
       return (
         <View style={[styles.contentContainer, role === Role.Bot ? styles.botContent : styles.userContent]}>
@@ -464,14 +468,14 @@ const ChatMessage = memo(({
       );
     }
 
-   
   
 
     // Regular text content (markdown) with context menu
     if (ContextMenu) {
       return (
         <>
-        <ContextMenu.Root>
+        {(!isAudio(content)) && (
+          <ContextMenu.Root>
           <ContextMenu.Trigger>
             <Pressable
               onLongPress={showTextContextMenu}
@@ -518,11 +522,13 @@ const ChatMessage = memo(({
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
+        )}
+        
         {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
           renderAudio()
         )}
 
-        {(isImage(content) || files?.[0]?.file_type === 'img') && renderImageContent()}
+        {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '')) && renderImageContent()}
         </>
       );
     } else {
@@ -556,7 +562,7 @@ const ChatMessage = memo(({
           renderAudio()
         )}
 
-        {(isImage(content) || files?.[0]?.file_type === 'img') && renderImageContent()}
+{(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '')) && renderImageContent()}
      </>)
   };
 }
