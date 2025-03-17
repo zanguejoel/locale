@@ -66,9 +66,6 @@ export const processStream = async (
               break;
             case 'final':
               res = data;
-              if (data?.data?.response) {
-                setStream(data?.data?.response);
-              }
               if (data?.data?.additional_data) {
                 setAdditionalData?.(data?.data?.additional_data)
               }
