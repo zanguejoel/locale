@@ -72,6 +72,7 @@ interface ChatContextType {
   renameConversation: (conversationId: string, newTitle: string) => Promise<boolean>;
   resetChat: () => void;
   createNewConversation: () => Promise<string>;
+  intermediate: string
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -586,7 +587,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetChat,
     createNewConversation,
     streamWorking,
+    intermediate,
   }), [
+    intermediate,
     messages,
     conversations,
     currentConversationId,

@@ -20,6 +20,33 @@ export const downloadAndSaveImage = async (imageUrl: string): Promise<any> => {
   }
 };
 
+
+export const downloadAndSaveVideo = async (videoUrl?: string) => {
+  if (!videoUrl) {
+    return;
+  }
+  try {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Media library permissions are needed to save the video.');
+      return;
+    }
+
+    const fileName = videoUrl.split('/').pop();
+    const fileUri = FileSystem.cacheDirectory + fileName;
+
+    const { uri } = await FileSystem.downloadAsync(videoUrl, fileUri);
+
+    const asset = await MediaLibrary.createAssetAsync(uri);
+
+    await MediaLibrary.createAlbumAsync('Downloaded Videos', asset, false);
+
+    Alert.alert('Success', 'Video downloaded and saved successfully!');
+  } catch (error) {
+    console.log('Error downloading video:', error);
+  }
+};
+
 const saveFile = async (fileUri: string) => {
   const { status } = await MediaLibrary.requestPermissionsAsync();
   if (status === 'granted') {
