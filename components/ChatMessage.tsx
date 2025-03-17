@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import Colors from '@/constants/Colors';
 import useMarkdownDisplay from '@/hooks/useMarkdownDisplay';
-import { copyImageToClipboard, downloadAndSaveImage, shareImage } from '@/utils/Image';
+import { copyImageToClipboard, downloadAndSaveImage, downloadAndSaveVideo, shareImage } from '@/utils/Image';
 import { Message, Role } from '@/utils/Interfaces';
 import { Link } from 'expo-router';
 import {
@@ -18,14 +18,16 @@ import {
   Clipboard,
   Share,
   Alert,
-  I18nManager
 } from 'react-native';
 import * as ContextMenu from 'zeego/context-menu';
 import { useCallback, useEffect, useRef } from 'react';
-import { Audio } from 'expo-av';
+import { Audio, Video } from 'expo-av';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Ionicons } from '@expo/vector-icons';
+
+import Feather from '@expo/vector-icons/Feather';
+import AnimatedText from './AnimatedText';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -160,17 +162,28 @@ const ChatMessage = memo(({
   streamingContent = false,
   isSending,
   streamWorking,
-  imageData
+  imageData,
+  intermediate
 }: ChatMessageProps) => {
   const sound = useRef(new Audio.Sound());
   const [isPlaying, setIsPlaying] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
   const [contentLoaded, setContentLoaded] = useState(false);
-  const [imageAttempts, setImageAttempts] = useState(0); // Track retry attempts for images
+  const [imageAttempts, setImageAttempts] = useState(0);
+  const [isLoadingDownloadVideo, setLoadingDownloadVideo] = useState(false)
   const MarkdownDisplay = useMarkdownDisplay();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  const videoRef = useRef<Video>(null);
+
+  const handleFullScreenVideo = () => {
+    if (videoRef.current) {
+      videoRef.current.presentFullscreenPlayer();
+    } else {
+      Alert.alert('Error', 'Video reference not available');
+    }
+  };
   // Force loading state to be a boolean
   const isLoading = loading === true;
 
@@ -281,12 +294,12 @@ const ChatMessage = memo(({
     if (onLongPress) {
       onLongPress();
     }
-    
+
     // For platforms with ActionSheet but without context menu (older Android versions)
     if (Platform.OS === 'android' && !ContextMenu.isAvailable) {
       Alert.alert(
-        'Message Options', 
-        '', 
+        'Message Options',
+        '',
         [
           { text: 'Copy', onPress: handleCopyText },
           { text: 'Share', onPress: handleShareText },
@@ -340,8 +353,6 @@ const ChatMessage = memo(({
 
   const renderImageContent = () => {
 
-  
-   
 
     if (imageLoadError && imageAttempts >= 3) {
       return (
@@ -362,7 +373,7 @@ const ChatMessage = memo(({
     }
 
     // Ensure URL is properly encoded
-    const processedUrl = imageData ?  instructionForImageChatDisplay() : `https://app-dev.jaiime.com/api/local-media?file=${encodeURI(files[0].file_path)}`;
+    const processedUrl = imageData ? instructionForImageChatDisplay() : `https://app-dev.jaiime.com/api/local-media?file=${encodeURI(files[0].file_path)}`;
 
     return (
       <ContextMenu.Root>
@@ -423,37 +434,75 @@ const ChatMessage = memo(({
   const renderAudio = () => {
     return (
       <Pressable
-      onLongPress={onLongPress}
-      onPress={handlePress}
-      style={[
-        styles.contentContainer,
-        role === Role.Bot ? styles.botContent : styles.userContent,
-      ]}
-      accessible={true}
-      accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} audio message`}
-      accessibilityRole="button"
-      testID="audio-player-container"
-    >
-      <Pressable style={styles.audioPlayer} onPress={playAudio} testID="audio-play-button">
-        {!isPlaying ? (
-          <View style={styles.audioPlayer}>
-            <AntDesign name="caretright" size={14} color="black" />
-            <Text style={styles.audioText}>Play Audio</Text>
-          </View>
-        ) : (
-          <View style={styles.audioPlayer}>
-            <Entypo name="controller-paus" size={14} color="black" />
-            <Text style={styles.audioText}>Stop Audio</Text>
-          </View>
-        )}
+        onLongPress={onLongPress}
+        onPress={handlePress}
+        style={[
+          styles.contentContainer,
+          role === Role.Bot ? styles.botContent : styles.userContent,
+        ]}
+        accessible={true}
+        accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} audio message`}
+        accessibilityRole="button"
+        testID="audio-player-container"
+      >
+        <Pressable style={styles.audioPlayer} onPress={playAudio} testID="audio-play-button">
+          {!isPlaying ? (
+            <View style={styles.audioPlayer}>
+              <AntDesign name="caretright" size={14} color="black" />
+              <Text style={styles.audioText}>Play Audio</Text>
+            </View>
+          ) : (
+            <View style={styles.audioPlayer}>
+              <Entypo name="controller-paus" size={14} color="black" />
+              <Text style={styles.audioText}>Stop Audio</Text>
+            </View>
+          )}
+        </Pressable>
       </Pressable>
-    </Pressable>
     )
+  };
+
+  const renderVideo = () => {
+    const videoUrl = files?.[0]?.s3_url;
+    const handleDownloadVideo = async () => {
+      try {
+        setLoadingDownloadVideo(true)
+        await downloadAndSaveVideo(videoUrl);
+        Alert.alert("Success", "Video downloaded successfully");
+      } catch (error) {
+        Alert.alert("Error", "Failed to download video");
+      } finally {
+        setLoadingDownloadVideo(false)
+
+      }
+    };
+
+    return (
+      <View>
+        <Video
+          ref={videoRef}
+          source={{ uri: videoUrl }}
+          style={styles.video}
+          useNativeControls
+          isLooping
+        />
+        {isLoadingDownloadVideo && <ActivityIndicator style={styles.loadingVideo} size={'small'} color={Colors.light.background} />}
+        <TouchableOpacity style={styles.fullScreenButton} onPress={handleFullScreenVideo}>
+          <Feather name="maximize" size={15} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.downloadButton]}
+          onPress={handleDownloadVideo}
+        >
+          <Feather name="download" size={15} color="#fff" />
+        </TouchableOpacity>
+      </View >
+    );
   };
 
   const renderContent = () => {
 
-    
+
     if (error && onRetry) {
       return (
         <View style={[styles.contentContainer, role === Role.Bot ? styles.botContent : styles.userContent]}>
@@ -468,104 +517,106 @@ const ChatMessage = memo(({
       );
     }
 
-  
 
     // Regular text content (markdown) with context menu
     if (ContextMenu) {
       return (
         <>
-        {(!isAudio(content)) && (
-          <ContextMenu.Root>
-          <ContextMenu.Trigger>
-            <Pressable
-              onLongPress={showTextContextMenu}
-              onPress={handlePress}
-              style={[
-                styles.contentContainer,
-                role === Role.Bot ? styles.botContent : styles.userContent,
-                streamingContent && styles.streamingContent,
-              ]}
-              accessible={true}
-              accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
-              accessibilityRole="text"
-              testID="markdown-container"
-            >
-              <Animated.View
-                style={[
-                  styles.markdownContainer,
-                  streamingContent && { transform: [] },
-                  streamingContent && { backgroundColor: `transparent` },
-                ]}
-              >
-                <MarkdownDisplay>{content}</MarkdownDisplay>
-              </Animated.View>
-            </Pressable>
-          </ContextMenu.Trigger>
-          <ContextMenu.Content>
-            <ContextMenu.Item key='copy-text' onSelect={handleCopyText}>
-              <ContextMenu.ItemTitle>Copy</ContextMenu.ItemTitle>
-              <ContextMenu.ItemIcon
-                ios={{
-                  name: 'doc.on.doc',
-                  pointSize: 18,
-                }}
-              />
-            </ContextMenu.Item>
-            <ContextMenu.Item key='share-text' onSelect={handleShareText}>
-              <ContextMenu.ItemTitle>Share</ContextMenu.ItemTitle>
-              <ContextMenu.ItemIcon
-                ios={{
-                  name: 'square.and.arrow.up',
-                  pointSize: 18,
-                }}
-              />
-            </ContextMenu.Item>
-          </ContextMenu.Content>
-        </ContextMenu.Root>
-        )}
-        
-        {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
-          renderAudio()
-        )}
+          {(!isAudio(content)) && (
+            <ContextMenu.Root>
+              <ContextMenu.Trigger>
+                <Pressable
+                  onLongPress={showTextContextMenu}
+                  onPress={handlePress}
+                  style={[
+                    styles.contentContainer,
+                    role === Role.Bot ? styles.botContent : styles.userContent,
+                    streamingContent && styles.streamingContent,
+                  ]}
+                  accessible={true}
+                  accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
+                  accessibilityRole="text"
+                  testID="markdown-container"
+                >
+                  <Animated.View
+                    style={[
+                      styles.markdownContainer,
+                      streamingContent && { transform: [] },
+                      streamingContent && { backgroundColor: `transparent` },
+                    ]}
+                  >
+                    <MarkdownDisplay>{content}</MarkdownDisplay>
+                  </Animated.View>
+                </Pressable>
+              </ContextMenu.Trigger>
+              <ContextMenu.Content>
+                <ContextMenu.Item key='copy-text' onSelect={handleCopyText}>
+                  <ContextMenu.ItemTitle>Copy</ContextMenu.ItemTitle>
+                  <ContextMenu.ItemIcon
+                    ios={{
+                      name: 'doc.on.doc',
+                      pointSize: 18,
+                    }}
+                  />
+                </ContextMenu.Item>
+                <ContextMenu.Item key='share-text' onSelect={handleShareText}>
+                  <ContextMenu.ItemTitle>Share</ContextMenu.ItemTitle>
+                  <ContextMenu.ItemIcon
+                    ios={{
+                      name: 'square.and.arrow.up',
+                      pointSize: 18,
+                    }}
+                  />
+                </ContextMenu.Item>
+              </ContextMenu.Content>
+            </ContextMenu.Root>
+          )}
 
-        {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '')) && renderImageContent()}
+          {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+            renderAudio()
+          )}
+          {(files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video') && content === '' && (
+            renderVideo()
+          )}
+
+
+          {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '')) && renderImageContent()}
         </>
       );
     } else {
       // Fallback for devices without ContextMenu support
       return (
         <>
-        <Pressable
-          onLongPress={showTextContextMenu}
-          onPress={handlePress}
-          style={[
-            styles.contentContainer,
-            role === Role.Bot ? styles.botContent : styles.userContent,
-            streamingContent && styles.streamingContent,
-          ]}
-          accessible={true}
-          accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
-          accessibilityRole="text"
-          testID="markdown-container"
-        >
-          <Animated.View
+          <Pressable
+            onLongPress={showTextContextMenu}
+            onPress={handlePress}
             style={[
-              styles.markdownContainer,
-              streamingContent && { transform: [] },
-              streamingContent && { backgroundColor: `transparent` },
+              styles.contentContainer,
+              role === Role.Bot ? styles.botContent : styles.userContent,
+              streamingContent && styles.streamingContent,
             ]}
+            accessible={true}
+            accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
+            accessibilityRole="text"
+            testID="markdown-container"
           >
-            <MarkdownDisplay>{content}</MarkdownDisplay>
-          </Animated.View>
-        </Pressable>
-        {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
-          renderAudio()
-        )}
-
-{(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '')) && renderImageContent()}
-     </>)
-  };
-}
+            <Animated.View
+              style={[
+                styles.markdownContainer,
+                streamingContent && { transform: [] },
+                streamingContent && { backgroundColor: `transparent` },
+              ]}
+            >
+              <MarkdownDisplay>{content}</MarkdownDisplay>
+            </Animated.View>
+          </Pressable>
+          {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+            renderAudio()
+          )}
+          {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '')) && renderImageContent()}
+        </>)
+    };
+  }
   return (
     <Animated.View
       style={[
@@ -575,21 +626,28 @@ const ChatMessage = memo(({
       testID={`message-${role === Role.Bot ? 'bot' : 'user'}`}
     >
       {isLoading ? (
-        <View
-          style={[
-            styles.contentContainer,
-            styles.loadingContainer,
-            role === Role.Bot ? styles.botContent : styles.userContent,
-            // Make background more transparent when loading
-            { backgroundColor: role === Role.Bot ? 'rgba(240, 240, 240, 0.6)' : 'rgba(200, 230, 255, 0.6)' }
-          ]}
-          testID="loading-animation-container"
-        >
-          <LoadingDots />
-        </View>
+        <>
+          {intermediate ? (
+
+            <AnimatedText text={intermediate?.toString()} />) : (
+            <View
+              style={[
+                styles.contentContainer,
+                styles.loadingContainer,
+                role === Role.Bot ? styles.botContent : styles.userContent,
+                // Make background more transparent when loading
+                { backgroundColor: role === Role.Bot ? 'rgba(240, 240, 240, 0.6)' : 'rgba(200, 230, 255, 0.6)' }
+              ]}
+              testID="loading-animation-container"
+            >
+              <LoadingDots />
+            </View>
+          )}
+        </>
+
       ) : (
         <View style={styles.messageContent} testID="message-content">
-         {renderContent()}
+          {renderContent()}
         </View>
       )}
     </Animated.View>
@@ -625,6 +683,24 @@ const styles = StyleSheet.create({
   messageContent: {
     //flex: 1,
     maxWidth: '100%',
+  },
+  videoContainer: {
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  downloadButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 10,
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 100
+  },
+  downloadButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
   contentContainer: {
     borderRadius: BORDER_RADIUS,
@@ -668,6 +744,36 @@ const styles = StyleSheet.create({
   },
   userText: {
     color: Colors.light,
+  },
+  loadingVideo: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0
+  },
+  video: {
+    width: 210,
+    height: 120,
+    borderRadius: 12,
+
+  },
+  fullScreenContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  fullScreenVideo: {
+    flex: 1,
+  },
+  fullScreenButton: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
   imageContainer: {
     marginTop: 12,

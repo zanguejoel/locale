@@ -40,11 +40,11 @@ const ChatPage = () => {
 
   // Hooks
   const chat = useChat();
-  const { messages, sendMessage, setCurrentRoom, isSending, stream, fetchMessages } = chat;
+  const { messages, sendMessage, setCurrentRoom, isSending, stream, fetchMessages, intermediate } = chat;
 
 
   const id = params?.id
-
+  // console.log('-messages', messages[1].)
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImagePickerAsset>(null);
 
@@ -209,6 +209,7 @@ const ChatPage = () => {
     return (
       <ChatMessage
         {...item}
+        intermediate={intermediate}
         loading={isLoading}
         streamingContent={isStreaming}
       />
