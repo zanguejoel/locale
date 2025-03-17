@@ -239,7 +239,6 @@ const ChatPage = () => {
     )
   }
 
-
   return (
     <View style={defaultStyles.pageContainer}>
       <Stack.Screen options={{
@@ -247,13 +246,15 @@ const ChatPage = () => {
         headerTitle: () => <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
       }} />
       <KeyboardAvoidingView
+        contentContainerStyle={{
+          backgroundColor: Colors.light.background,
+        }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={85}
+        keyboardVerticalOffset={110}
         style={[
           styles.keyboardAvoidingView,
           // isKeyboardVisible && KeyboardVisibleStyle,
           isSending && KeyboardVisibleStyle,
-
         ]}
       >
         <View style={styles.page} onLayout={onLayout}>
@@ -366,6 +367,7 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
+    backgroundColor: Colors.light.background,
   },
   inputBlurContainer: {
     width: '100%',

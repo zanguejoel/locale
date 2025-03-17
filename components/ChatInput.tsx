@@ -21,6 +21,8 @@ import { isLoaded } from 'expo-font';
 
 const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
+const MIN_HEIGHT = 40;
+
 export type Props = {
   onShouldSend: (message: string, type?: string) => void;
   fetchMessages?: () => void
@@ -29,11 +31,12 @@ export type Props = {
   isLoading?: boolean
 };
 
-const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading}: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading }: Props) => {
   const [message, setMessage] = useState('');
   const { bottom } = useSafeAreaInsets();
   const expanded = useSharedValue(0);
   const inputRef = useRef<TextInput>(null);
+  const [inputHeight, setInputHeight] = useState(MIN_HEIGHT);
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -128,6 +131,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
     }
     setSelectedImage?.('')
     setMessage('');
+    setInputHeight(MIN_HEIGHT);
 
   };
 
@@ -191,14 +195,8 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
 
 
   return (
-    <View
-      style={[styles.container,
-      ]}
-    >
-      <BlurView intensity={90} tint="extraLight" style={[
-        styles.inputContainer,
-        { paddingBottom: bottom },
-      ]}>
+    <View style={[styles.container]}>
+      <BlurView intensity={90} tint="extraLight" style={[styles.inputContainer]}>
         <View style={styles.row}>
           <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
             <Ionicons name="add" size={24} color={Colors.grey} />
@@ -222,19 +220,19 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             // autoFocus
             ref={inputRef}
             placeholder="Message"
-            style={styles.messageInput}
+            style={[styles.messageInput]}
             onFocus={collapseItems}
             onChangeText={onChangeText}
             value={message}
-            multiline
+            multiline={true}
           />
           {message.length > 0 ? (
             <TouchableOpacity disabled={isLoading} onPress={onSend}>
-              <Ionicons name="arrow-up-circle" size={30} color={isLoading? Colors.greyLight :Colors.grey} />
+              <Ionicons name="arrow-up-circle" size={30} color={isLoading ? Colors.greyLight : Colors.grey} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity disabled={isLoading} onPress={isRecording ? stopRecording : startRecording}>
-              <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : (isLoading? Colors.greyLight :Colors.grey)} />
+              <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : (isLoading ? Colors.greyLight : Colors.grey)} />
             </TouchableOpacity>
           )}
         </View>
@@ -247,30 +245,33 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFF'
+    backgroundColor: Colors.light.background,
   },
   inputContainer: {
-    paddingTop: 10, borderTopLeftRadius: 24,
+    backgroundColor: Colors.light.background,
+    paddingTop: 10,
+    borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
     borderTopWidth: 1,
     borderTopColor: 'rgba(230,230,230,0.5)'
   },
   row: {
-
+    paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
   },
   messageInput: {
     flex: 1,
+    zIndex: 10000,
+    maxHeight: 75,
     marginHorizontal: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 20,
     padding: 10,
     borderColor: Colors.greyLight,
     backgroundColor: Colors.light.background,
-
   },
   roundBtn: {
     width: 30,

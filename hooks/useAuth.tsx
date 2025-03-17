@@ -27,6 +27,7 @@ interface AuthContextType {
   forgotPassword: (e: string) => {}
   confirmEmail: (e: string, s: string, r: any, p: string) => {}
   updateUser: (formatData: FormData,) => Promise<void>;
+  changePassword: (oldPassword: string, newP: string, confirm: string) => void
 }
 
 
@@ -158,8 +159,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         city: formData.city,
         postal_code: formData.postalCode,
         state: formData.state
-
-
       });
       if (response.ok) {
         const newUser = { ...response.data, token: user?.token };
@@ -175,6 +174,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+
+  const changePassword = async (oldPassword: string, newPassword: string, confirmPassword: string) => {
+    try {
+      const response = await api.patch<{ token: string } | any>(`/auth/change-password?`, {
+        old_password: oldPassword,
+        new_password: newPassword,
+      }, {
+        headers: {
+          "X-Mobile-Recaptcha-Token": "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1",
+          "Content-Type": "application/json",
+        }
+      });
+
+      if (response.ok) {
+
+        return response.data;
+      } else {
+        throw response.data
+      }
+
+
+    } catch (error) {
+      console.error('changePassword error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const resetPassword = async (email: string) => {
     try {
@@ -195,7 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser, changePassword }}>
       {children}
     </AuthContext.Provider>
   );
