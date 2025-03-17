@@ -13,6 +13,11 @@ const rawPage = [{
   icon: 'person-outline'
 }, {
   id: 2,
+  key: 'change-password',
+  title: 'Change password',
+  icon: 'settings-outline'
+}, {
+  id: 3,
   key: 'sign_out',
   title: 'Sign Out',
   icon: 'log-out-outline'
@@ -39,6 +44,8 @@ const Page = () => {
     switch (type) {
       case 'profile':
         return router.push('/profile')
+      case 'change-password':
+        return router.push('/change-password')
       case 'sign_out':
         return handleSignOut()
     }

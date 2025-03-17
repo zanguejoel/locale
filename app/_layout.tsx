@@ -114,19 +114,28 @@ const Layout = () => {
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="registration" options={{ headerShown: false }} />
       <Stack.Screen name="success-page" options={{ headerShown: false }} />
-
-
       <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
       <Stack.Screen name="email-verification" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="change-password"
+        options={{
+          headerTitle: "Change Password",
+          presentation: "modal",
+          headerStyle: { backgroundColor: Colors.selected },
+          headerTitleStyle: { color: Colors.light.text },
+
+        }}
+      />
       <Stack.Screen
         name="profile"
         options={{
           headerTitle: "Profile",
           presentation: "modal",
           headerStyle: { backgroundColor: Colors.selected },
+          headerTitleStyle: { color: Colors.light.text },
+
         }}
       />
-
       <Stack.Screen name="(chat)" options={{ headerShown: false }} />
 
       <Stack.Screen
