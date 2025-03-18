@@ -96,6 +96,13 @@ const Profile = () => {
           <Text style={styles.buttonText}>Edit Profile</Text>
         </TouchableOpacity>
       </View>
+      <EditProfileModal
+        isModalVisible={isModalVisible}
+        setIsModalVisible={setIsModalVisible}
+        handleInputChange={handleInputChange}
+        formData={formData}
+        handleSave={handleSave}
+      />
     </ScrollView>
 
   );
