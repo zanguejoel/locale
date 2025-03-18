@@ -196,7 +196,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
 
   return (
     <View style={[styles.container]}>
-      <BlurView intensity={90} tint="extraLight" style={[styles.inputContainer]}>
+      <View style={styles.inputContainer}>
         <View style={styles.row}>
           <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
             <Ionicons name="add" size={24} color={Colors.grey} />
@@ -236,25 +236,21 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             </TouchableOpacity>
           )}
         </View>
-      </BlurView>
+      </View>
     </View>
-
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: 'rgba(230,230,230,0.5)'
   },
   inputContainer: {
-    backgroundColor: Colors.light.background,
     paddingTop: 10,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(230,230,230,0.5)'
   },
   row: {
     paddingBottom: 12,

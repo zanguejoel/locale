@@ -26,7 +26,7 @@ const Drawer = createDrawerNavigator();
 const Layout = () => {
 
   const router = useRouter();
-  const { createNewConversation, resetChat } = useChat();
+  const { createNewConversation, resetChat, isChatLoading } = useChat();
 
   const handleNewChat = async () => {
     try {
@@ -46,44 +46,31 @@ const Layout = () => {
   };
 
   return (
-    <Drawer.Navigator
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={{
-        drawerActiveBackgroundColor: '#selectedColor',
-        drawerActiveTintColor: '#000',
-        drawerInactiveTintColor: '#000',
-        headerTintColor: Colors.light.tint,
-        headerStyle: {
-          backgroundColor: Colors.light.background,
-          height: 110,
-        },
-        headerShadowVisible: true,
-        overlayColor: 'rgba(0, 0, 0, 0.2)',
-        drawerItemStyle: { borderRadius: 12 },
-        drawerLabelStyle: { marginLeft: -20 },
-        drawerStyle: {
-          backgroundColor: '#FFFFFF',
-        },
-        drawerType: 'slide',
-      }}
-    >
-      <Drawer.Screen name="new" component={ChatPage} options={{
-        title: 'Jaiime AI',
-        headerRight: () => (
-          <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
-            <Ionicons
-              name="add"
-              size={24}
-              color={Colors.light.tint}
-            />
-          </TouchableOpacity>
-        ),
-      }} />
+    <View style={{ flex: 1 }}>
 
-      <Drawer.Screen name="[id]"
+      <Drawer.Navigator
+        drawerContent={(props) => <CustomDrawerContent {...props} />}
+        screenOptions={{
+          drawerActiveBackgroundColor: '#selectedColor',
+          drawerActiveTintColor: '#000',
+          drawerInactiveTintColor: '#000',
+          headerTintColor: Colors.light.tint,
+          headerStyle: {
+            backgroundColor: Colors.light.background,
+            height: 110,
+          },
+          headerShadowVisible: true,
+          overlayColor: 'rgba(0, 0, 0, 0.2)',
+          drawerItemStyle: { borderRadius: 12 },
+          drawerLabelStyle: { marginLeft: -20 },
+          drawerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          drawerType: 'slide',
+        }}
+      >
 
-
-        component={ChatPageId} options={{
+        <Drawer.Screen name="new" component={ChatPage} options={{
           title: 'Jaiime AI',
           headerRight: () => (
             <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
@@ -96,7 +83,27 @@ const Layout = () => {
           ),
         }} />
 
-    </Drawer.Navigator>
+        <Drawer.Screen name="[id]"
+
+
+          component={ChatPageId} options={{
+            title: 'Jaiime AI',
+            headerRight: () => (
+              <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
+                <Ionicons
+                  name="add"
+                  size={24}
+                  color={Colors.light.tint}
+                />
+              </TouchableOpacity>
+            ),
+          }} />
+
+      </Drawer.Navigator>
+      {isChatLoading && <View style={styles.disabledArea} />
+      }
+    </View>
+
   );
 };
 
@@ -118,6 +125,14 @@ const styles = StyleSheet.create({
   headerTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  disabledArea: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100000000
   },
   headerLogo: {
     width: 24,

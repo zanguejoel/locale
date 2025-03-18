@@ -765,10 +765,9 @@ const styles = StyleSheet.create({
     right: 0
   },
   video: {
-    width: 210,
-    height: 120,
+    width: 260,
+    height: 145,
     borderRadius: 12,
-
   },
   fullScreenContainer: {
     flex: 1,

@@ -66,46 +66,37 @@ const Profile = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.container}>
-          <View style={styles.profileHeader}>
-            <View style={styles.profileImageContainer}>
-              <View style={styles.profileImage}>
-                <Text style={styles.profileInitials}>
-                  {user?.first_name?.[0]}{user?.last_name?.[0]}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.profileName}>
-              {user?.first_name} {user?.last_name}
-            </Text>
-            <Text style={styles.profileEmail}>{user?.email}</Text>
-          </View>
-
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
-            <View style={styles.infoContainer}>
-              {renderProfileInfo()}
+    <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.container}>
+        <View style={styles.profileHeader}>
+          <View style={styles.profileImageContainer}>
+            <View style={styles.profileImage}>
+              <Text style={styles.profileInitials}>
+                {user?.first_name?.[0]}{user?.last_name?.[0]}
+              </Text>
             </View>
           </View>
-
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => setIsModalVisible(true)}
-          >
-            <Text style={styles.buttonText}>Edit Profile</Text>
-          </TouchableOpacity>
+          <Text style={styles.profileName}>
+            {user?.first_name} {user?.last_name}
+          </Text>
+          <Text style={styles.profileEmail}>{user?.email}</Text>
         </View>
-      </ScrollView>
-      <EditProfileModal
-        isModalVisible={isModalVisible}
-        setIsModalVisible={setIsModalVisible}
-        handleInputChange={handleInputChange}
-        formData={formData}
-        handleSave={handleSave}
-      />
-    </SafeAreaView>
+
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <View style={styles.infoContainer}>
+            {renderProfileInfo()}
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => setIsModalVisible(true)}
+        >
+          <Text style={styles.buttonText}>Edit Profile</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
 
   );
 };
@@ -118,9 +109,13 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 90,
+    backgroundColor: '#FFFFFF',
+
   },
   container: {
     flex: 1,

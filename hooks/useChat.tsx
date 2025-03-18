@@ -73,6 +73,8 @@ interface ChatContextType {
   resetChat: () => void;
   createNewConversation: () => Promise<string>;
   intermediate: string
+  setChatLoading?: (a: boolean) => void
+  isChatLoading?: boolean
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -91,7 +93,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [inputDisabled, setInputDisabled] = useState(false);
   const [pastedActive, setPastedActive] = useState(false);
   const [streamWorking, setStreamWorking] = useState(false);
-
+  const [isChatLoading, setChatLoading] = useState(false)
   const [additionalData, setAdditionalData] = useState([]);
 
 
@@ -223,6 +225,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ---------------- Chat Operations ----------------
 
   const sendMessage = useCallback(async (message: string, messageType = 'text', operation: string | null = null, additionalData: string) => {
+
+    setChatLoading(true)
     setError('');
     setStream('');
     setIntermediate('');
@@ -374,6 +378,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsSending(false);
       setInputDisabled(false);
+      setChatLoading(false)
     }
   }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError]);
 
@@ -568,7 +573,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
+
   const contextValue = useMemo(() => ({
+    isChatLoading,
+    setChatLoading,
     messages,
     conversations,
     currentConversationId,
@@ -589,6 +597,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     streamWorking,
     intermediate,
   }), [
+    isChatLoading,
+    setChatLoading,
     intermediate,
     messages,
     conversations,

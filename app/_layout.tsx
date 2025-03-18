@@ -10,13 +10,13 @@ import { Slot, Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
-import { TouchableOpacity } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 
 import { useColorScheme } from "@/components/useColorScheme";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Colors from "@/constants/Colors";
-import { ChatProvider } from "@/hooks/useChat";
+import { ChatProvider, useChat } from "@/hooks/useChat";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -111,6 +111,7 @@ const Layout = () => {
         headerShadowVisible: false,
       }}
     >
+
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="registration" options={{ headerShown: false }} />
       <Stack.Screen name="success-page" options={{ headerShown: false }} />
