@@ -68,44 +68,41 @@ const ChangePassword = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.container}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              {passwordFields.map((field, index) => (
-                <View key={index} style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>{field.label}</Text>
-                  <CustomInput
-                    icon="lock-closed-outline"
-                    style={styles.input}
-                    value={formData[field.key as keyof typeof formData]}
-                    onChangeText={(value) =>
-                      handleInputChange(field.key as keyof typeof formData, value)
-                    }
-                    placeholder={field.placeholder}
-                    secureTextEntry={!showPassword[field.key as keyof typeof showPassword]}
-                    isPassword
-                  />
-
-                </View>
-              ))}
-            </View>
+    <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.container}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            {passwordFields.map((field, index) => (
+              <View key={index} style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>{field.label}</Text>
+                <CustomInput
+                  icon="lock-closed-outline"
+                  style={styles.input}
+                  value={formData[field.key as keyof typeof formData]}
+                  onChangeText={(value) =>
+                    handleInputChange(field.key as keyof typeof formData, value)
+                  }
+                  placeholder={field.placeholder}
+                  secureTextEntry={!showPassword[field.key as keyof typeof showPassword]}
+                  isPassword
+                />
+              </View>
+            ))}
           </View>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={handleSavePassword}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>Save Changes</Text>
-            )}
-          </TouchableOpacity>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={handleSavePassword}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Save Changes</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
@@ -117,9 +114,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
-    flexGrow: 1,
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
