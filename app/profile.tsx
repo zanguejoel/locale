@@ -48,7 +48,7 @@ const Profile = () => {
 
 
     return userData.map((item, index) => (
-      <View key={index} style={[styles.infoCard, userData.length - 1 === index && { marginBottom: 0 }]}>
+      <View key={index} style={[styles.infoCard, userData.length - 1 === index && { borderBottomWidth: 0 }]}>
         <View style={styles.iconContainer}>
           <Ionicons name={item.icon as any} size={22} color={Colors.primary} />
         </View>
