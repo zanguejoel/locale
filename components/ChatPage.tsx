@@ -44,7 +44,6 @@ const ChatPage = () => {
 
 
   const id = params?.id
-  // console.log('-messages', messages[1].)
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImagePickerAsset>(null);
 
@@ -298,7 +297,7 @@ const ChatPage = () => {
 
             />
           </CustomView>
-          {showScrollButton && (
+          {showScrollButton && messages.length > 0 && (
             <TouchableOpacity
               style={styles.scrollButton}
               onPress={scrollToBottom}

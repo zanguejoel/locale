@@ -22,12 +22,13 @@ import {
 import * as ContextMenu from 'zeego/context-menu';
 import { useCallback, useEffect, useRef } from 'react';
 import { Audio, Video } from 'expo-av';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import Entypo from '@expo/vector-icons/Entypo';
+
 import { Ionicons } from '@expo/vector-icons';
 
 import Feather from '@expo/vector-icons/Feather';
 import AnimatedText from './AnimatedText';
+
+import AudioPlayer from './AudioPlayer';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -171,6 +172,9 @@ const ChatMessage = memo(({
   const [contentLoaded, setContentLoaded] = useState(false);
   const [imageAttempts, setImageAttempts] = useState(0);
   const [isLoadingDownloadVideo, setLoadingDownloadVideo] = useState(false)
+  const [duration, setDuration] = useState(0);
+  const [position, setPosition] = useState(0);
+
   const MarkdownDisplay = useMarkdownDisplay();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -316,10 +320,19 @@ const ChatMessage = memo(({
         setIsPlaying(false);
       } else {
         await sound.current.unloadAsync();
-        await sound.current.loadAsync({ uri: content || files[0]?.s3_url });
+
+        await sound.current.loadAsync(
+          { uri: content || files[0]?.s3_url },
+          { progressUpdateIntervalMillis: 1 }
+        );
         await sound.current.playAsync();
         setIsPlaying(true);
         sound.current.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded) {
+            setDuration(status.durationMillis || 0);
+            setPosition(status.positionMillis || 0);
+            setIsPlaying(status.isPlaying);
+          }
           if (status.didJustFinish) {
             setIsPlaying(false);
           }
@@ -329,6 +342,7 @@ const ChatMessage = memo(({
       console.error('Error playing audio:', error);
     }
   };
+
 
   const handleImageError = (error: any) => {
     setImageLoadError(true);
@@ -432,33 +446,25 @@ const ChatMessage = memo(({
   };
 
   const renderAudio = () => {
+    const handleSeek = (newProgress: number) => {
+      if (sound.current && duration > 0) {
+        const newPosition = newProgress * duration;
+
+        sound.current.setPositionAsync(newPosition);
+      }
+    };
+
     return (
-      <Pressable
+      <AudioPlayer
+        handleSeek={handleSeek}
+        duration={duration}
+        position={position}
+        handlePress={handlePress}
         onLongPress={onLongPress}
-        onPress={handlePress}
-        style={[
-          styles.contentContainer,
-          role === Role.Bot ? styles.botContent : styles.userContent,
-        ]}
-        accessible={true}
-        accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} audio message`}
-        accessibilityRole="button"
-        testID="audio-player-container"
-      >
-        <Pressable style={styles.audioPlayer} onPress={playAudio} testID="audio-play-button">
-          {!isPlaying ? (
-            <View style={styles.audioPlayer}>
-              <AntDesign name="caretright" size={14} color="black" />
-              <Text style={styles.audioText}>Play Audio</Text>
-            </View>
-          ) : (
-            <View style={styles.audioPlayer}>
-              <Entypo name="controller-paus" size={14} color="black" />
-              <Text style={styles.audioText}>Stop Audio</Text>
-            </View>
-          )}
-        </Pressable>
-      </Pressable>
+        role={role}
+        playAudio={playAudio}
+        isPlaying={isPlaying}
+      />
     )
   };
 
@@ -702,7 +708,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
+  customPlayer: {
+    flexDirection: 'row',
+    width: 200,
+    paddingVertical: 8,
+  },
   contentContainer: {
+
     borderRadius: BORDER_RADIUS,
     paddingHorizontal: 12,
     // minWidth: 60,
