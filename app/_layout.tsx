@@ -17,6 +17,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Colors from "@/constants/Colors";
 import { ChatProvider, useChat } from "@/hooks/useChat";
+import { useTheme } from "@/hooks/useTheme";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -25,6 +26,7 @@ export {
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -55,13 +57,14 @@ SplashScreen.preventAutoHideAsync();
 
 const CustomBackButton = () => {
   const router = useRouter();
+  const theme = useTheme();
 
   return (
     <TouchableOpacity
       onPress={() => router.back()}
       style={{ marginLeft: 8 }}
     >
-      <Ionicons name="chevron-back" size={24} color={Colors.grey} />
+      <Ionicons name="chevron-back" size={24} color={theme.colors.grey} />
     </TouchableOpacity>
   );
 };
@@ -73,6 +76,7 @@ const Layout = () => {
   const { user, isLoading, isSignedIn } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const theme = useTheme();
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -106,8 +110,9 @@ const Layout = () => {
       screenOptions={{
         headerLeft: CustomBackButton,
         headerStyle: {
-          backgroundColor: Colors.light.background,
+          backgroundColor: theme.colors.background,
         },
+        headerTintColor: theme.colors.text,
         headerShadowVisible: false,
       }}
     >
@@ -122,9 +127,8 @@ const Layout = () => {
         options={{
           headerTitle: "Change Password",
           presentation: "modal",
-          headerStyle: { backgroundColor: Colors.selected },
-          headerTitleStyle: { color: Colors.light.text },
-
+          headerStyle: { backgroundColor: theme.colors.selected },
+          headerTitleStyle: { color: theme.colors.text },
         }}
       />
       <Stack.Screen
@@ -132,9 +136,8 @@ const Layout = () => {
         options={{
           headerTitle: "Profile",
           presentation: "modal",
-          headerStyle: { backgroundColor: Colors.selected },
-          headerTitleStyle: { color: Colors.light.text },
-
+          headerStyle: { backgroundColor: theme.colors.selected },
+          headerTitleStyle: { color: theme.colors.text },
         }}
       />
       <Stack.Screen name="(chat)" options={{ headerShown: false }} />
@@ -143,10 +146,9 @@ const Layout = () => {
         name="(modal)/settings"
         options={{
           headerTitle: "Settings",
-          // presentation: "modal",
           headerTitleAlign: 'center',
-          headerTitleStyle: { color: Colors.light.text },
-          headerStyle: { backgroundColor: Colors.selected },
+          headerTitleStyle: { color: theme.colors.text },
+          headerStyle: { backgroundColor: theme.colors.selected },
         }}
       />
       <Stack.Screen
@@ -154,11 +156,11 @@ const Layout = () => {
         options={{
           headerTitle: "",
           presentation: "fullScreenModal",
-          headerBlurEffect: "dark",
-          headerStyle: { backgroundColor: "rgba(0,0,0,0.4)" },
+          headerBlurEffect: theme.isDark ? "dark" : "light",
+          headerStyle: { backgroundColor: theme.isDark ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)" },
           headerTransparent: true,
           headerShadowVisible: false,
-          headerLeft: () => <></>,
+          headerLeft: () => null,
         }}
       />
       <Stack.Screen
@@ -167,7 +169,7 @@ const Layout = () => {
           headerTitle: "",
           presentation: "fullScreenModal",
           headerShadowVisible: false,
-          headerLeft: () => <></>,
+          headerLeft: () => null,
         }}
       />
     </Stack>

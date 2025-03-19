@@ -23,6 +23,7 @@ import CustomInput from "@/components/CustomInput";
 import WebView from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import contries from '@/data/countries.json'
+import { useTheme } from '@/hooks/useTheme';
 
 interface ErrorType {
   firstName?: string;
@@ -54,6 +55,7 @@ const countryCodes: CountryCode[] = contries;
 
 const Registration = () => {
   const { signUp, isLoading } = useAuth();
+  const theme = useTheme();
   const [errors, setErrors] = useState<ErrorType>({});
   const [isValidForm, setIsFormValid] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -186,11 +188,11 @@ const Registration = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       {isLoading && (
-        <View style={defaultStyles.loadingOverlay}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+        <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       )}
       <SafeAreaView>
@@ -199,9 +201,12 @@ const Registration = () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.headerContainer}>
-            <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Sign up to get started</Text>
+            <Image 
+              source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} 
+              style={styles.logo} 
+            />
+            <Text style={[styles.title, { color: theme.colors.text }]}>Create Account</Text>
+            <Text style={[styles.subtitle, { color: theme.colors.text }]}>Sign up to get started</Text>
           </View>
 
           <View style={styles.formContainer}>
@@ -212,8 +217,9 @@ const Registration = () => {
               onChangeText={(value) => handleInputChange("firstName", value)}
               error={!!errors.firstName}
               autoCapitalize="words"
+              theme={theme}
             />
-            {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
+            {errors.firstName && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.firstName}</Text>}
 
             <CustomInput
               icon="person-outline"
@@ -222,8 +228,9 @@ const Registration = () => {
               onChangeText={(value) => handleInputChange("lastName", value)}
               error={!!errors.lastName}
               autoCapitalize="words"
+              theme={theme}
             />
-            {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
+            {errors.lastName && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.lastName}</Text>}
 
             <CustomInput
               icon="mail-outline"
@@ -233,32 +240,34 @@ const Registration = () => {
               error={!!errors.email}
               autoCapitalize="none"
               keyboardType="email-address"
+              theme={theme}
             />
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            {errors.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.email}</Text>}
 
             {/* Custom Phone Input with Country Code Selector */}
             <View style={styles.phoneContainer}>
               <TouchableOpacity 
-                style={styles.countrySelector}
+                style={[styles.countrySelector, { borderColor: theme.colors.greyLight }]}
                 onPress={() => setShowCountryModal(true)}
               >
                 <Text style={styles.countryFlag}>{selectedCountry.flag}</Text>
-                <Text style={styles.countryCode}>{selectedCountry.dial_code}</Text>
-                <Ionicons name="chevron-down" size={16} color={Colors.grey} />
+                <Text style={[styles.countryCode, { color: theme.colors.text }]}>{selectedCountry.dial_code}</Text>
+                <Ionicons name="chevron-down" size={16} color={theme.colors.text} />
               </TouchableOpacity>
               
-              <View style={[styles.phoneInputContainer, !!errors.phone && styles.inputError]}>
-                <Ionicons name="call-outline" size={20} color={Colors.grey} style={styles.phoneIcon} />
+              <View style={[styles.phoneInputContainer, !!errors.phone && styles.inputError, { borderColor: theme.colors.greyLight }]}>
+                <Ionicons name="call-outline" size={20} color={theme.colors.text} style={styles.phoneIcon} />
                 <TextInput
-                  style={styles.phoneInput}
+                  style={[styles.phoneInput, { color: theme.colors.text }]}
                   placeholder="Phone Number"
+                  placeholderTextColor={theme.colors.greyLight}
                   value={formData.phone}
                   onChangeText={(value) => handleInputChange("phone", value)}
                   keyboardType="phone-pad"
                 />
               </View>
             </View>
-            {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+            {errors.phone && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.phone}</Text>}
 
             <CustomInput
               icon="lock-closed-outline"
@@ -267,8 +276,9 @@ const Registration = () => {
               onChangeText={(value) => handleInputChange("password", value)}
               error={!!errors.password}
               isPassword
+              theme={theme}
             />
-            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            {errors.password && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.password}</Text>}
 
             <CustomInput
               icon="lock-closed-outline"
@@ -277,21 +287,22 @@ const Registration = () => {
               onChangeText={(value) => handleInputChange("confirmPassword", value)}
               error={!!errors.confirmPassword}
               isPassword
+              theme={theme}
             />
-            {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+            {errors.confirmPassword && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.confirmPassword}</Text>}
 
             <View style={styles.btnContainer}>
               <TouchableOpacity
-                style={[defaultStyles.btn, styles.signUpButton]}
+                style={[defaultStyles.btn, styles.signUpButton, { backgroundColor: theme.colors.primary }]}
                 onPress={onSignUpPress}
               >
                 <Text style={styles.btnPrimaryText}>Create Account</Text>
               </TouchableOpacity>
 
               <View style={styles.loginContainer}>
-                <Text style={styles.loginText}>Already have an account?</Text>
+                <Text style={[styles.loginText, { color: theme.colors.text }]}>Already have an account?</Text>
                 <TouchableOpacity onPress={() => router.replace('/login')}>
-                  <Text style={styles.loginLink}>Login</Text>
+                  <Text style={[styles.loginLink, { color: theme.colors.primary }]}>Login</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -305,20 +316,21 @@ const Registration = () => {
         animationType="slide"
         transparent={true}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)' }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Country Code</Text>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Select Country Code</Text>
               <TouchableOpacity onPress={() => setShowCountryModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.grey} />
+                <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
             
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color={Colors.grey} style={styles.searchIcon} />
+            <View style={[styles.searchContainer, { borderColor: theme.colors.greyLight }]}>
+              <Ionicons name="search" size={20} color={theme.colors.text} style={styles.searchIcon} />
               <TextInput
-                style={styles.searchInput}
+                style={[styles.searchInput, { color: theme.colors.text }]}
                 placeholder="Search country or code"
+                placeholderTextColor={theme.colors.greyLight}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -333,11 +345,11 @@ const Registration = () => {
                   onPress={() => selectCountry(item)}
                 >
                   <Text style={styles.countryFlag}>{item.flag}</Text>
-                  <Text style={styles.countryName}>{item.name}</Text>
-                  <Text style={styles.countryDialCode}>{item.dial_code}</Text>
+                  <Text style={[styles.countryName, { color: theme.colors.text }]}>{item.name}</Text>
+                  <Text style={[styles.countryDialCode, { color: theme.colors.text }]}>{item.dial_code}</Text>
                 </TouchableOpacity>
               )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: theme.colors.greyLight }]} />}
             />
           </View>
         </View>
@@ -349,7 +361,6 @@ const Registration = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scrollContainer: {
     flexGrow: 1,

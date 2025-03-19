@@ -14,8 +14,10 @@ import { BlurView } from 'expo-blur';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useRoute } from '@react-navigation/native';
 import { ImagePickerAsset } from 'expo-image-picker';
+import { useTheme } from '@/hooks/useTheme';
 
 const ChatPage = () => {
+  const theme = useTheme();
   const { params } = useRoute();
 
   // States
@@ -243,7 +245,7 @@ const ChatPage = () => {
     <View style={defaultStyles.pageContainer}>
       <Stack.Screen options={{
         headerTitleAlign: 'center',
-        headerTitle: () => <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
+        headerTitle: () => <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.logo} />
       }} />
       <KeyboardAvoidingView
         contentContainerStyle={{
@@ -277,7 +279,7 @@ const ChatPage = () => {
                 }
               ]}
             >
-              <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.image} />
+              <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.image} />
               <Text style={styles.welcomeText}>How can I assist you today?</Text>
             </Animated.View>
           )}

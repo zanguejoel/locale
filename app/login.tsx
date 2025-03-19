@@ -21,6 +21,7 @@ import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '@/hooks/useTheme';
 
 interface ErrorType {
   email?: string;
@@ -29,6 +30,7 @@ interface ErrorType {
 
 const Login = () => {
   const { signIn, isLoading } = useAuth();
+  const theme = useTheme();
   const [errors, setErrors] = useState<ErrorType>({});
   const [isValidForm, setIsFormValid] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
@@ -54,7 +56,11 @@ const Login = () => {
   // Interpolate background color
   const backgroundColorInterpolation = colorAnim.interpolate({
     inputRange: [0, 1, 2],
-    outputRange: ['rgba(255, 255, 255, 1)', 'rgba(250, 250, 255, 1)', 'rgba(255, 255, 255, 1)'],
+    outputRange: [
+      theme.colors.background,
+      theme.isDark ? 'rgba(30, 30, 30, 1)' : 'rgba(250, 250, 255, 1)',
+      theme.colors.background
+    ],
   });
   
   // No rotation animation needed anymore
@@ -382,8 +388,8 @@ const Login = () => {
         style={styles.keyboardView}
       >
         {isLoading && (
-          <View style={defaultStyles.loadingOverlay}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+          <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         )}
         <SafeAreaView>
@@ -396,41 +402,41 @@ const Login = () => {
               }
             ]}
           >
-            <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
-            
-{/* No orbit animation anymore */}
+            <Image 
+              source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} 
+              style={styles.logo} 
+            />
             
             {/* Chat bubbles animation */}
             <View style={styles.bubbleContainer}>
-              <Animated.View style={[styles.bubble, { transform: [{ scale: bubbleScale1 }] }]}>
-                <Ionicons name="browsers-outline" size={24} color={Colors.primary} />
+              <Animated.View style={[styles.bubble, { transform: [{ scale: bubbleScale1 }], backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)' }]}>
+                <Ionicons name="browsers-outline" size={24} color={theme.colors.primary} />
               </Animated.View>
-              <Animated.View style={[styles.bubble, styles.bubble2, { transform: [{ scale: bubbleScale2 }] }]}>
+              <Animated.View style={[styles.bubble, styles.bubble2, { transform: [{ scale: bubbleScale2 }], backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)' }]}>
                 <Ionicons name="server-outline" size={22} color="#6C63FF" />
               </Animated.View>
-              <Animated.View style={[styles.bubble, styles.bubble3, { transform: [{ scale: bubbleScale3 }] }]}>
+              <Animated.View style={[styles.bubble, styles.bubble3, { transform: [{ scale: bubbleScale3 }], backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)' }]}>
                 <Ionicons name="flash-outline" size={20} color="#4CD964" />
               </Animated.View>
-              <Animated.View style={[styles.bubble, styles.bubble4, { transform: [{ scale: bubbleScale4 }] }]}>
+              <Animated.View style={[styles.bubble, styles.bubble4, { transform: [{ scale: bubbleScale4 }], backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)' }]}>
                 <Ionicons name="bulb-outline" size={18} color="#FF9500" />
               </Animated.View>
-              <Animated.View style={[styles.bubble, styles.bubble5, { transform: [{ scale: bubbleScale5 }] }]}>
+              <Animated.View style={[styles.bubble, styles.bubble5, { transform: [{ scale: bubbleScale5 }], backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)' }]}>
                 <Ionicons name="analytics-outline" size={18} color="#FF2D55" />
               </Animated.View>
-              <Animated.View style={[styles.bubble, styles.bubble6, { transform: [{ scale: bubbleScale6 }] }]}>
+              <Animated.View style={[styles.bubble, styles.bubble6, { transform: [{ scale: bubbleScale6 }], backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)' }]}>
                 <Ionicons name="planet-outline" size={16} color="#5AC8FA" />
               </Animated.View>
             </View>
             
-            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={[styles.title, { color: theme.colors.text }]}>Welcome Back</Text>
             
-            {/* Animated typing dots */}
             <View style={styles.typingContainer}>
-              <Text style={styles.subtitle}>Sign in to continue</Text>
+              <Text style={[styles.subtitle, { color: theme.colors.text }]}>Sign in to continue</Text>
               <View style={styles.typingDots}>
-                <Animated.View style={[styles.typingDot, { opacity: dotOpacity1 }]} />
-                <Animated.View style={[styles.typingDot, { opacity: dotOpacity2 }]} />
-                <Animated.View style={[styles.typingDot, { opacity: dotOpacity3 }]} />
+                <Animated.View style={[styles.typingDot, { opacity: dotOpacity1, backgroundColor: theme.colors.primary }]} />
+                <Animated.View style={[styles.typingDot, { opacity: dotOpacity2, backgroundColor: theme.colors.primary }]} />
+                <Animated.View style={[styles.typingDot, { opacity: dotOpacity3, backgroundColor: theme.colors.primary }]} />
               </View>
             </View>
           </Animated.View>
@@ -457,8 +463,9 @@ const Login = () => {
               error={!!errors.email}
               autoCapitalize="none"
               keyboardType="email-address"
+              theme={theme}
             />
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            {errors.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.email}</Text>}
 
             <CustomInput
               icon="lock-closed-outline"
@@ -469,25 +476,26 @@ const Login = () => {
               }}
               error={!!errors.password}
               isPassword
+              theme={theme}
             />
-            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            {errors.password && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.password}</Text>}
 
             <View style={styles.optionsContainer}>
               <TouchableOpacity style={styles.rememberMeContainer} onPress={toggleRememberMe}>
-                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked, { borderColor: theme.colors.text }]}>
                   {rememberMe && <Text style={styles.checkmark}>✓</Text>}
                 </View>
-                <Text style={styles.rememberMeText}>Remember me</Text>
+                <Text style={[styles.rememberMeText, { color: theme.colors.text }]}>Remember me</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleForgotPassword}>
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                <Text style={[styles.forgotPasswordText, { color: theme.colors.primary }]}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.btnContainer}>
               <TouchableOpacity
-                style={[defaultStyles.btn, styles.signInButton]}
+                style={[defaultStyles.btn, styles.signInButton, { backgroundColor: theme.colors.primary }]}
                 onPress={onSignInPress}
               >
                 <Text style={{ color: '#fff' }}>Sign In</Text>
@@ -495,9 +503,9 @@ const Login = () => {
               </TouchableOpacity>
 
               <View style={styles.dividerContainer}>
-                <View style={styles.divider} />
-                <Text style={styles.dividerText}>OR</Text>
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: theme.colors.greyLight }]} />
+                <Text style={[styles.dividerText, { color: theme.colors.text }]}>OR</Text>
+                <View style={[styles.divider, { backgroundColor: theme.colors.greyLight }]} />
               </View>
 
               <TouchableOpacity
@@ -505,9 +513,9 @@ const Login = () => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   router.replace("/registration");
                 }}
-                style={[defaultStyles.btnSecondary, styles.createAccountButton]}
+                style={[defaultStyles.btnSecondary, styles.createAccountButton, { borderColor: theme.colors.primary }]}
               >
-                <Text style={[{ color: Colors.primary }]}>
+                <Text style={[{ color: theme.colors.primary }]}>
                   Create an Account
                 </Text>
               </TouchableOpacity>
@@ -539,7 +547,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: Colors.primary,
     marginBottom: 8,
   },
   typingContainer: {
@@ -549,7 +556,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.grey,
     marginRight: 8,
   },
   typingDots: {
@@ -568,7 +574,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   errorText: {
-    color: Colors.red,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 12,
@@ -603,7 +608,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   rememberMeText: {
-    color: Colors.grey,
     fontSize: 14,
   },
   forgotPasswordText: {
@@ -635,10 +639,8 @@ const styles = StyleSheet.create({
   divider: {
     width: 140,
     height: 1,
-    backgroundColor: '#E0E0E0',
   },
   dividerText: {
-    color: Colors.greyLight,
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 20,
