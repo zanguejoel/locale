@@ -744,7 +744,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   },
   userContent: {
-    backgroundColor: `${Colors.primary}20`,
+    backgroundColor: `${Colors.common.primary}20`,
     borderBottomRightRadius: 4,
   },
   text: {
