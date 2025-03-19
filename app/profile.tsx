@@ -11,9 +11,10 @@ import {
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import EditProfileModal from "@/components/modals/EditProfileModal/EditProfileModal";
-import Colors from "@/constants/Colors/index";
+
 import { useTheme } from "@/hooks/useTheme";
 import { Theme } from "@/constants/Types";
+import Colors from "@/constants/Colors";
 
 
 
@@ -55,7 +56,7 @@ const Profile = () => {
     return userData.map((item, index) => (
       <View key={index} style={[styles.infoCard, userData.length - 1 === index && { borderBottomWidth: 0 }]}>
         <View style={styles.iconContainer}>
-          <Ionicons name={item.icon as any} size={22} color={Colors.primary} />
+          <Ionicons name={item.icon as any} size={22} color={Colors.common.primary} />
         </View>
         <View style={styles.infoContent}>
           <Text style={styles.label}>{item.label}</Text>
@@ -151,7 +152,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   profileInitials: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: Colors.common.primary,
   },
   profileName: {
     fontSize: 24,
@@ -161,7 +162,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   profileEmail: {
     fontSize: 16,
-    color: Colors.greyLight,
+    color: Colors.common.greyLight,
   },
   sectionContainer: {
     marginBottom: 16,
@@ -216,7 +217,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.text,
   },
   editButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',

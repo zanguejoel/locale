@@ -753,12 +753,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     alignSelf: 'flex-start',
   },
   botContent: {
-    backgroundColor: `${theme.colors.greyLight}20`,
+    // backgroundColor: `${theme.colors.greyLight}20`,
     borderBottomLeftRadius: 4,
   },
   userContent: {
     backgroundColor: `${theme.colors.primary}20`,
-
     borderBottomRightRadius: 4,
   },
   text: {

@@ -300,12 +300,12 @@ const ChatPage = () => {
               onPress={scrollToBottom}
               accessibilityLabel="Scroll to bottom"
               accessibilityRole="button"
-              activeOpacity={0.7}
+              activeOpacity={0.6}
             >
               <Text style={styles.textScrollDown}>
                 {autoScrollEnabled ? 'Scroll down' : 'Scroll to bottom'}
               </Text>
-              <Ionicons name="chevron-down" size={16} color={Colors.grey} />
+              <Ionicons name="chevron-down" size={16} color={Colors.common.grey} />
             </TouchableOpacity>
           )}
         </View>
@@ -384,7 +384,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   scrollButton: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 10,
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
