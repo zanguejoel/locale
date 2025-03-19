@@ -86,11 +86,11 @@ const styles = StyleSheet.create({
         }),
     },
     botContent: {
-        backgroundColor: `${Colors.greyLight}20`,
+        backgroundColor: `${Colors.common.greyLight}20`,
         borderBottomLeftRadius: 4,
     },
     userContent: {
-        backgroundColor: `${Colors.primary}20`,
+        backgroundColor: `${Colors.common.primary}20`,
         borderBottomRightRadius: 4,
     },
     customPlayer: {

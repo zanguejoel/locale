@@ -371,7 +371,7 @@ const ChatMessage = memo(({
     if (imageLoadError && imageAttempts >= 3) {
       return (
         <View style={styles.imageErrorContainer}>
-          <Ionicons name="image-outline" size={40} color={Colors.grey} />
+          <Ionicons name="image-outline" size={40} color={Colors.common.grey} />
           <Text style={styles.imageErrorText}>Failed to load image</Text>
           <TouchableOpacity
             style={styles.retryImageButton}
@@ -407,7 +407,7 @@ const ChatMessage = memo(({
               <View style={styles.imageContainer} testID="image-container">
                 {(imageLoadError || !contentLoaded) && (
                   <View style={styles.imageLoadingOverlay} testID="image-loading-overlay">
-                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <ActivityIndicator size="large" color={Colors.common.primary} />
                     {imageLoadError && <Text style={styles.imageLoadingText}>Retrying...</Text>}
                   </View>
                 )}
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
   },
   audioText: {
     marginLeft: 9,
-    color: Colors.grey,
+    color: Colors.common.grey,
   },
   botContainer: {
     alignSelf: 'flex-start',
@@ -732,8 +732,8 @@ const styles = StyleSheet.create({
     }),
   },
   streamingContent: {
-    borderWidth: 1,
-    borderColor: `${Colors.primary}40`,
+    // borderWidth: 1,
+    // borderColor: `${Colors.primary}40`,
   },
   markdownContainer: {
     width: '100%',
@@ -835,13 +835,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   imageErrorText: {
-    color: Colors.grey,
+    color: Colors.common.grey,
     marginTop: 8,
     marginBottom: 12,
     textAlign: 'center',
   },
   retryImageButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 5,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
     marginHorizontal: 3,
   },
   errorContainer: {
@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
