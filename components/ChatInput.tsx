@@ -12,11 +12,13 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRef, useState } from 'react';
-import { BlurView } from 'expo-blur';
+
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { isLoaded } from 'expo-font';
+import { useTheme } from '@/hooks/useTheme';
+import { Theme } from '@/constants/Types';
 
 
 const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
@@ -33,7 +35,9 @@ export type Props = {
 
 const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading }: Props) => {
   const [message, setMessage] = useState('');
-  const { bottom } = useSafeAreaInsets();
+  const theme = useTheme();
+  const styles = getStyles(theme);
+
   const expanded = useSharedValue(0);
   const inputRef = useRef<TextInput>(null);
   const [inputHeight, setInputHeight] = useState(MIN_HEIGHT);
@@ -199,20 +203,20 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
       <View style={styles.inputContainer}>
         <View style={styles.row}>
           <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
-            <Ionicons name="add" size={24} color={Colors.grey} />
+            <Ionicons name="add" size={24} color={theme.colors.grey} />
           </ATouchableOpacity>
 
           <Animated.View style={[styles.buttonView, buttonViewStyle]}>
             <TouchableOpacity onPress={takePhoto}>
-              <Ionicons name="camera-outline" size={24} color={Colors.grey} />
+              <Ionicons name="camera-outline" size={24} color={theme.colors.chatIcons} />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={pickImageFromGallery}>
-              <Ionicons name="image-outline" size={24} color={Colors.grey} />
+              <Ionicons name="image-outline" size={24} color={theme.colors.chatIcons} />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={pickDocument}>
-              <Ionicons name="folder-outline" size={24} color={Colors.grey} />
+              <Ionicons name="folder-outline" size={24} color={theme.colors.chatIcons} />
             </TouchableOpacity>
           </Animated.View>
 
@@ -228,11 +232,11 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
           />
           {message.length > 0 ? (
             <TouchableOpacity disabled={isLoading} onPress={onSend}>
-              <Ionicons name="arrow-up-circle" size={30} color={isLoading ? Colors.greyLight : Colors.grey} />
+              <Ionicons name="arrow-up-circle" size={30} color={isLoading ? theme.colors.chatIcons : theme.colors.chatIcons} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity disabled={isLoading} onPress={isRecording ? stopRecording : startRecording}>
-              <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : (isLoading ? Colors.greyLight : Colors.grey)} />
+              <Ionicons name="mic-outline" size={30} color={isRecording ? theme.colors.red : (isLoading ? theme.colors.chatIcons : theme.colors.chatIcons)} />
             </TouchableOpacity>
           )}
         </View>
@@ -241,10 +245,10 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(230,230,230,0.5)'
+    backgroundColor: theme.colors.backgroundLight
   },
   inputContainer: {
     paddingTop: 10,
@@ -266,14 +270,15 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 20,
     padding: 10,
-    borderColor: Colors.greyLight,
-    backgroundColor: Colors.light.background,
+    color: theme.colors.text,
+    borderColor: theme.colors.greyLight,
+    backgroundColor: theme.colors.chatInputBg,
   },
   roundBtn: {
     width: 30,
     height: 30,
     borderRadius: 20,
-    backgroundColor: Colors.input,
+    backgroundColor: Colors.common.input,
     alignItems: 'center',
     justifyContent: 'center',
   },

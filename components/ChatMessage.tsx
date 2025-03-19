@@ -29,6 +29,8 @@ import Feather from '@expo/vector-icons/Feather';
 import AnimatedText from './AnimatedText';
 
 import AudioPlayer from './AudioPlayer';
+import { useTheme } from '@/hooks/useTheme';
+import { Theme } from '@/constants/Types';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -69,6 +71,9 @@ const contextItems = [
 
 
 const LoadingDots = memo(() => {
+  const theme = useTheme();
+  const styles = getStyles(theme);
+
   const dotAnimations = [
     useRef(new Animated.Value(0)).current,
     useRef(new Animated.Value(0)).current,
@@ -166,6 +171,9 @@ const ChatMessage = memo(({
   imageData,
   intermediate
 }: ChatMessageProps) => {
+  const theme = useTheme();
+  const styles = getStyles(theme);
+
   const sound = useRef(new Audio.Sound());
   const [isPlaying, setIsPlaying] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
@@ -371,7 +379,7 @@ const ChatMessage = memo(({
     if (imageLoadError && imageAttempts >= 3) {
       return (
         <View style={styles.imageErrorContainer}>
-          <Ionicons name="image-outline" size={40} color={Colors.grey} />
+          <Ionicons name="image-outline" size={40} color={Colors.common.grey} />
           <Text style={styles.imageErrorText}>Failed to load image</Text>
           <TouchableOpacity
             style={styles.retryImageButton}
@@ -407,7 +415,7 @@ const ChatMessage = memo(({
               <View style={styles.imageContainer} testID="image-container">
                 {(imageLoadError || !contentLoaded) && (
                   <View style={styles.imageLoadingOverlay} testID="image-loading-overlay">
-                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <ActivityIndicator size="large" color={Colors.common.primary} />
                     {imageLoadError && <Text style={styles.imageLoadingText}>Retrying...</Text>}
                   </View>
                 )}
@@ -537,6 +545,7 @@ const ChatMessage = memo(({
                   style={[
                     styles.contentContainer,
                     role === Role.Bot ? styles.botContent : styles.userContent,
+
                     streamingContent && styles.streamingContent,
                   ]}
                   accessible={true}
@@ -599,6 +608,10 @@ const ChatMessage = memo(({
             style={[
               styles.contentContainer,
               role === Role.Bot ? styles.botContent : styles.userContent,
+              theme.isDark && {
+                borderColor: theme.colors.light,
+                borderWidth: 0.7,
+              },
               streamingContent && styles.streamingContent,
             ]}
             accessible={true}
@@ -640,9 +653,11 @@ const ChatMessage = memo(({
               style={[
                 styles.contentContainer,
                 styles.loadingContainer,
+
                 role === Role.Bot ? styles.botContent : styles.userContent,
+
                 // Make background more transparent when loading
-                { backgroundColor: role === Role.Bot ? 'rgba(240, 240, 240, 0.6)' : 'rgba(200, 230, 255, 0.6)' }
+                { backgroundColor: role === Role.Bot ? theme.colors.backgroundLight : 'rgba(200, 230, 255, 0.6)' }
               ]}
               testID="loading-animation-container"
             >
@@ -660,7 +675,7 @@ const ChatMessage = memo(({
   );
 });
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     marginVertical: 8,
@@ -674,7 +689,7 @@ const styles = StyleSheet.create({
   },
   audioText: {
     marginLeft: 9,
-    color: Colors.grey,
+    color: Colors.common.grey,
   },
   botContainer: {
     alignSelf: 'flex-start',
@@ -714,7 +729,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   contentContainer: {
-
     borderRadius: BORDER_RADIUS,
     paddingHorizontal: 12,
     // minWidth: 60,
@@ -732,19 +746,19 @@ const styles = StyleSheet.create({
     }),
   },
   streamingContent: {
-    borderWidth: 1,
-    borderColor: `${Colors.primary}40`,
+
   },
   markdownContainer: {
     width: '100%',
     alignSelf: 'flex-start',
   },
   botContent: {
-    backgroundColor: `${Colors.greyLight}20`,
+    backgroundColor: `${theme.colors.greyLight}20`,
     borderBottomLeftRadius: 4,
   },
   userContent: {
-    backgroundColor: `${Colors.primary}20`,
+    backgroundColor: `${theme.colors.primary}20`,
+
     borderBottomRightRadius: 4,
   },
   text: {
@@ -752,10 +766,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   botText: {
-    color: Colors.grey,
+    color: Colors.common.grey,
   },
   userText: {
-    color: Colors.light,
+    color: Colors.light.text,
   },
   loadingVideo: {
     position: 'absolute',
@@ -835,13 +849,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   imageErrorText: {
-    color: Colors.grey,
+    color: Colors.common.grey,
     marginTop: 8,
     marginBottom: 12,
     textAlign: 'center',
   },
   retryImageButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
@@ -868,7 +882,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 5,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
     marginHorizontal: 3,
   },
   errorContainer: {
@@ -883,7 +897,7 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,

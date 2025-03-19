@@ -1,3 +1,5 @@
+import { Theme } from '@/constants/Types';
+import { useTheme } from '@/hooks/useTheme';
 import React, { useEffect, useMemo } from 'react';
 import { View, Animated, StyleSheet, Easing } from 'react-native';
 
@@ -6,7 +8,8 @@ interface IAnimatedText {
 }
 
 const AnimatedText = ({ text }: IAnimatedText) => {
-
+    const theme = useTheme();
+    const styles = getStyles(theme);
     const animatedValues = useMemo(
         () => text.split('').map(() => new Animated.Value(0)),
         [text]
@@ -55,11 +58,12 @@ const AnimatedText = ({ text }: IAnimatedText) => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flexDirection: 'row',
     },
     letter: {
+        color: theme.colors.text,
         fontSize: 12,
     },
 });

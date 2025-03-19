@@ -12,10 +12,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import EditProfileModal from "@/components/modals/EditProfileModal/EditProfileModal";
 import Colors from "@/constants/Colors/index";
+import { useTheme } from "@/hooks/useTheme";
+import { Theme } from "@/constants/Types";
 
 
 
 const Profile = () => {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const { user, updateUser } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -108,20 +112,20 @@ const Profile = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
     marginBottom: 80,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 90,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
 
   },
   container: {
@@ -152,7 +156,7 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: Colors.grey,
+    color: theme.colors.text,
     marginBottom: 4,
   },
   profileEmail: {
@@ -166,10 +170,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
-    color: Colors.grey,
+    color: theme.colors.text,
   },
   infoContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.backgroundLight,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: {
@@ -186,7 +190,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: theme.colors.greyLight,
     marginBottom: 8,
   },
   iconContainer: {
@@ -203,20 +207,20 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: Colors.greyLight,
+    color: theme.colors.text,
     marginBottom: 2,
   },
   value: {
     fontSize: 15,
     fontWeight: '500',
-    color: Colors.grey,
+    color: theme.colors.text,
   },
   editButton: {
     backgroundColor: Colors.primary,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 12,
   },
   buttonText: {
     color: '#FFFFFF',

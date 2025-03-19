@@ -132,7 +132,7 @@ const Registration = () => {
       // Format the phone number with spaces or dashes
       value = formatPhoneNumber(value);
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -143,7 +143,7 @@ const Registration = () => {
   const formatPhoneNumber = (input: string) => {
     // Remove all non-digits
     const phoneDigits = input.replace(/\D/g, '');
-    
+
     // Format based on length patterns (customize this based on your needs)
     if (phoneDigits.length <= 3) {
       return phoneDigits;
@@ -159,11 +159,11 @@ const Registration = () => {
     setShowCountryModal(false);
   };
 
-  const filteredCountries = searchQuery 
-    ? countryCodes.filter(country => 
-        country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        country.dial_code.includes(searchQuery)
-      )
+  const filteredCountries = searchQuery
+    ? countryCodes.filter(country =>
+      country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      country.dial_code.includes(searchQuery)
+    )
     : countryCodes;
 
   const onSignUpPress = async () => {
@@ -177,8 +177,8 @@ const Registration = () => {
           ...formData,
           phone: completePhoneNumber
         };
-        
-         await signUp(updatedFormData, router);
+
+        await signUp(updatedFormData, router);
       } catch (err: any) {
         Alert.alert("Error", err || "Registration failed");
       }
@@ -201,9 +201,9 @@ const Registration = () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.headerContainer}>
-            <Image 
-              source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} 
-              style={styles.logo} 
+            <Image
+              source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
+              style={styles.logo}
             />
             <Text style={[styles.title, { color: theme.colors.text }]}>Create Account</Text>
             <Text style={[styles.subtitle, { color: theme.colors.text }]}>Sign up to get started</Text>
@@ -246,7 +246,7 @@ const Registration = () => {
 
             {/* Custom Phone Input with Country Code Selector */}
             <View style={styles.phoneContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.countrySelector, { borderColor: theme.colors.greyLight }]}
                 onPress={() => setShowCountryModal(true)}
               >
@@ -254,7 +254,7 @@ const Registration = () => {
                 <Text style={[styles.countryCode, { color: theme.colors.text }]}>{selectedCountry.dial_code}</Text>
                 <Ionicons name="chevron-down" size={16} color={theme.colors.text} />
               </TouchableOpacity>
-              
+
               <View style={[styles.phoneInputContainer, !!errors.phone && styles.inputError, { borderColor: theme.colors.greyLight }]}>
                 <Ionicons name="call-outline" size={20} color={theme.colors.text} style={styles.phoneIcon} />
                 <TextInput
@@ -324,7 +324,7 @@ const Registration = () => {
                 <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={[styles.searchContainer, { borderColor: theme.colors.greyLight }]}>
               <Ionicons name="search" size={20} color={theme.colors.text} style={styles.searchIcon} />
               <TextInput
@@ -335,7 +335,7 @@ const Registration = () => {
                 onChangeText={setSearchQuery}
               />
             </View>
-            
+
             <FlatList
               data={filteredCountries}
               keyExtractor={(item) => item.code}

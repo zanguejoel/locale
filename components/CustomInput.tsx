@@ -50,7 +50,7 @@ const CustomInput = ({
         {...props}
         style={styles.inputField}
         secureTextEntry={isPassword && !showPassword}
-        placeholderTextColor={Colors.grey}
+        placeholderTextColor={theme.colors.greyLight}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
@@ -63,7 +63,7 @@ const CustomInput = ({
           <Ionicons
             name={showPassword ? "eye-outline" : "eye-off-outline"}
             size={20}
-            color={isFocused ? Colors.primary : Colors.grey}
+            color={isFocused ? theme.colors.primary : theme.colors.grey}
           />
         </TouchableOpacity>
       )}
@@ -90,7 +90,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     elevation: 5,
   },
   inputFocused: {
-    borderColor: Colors.primary,
+    borderColor: theme.colors.primary,
     borderWidth: 1.5,
     shadowOpacity: 0.1,
     shadowRadius: 4.84,
@@ -107,7 +107,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     borderColor: theme.colors.greyLight
   },
   inputError: {
-    borderColor: Colors.red,
+    borderColor: theme.colors.red,
     borderWidth: 1.5,
   },
   eyeIcon: {

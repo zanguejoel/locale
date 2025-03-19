@@ -5,6 +5,9 @@ export interface ColorTheme {
   tabIconDefault: string;
   tabIconSelected: string;
   primary: string;
+  backgroundLight: string
+  light: string
+  chatIcons: string
 }
 export interface CommonColors {
   primary: string;
@@ -22,6 +25,7 @@ export interface CommonColors {
   greyLight: string;
   input: string;
   selected: string;
+  chatInputBg: string
 }
 
 export interface AppTheme {
@@ -37,18 +41,27 @@ const theme: AppTheme = {
   light: {
     text: "#000",
     background: "#fff",
+    backgroundLight: 'rgba(230,230,230,0.5)',
     tint: tintColorLight,
     tabIconDefault: "#ccc",
     tabIconSelected: tintColorLight,
     primary: "#51b0cb",
+    light: '#fff',
+    chatIcons: '#242026',
+    chatInputBg: '#fff',
   },
   dark: {
     text: "#fff",
     background: "#000",
+    backgroundLight: '#242424',
     tint: tintColorDark,
     tabIconDefault: "#ccc",
     tabIconSelected: tintColorDark,
     primary: "#51b0cb",
+    light: '#fff',
+    chatIcons: '#fff',
+    chatInputBg: '#242424',
+
   },
   common: {
     primary: "#51b0cb",

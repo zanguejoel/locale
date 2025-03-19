@@ -22,7 +22,7 @@ export interface Theme {
     tabIconDefault: string;
     tabIconSelected: string;
     primary: string;
-
+    backgroundLight: string;
     lime: string;
     pink: string;
     brown: string;
@@ -37,6 +37,11 @@ export interface Theme {
     greyLight: string;
     input: string;
     selected: string;
+    light: string;
+    chatIcons: string
+    chatInputBg: string
+    chaRawHistoryBG: string
+
   };
 }
 

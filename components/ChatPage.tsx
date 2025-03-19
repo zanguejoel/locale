@@ -15,10 +15,14 @@ import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useRoute } from '@react-navigation/native';
 import { ImagePickerAsset } from 'expo-image-picker';
 import { useTheme } from '@/hooks/useTheme';
+import { Theme } from '@/constants/Types';
 
 const ChatPage = () => {
-  const theme = useTheme();
+
   const { params } = useRoute();
+
+  const theme = useTheme();
+  const styles = getStyles(theme);
 
   // States
   const [height, setHeight] = useState(0);
@@ -125,12 +129,6 @@ const ChatPage = () => {
     layoutHeightRef.current = height;
   };
 
-  const isNearBottom = () => {
-    const scrollThreshold = 50; // px from bottom to consider "near bottom"
-    const distanceFromBottom = contentHeightRef.current - (scrollPositionRef.current + layoutHeightRef.current);
-    return distanceFromBottom <= scrollThreshold;
-  };
-
   const handleScroll = (event: any) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     const scrollY = contentOffset.y;
@@ -229,7 +227,7 @@ const ChatPage = () => {
   const renderSelectedFile = () => {
     return (
       <View style={styles.selectedFileContainer}>
-        <AntDesign onPress={() => setSelectedImage('')} name="closecircleo" style={styles.closeIcon} size={14} color={Colors.red} />
+        <AntDesign onPress={() => setSelectedImage('')} name="closecircleo" style={styles.closeIcon} size={14} color={theme.colors.red} />
         <Image
           source={{ uri: selectedImage?.uri, cache: 'force-cache' }}
           style={styles.previewImage}
@@ -242,15 +240,12 @@ const ChatPage = () => {
   }
 
   return (
-    <View style={defaultStyles.pageContainer}>
+    <View style={styles.pageContainer}>
       <Stack.Screen options={{
         headerTitleAlign: 'center',
         headerTitle: () => <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.logo} />
       }} />
       <KeyboardAvoidingView
-        contentContainerStyle={{
-          backgroundColor: Colors.light.background,
-        }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={110}
         style={[
@@ -336,7 +331,11 @@ const ChatPage = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
+  pageContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   // Logo and welcome
   logoContainer: {
     alignSelf: 'center',
@@ -361,7 +360,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 18,
     fontWeight: '500',
-    color: '#000',
+    color: theme.colors.text,
     textAlign: 'center',
   },
   page: {
@@ -369,7 +368,7 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: theme.colors.background,
   },
   inputBlurContainer: {
     width: '100%',
@@ -377,8 +376,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(230,230,230,0.5)',
+
   },
   logo: {
     width: 110,
