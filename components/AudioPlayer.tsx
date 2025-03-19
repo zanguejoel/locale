@@ -4,6 +4,8 @@ import { AntDesign, Entypo } from '@expo/vector-icons';
 import Waveform from './ui/Waveform/Waveform';
 import { Role } from '@/utils/Interfaces';
 import Colors from '@/constants/Colors';
+import { useTheme } from '@/hooks/useTheme';
+import { Theme } from '@/constants/Types';
 
 interface AudioPlayerProps {
     handleSeek: (progress: number) => void;
@@ -26,6 +28,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
     playAudio,
     isPlaying,
 }) => {
+    const theme = useTheme();
+    const styles = getStyles(theme);
+
     const progress = duration > 0 ? position / duration : 0;
 
     return (
@@ -45,11 +50,11 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
             <Pressable style={styles.audioPlayer} onPress={playAudio} testID="audio-play-button">
                 {!isPlaying ? (
                     <View style={styles.audioPlayer}>
-                        <AntDesign name="caretright" size={17} color="black" />
+                        <AntDesign name="caretright" size={17} color={theme.colors.chatIcons} />
                     </View>
                 ) : (
                     <View style={styles.audioPlayer}>
-                        <Entypo name="controller-paus" size={17} color="black" />
+                        <Entypo name="controller-paus" size={17} color={theme.colors.chatIcons} />
                     </View>
                 )}
             </Pressable>
@@ -60,7 +65,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
 export default AudioPlayer;
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     audioPlayer: {
         flexDirection: 'row',
         alignItems: 'center',

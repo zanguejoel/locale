@@ -29,6 +29,8 @@ import Feather from '@expo/vector-icons/Feather';
 import AnimatedText from './AnimatedText';
 
 import AudioPlayer from './AudioPlayer';
+import { useTheme } from '@/hooks/useTheme';
+import { Theme } from '@/constants/Types';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -69,6 +71,9 @@ const contextItems = [
 
 
 const LoadingDots = memo(() => {
+  const theme = useTheme();
+  const styles = getStyles(theme);
+
   const dotAnimations = [
     useRef(new Animated.Value(0)).current,
     useRef(new Animated.Value(0)).current,
@@ -166,6 +171,9 @@ const ChatMessage = memo(({
   imageData,
   intermediate
 }: ChatMessageProps) => {
+  const theme = useTheme();
+  const styles = getStyles(theme);
+
   const sound = useRef(new Audio.Sound());
   const [isPlaying, setIsPlaying] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
@@ -537,6 +545,7 @@ const ChatMessage = memo(({
                   style={[
                     styles.contentContainer,
                     role === Role.Bot ? styles.botContent : styles.userContent,
+
                     streamingContent && styles.streamingContent,
                   ]}
                   accessible={true}
@@ -599,6 +608,10 @@ const ChatMessage = memo(({
             style={[
               styles.contentContainer,
               role === Role.Bot ? styles.botContent : styles.userContent,
+              theme.isDark && {
+                borderColor: theme.colors.light,
+                borderWidth: 0.7,
+              },
               streamingContent && styles.streamingContent,
             ]}
             accessible={true}
@@ -640,9 +653,11 @@ const ChatMessage = memo(({
               style={[
                 styles.contentContainer,
                 styles.loadingContainer,
+
                 role === Role.Bot ? styles.botContent : styles.userContent,
+
                 // Make background more transparent when loading
-                { backgroundColor: role === Role.Bot ? 'rgba(240, 240, 240, 0.6)' : 'rgba(200, 230, 255, 0.6)' }
+                { backgroundColor: role === Role.Bot ? theme.colors.backgroundLight : 'rgba(200, 230, 255, 0.6)' }
               ]}
               testID="loading-animation-container"
             >
@@ -660,7 +675,7 @@ const ChatMessage = memo(({
   );
 });
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     marginVertical: 8,
@@ -714,7 +729,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   contentContainer: {
-
     borderRadius: BORDER_RADIUS,
     paddingHorizontal: 12,
     // minWidth: 60,
@@ -732,19 +746,19 @@ const styles = StyleSheet.create({
     }),
   },
   streamingContent: {
-    // borderWidth: 1,
-    // borderColor: `${Colors.primary}40`,
+
   },
   markdownContainer: {
     width: '100%',
     alignSelf: 'flex-start',
   },
   botContent: {
-    // backgroundColor: `${Colors.common.greyLight}20`,
+    backgroundColor: `${theme.colors.greyLight}20`,
     borderBottomLeftRadius: 4,
   },
   userContent: {
-    backgroundColor: `${Colors.common.primary}20`,
+    backgroundColor: `${theme.colors.primary}20`,
+
     borderBottomRightRadius: 4,
   },
   text: {

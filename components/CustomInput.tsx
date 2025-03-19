@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
+import { useTheme } from '@/hooks/useTheme';
+import { Theme } from '@/constants/Types';
 
 interface CustomInputProps extends TextInputProps {
   icon: string;
@@ -24,29 +26,31 @@ const CustomInput = ({
   containerStyle,
   ...props
 }: CustomInputProps) => {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [err] = useState(error);
 
   return (
     <View style={[
-      styles.inputContainer, 
+      styles.inputContainer,
       isFocused && styles.inputFocused,
-      error && styles.inputError, 
+      error && styles.inputError,
       containerStyle
     ]}>
-      <Ionicons 
-        name={icon as any} 
-        size={20} 
-        color={isFocused ? Colors.primary : Colors.grey} 
-        style={styles.inputIcon} 
+      <Ionicons
+        name={icon as any}
+        size={20}
+        color={isFocused ? theme.colors.primary : theme.colors.greyLight}
+        style={styles.inputIcon}
       />
-      
+
       <TextInput
         {...props}
         style={styles.inputField}
         secureTextEntry={isPassword && !showPassword}
-        placeholderTextColor={Colors.grey}
+        placeholderTextColor={theme.colors.greyLight}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
@@ -59,7 +63,7 @@ const CustomInput = ({
           <Ionicons
             name={showPassword ? "eye-outline" : "eye-off-outline"}
             size={20}
-            color={isFocused ? Colors.primary : Colors.grey}
+            color={isFocused ? theme.colors.primary : theme.colors.grey}
           />
         </TouchableOpacity>
       )}
@@ -67,15 +71,15 @@ const CustomInput = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 16,
     borderWidth: 1.5,
-    borderColor: '#E1E1E1',
+    borderColor: theme.colors.greyLight,
     borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -86,7 +90,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   inputFocused: {
-    borderColor: Colors.primary,
+    borderColor: theme.colors.primary,
     borderWidth: 1.5,
     shadowOpacity: 0.1,
     shadowRadius: 4.84,
@@ -99,10 +103,11 @@ const styles = StyleSheet.create({
     height: 50,
     padding: 12,
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.text,
+    borderColor: theme.colors.greyLight
   },
   inputError: {
-    borderColor: Colors.red,
+    borderColor: theme.colors.red,
     borderWidth: 1.5,
   },
   eyeIcon: {

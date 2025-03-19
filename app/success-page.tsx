@@ -9,9 +9,10 @@ import {
     SafeAreaView,
 } from "react-native";
 import Colors from "@/constants/Colors";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { useChat } from "@/hooks/useChat";
+import { useTheme } from "@/hooks/useTheme";
+import { Theme } from "@/constants/Types";
 
 
 interface ErrorType {
@@ -21,6 +22,8 @@ interface ErrorType {
 
 const SuccessPage = () => {
     const { signIn } = useAuth();
+    const theme = useTheme();
+    const styles = getStyles(theme);
 
     const { email, password } = useLocalSearchParams();
     const [isLoading, setLoading] = useState(false)
@@ -39,7 +42,7 @@ const SuccessPage = () => {
         <View style={styles.container} >
             <SafeAreaView style={styles.content}>
                 <View style={styles.headerContainer}>
-                    <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
+                    <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.logo} />
                     <View style={{ flex: 1, justifyContent: 'center', bottom: 60 }}>
                         <View style={styles.titleContainer}>
                             <Text style={styles.title}>Success!</Text>
@@ -65,10 +68,10 @@ const SuccessPage = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.background,
     },
     content: {
         justifyContent: 'space-between',
@@ -96,20 +99,20 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: "bold",
-        color: Colors.primary,
+        color: theme.colors.primary,
         marginBottom: 12,
         textAlign: 'center',
     },
     timerText: {
         fontSize: 13,
         marginLeft: 4,
-        color: Colors.primary,
+        color: theme.colors.primary,
         textAlign: 'center',
         lineHeight: 22,
     },
     subtitle: {
         fontSize: 17,
-        color: Colors.grey,
+        color: theme.colors.text,
         textAlign: 'center',
         lineHeight: 22,
     },
@@ -118,7 +121,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
     },
     errorText: {
-        color: Colors.red,
+        color: theme.colors.red,
         fontSize: 12,
         marginTop: 4,
         marginLeft: 12,
@@ -129,14 +132,14 @@ const styles = StyleSheet.create({
     },
     resetButton: {
         height: 50,
-        backgroundColor: Colors.primary,
+        backgroundColor: theme.colors.primary,
         borderRadius: 12,
     },
     cancelButton: {
         height: 50,
         borderRadius: 12,
         borderWidth: 1.5,
-        borderColor: Colors.primary,
+        borderColor: theme.colors.primary,
     },
     buttonText: {
         fontSize: 16,
@@ -152,33 +155,33 @@ const styles = StyleSheet.create({
     },
     successMessage: {
         fontSize: 16,
-        color: Colors.grey,
+        color: theme.colors.text,
         textAlign: 'center',
         marginBottom: 8,
     },
     emailText: {
         fontSize: 18,
         fontWeight: '600',
-        color: Colors.primary,
+        color: theme.colors.primary,
         marginBottom: 16,
     },
     instructionText: {
         fontSize: 16,
-        color: Colors.grey,
+        color: theme.colors.text,
         textAlign: 'center',
         lineHeight: 22,
         marginBottom: 32,
     },
     returnButton: {
         height: 50,
-        backgroundColor: Colors.primary,
+        backgroundColor: theme.colors.primary,
         borderRadius: 12,
     },
     resendButton: {
         height: 50,
         borderRadius: 12,
         borderWidth: 1.5,
-        borderColor: Colors.primary,
+        borderColor: theme.colors.primary,
     },
 });
 

@@ -127,8 +127,19 @@ const Layout = () => {
         options={{
           headerTitle: "Change Password",
           presentation: "modal",
-          headerStyle: { backgroundColor: theme.colors.selected },
+
+          headerTintColor: theme.colors.text,
+
           headerTitleStyle: { color: theme.colors.text },
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color={theme.colors.text} />
+            </TouchableOpacity>
+          ),
         }}
       />
       <Stack.Screen
@@ -136,8 +147,17 @@ const Layout = () => {
         options={{
           headerTitle: "Profile",
           presentation: "modal",
-          headerStyle: { backgroundColor: theme.colors.selected },
+          headerTintColor: theme.colors.light,
           headerTitleStyle: { color: theme.colors.text },
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color={theme.colors.text} />
+            </TouchableOpacity>
+          ),
         }}
       />
       <Stack.Screen name="(chat)" options={{ headerShown: false }} />
@@ -147,8 +167,17 @@ const Layout = () => {
         options={{
           headerTitle: "Settings",
           headerTitleAlign: 'center',
+          headerTintColor: theme.colors.text,
           headerTitleStyle: { color: theme.colors.text },
-          headerStyle: { backgroundColor: theme.colors.selected },
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color={theme.colors.text} />
+            </TouchableOpacity>
+          ),
         }}
       />
       <Stack.Screen

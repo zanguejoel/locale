@@ -1,11 +1,9 @@
-import Colors from "@/constants/Colors";
 import { useAuth } from "@/hooks/useAuth";
 import React, { useState } from "react";
 import {
   View,
   StyleSheet,
   Text,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -15,8 +13,12 @@ import {
 import { getErrorMessage } from "@/utils/ErrorValidation";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
+import { useTheme } from "@/hooks/useTheme";
+import { Theme } from "@/constants/Types";
 
 const ChangePassword = () => {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const { changePassword } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -106,18 +108,18 @@ const ChangePassword = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
     marginBottom: 80,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
   },
   container: {
     flex: 1,
@@ -129,7 +131,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
-    color: Colors.greyLight,
+    color: theme.colors.greyLight,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -146,7 +148,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   editButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: theme.colors.primary,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',

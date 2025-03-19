@@ -20,11 +20,14 @@ import React from 'react';
 import { CustomDrawerContent } from '@/components/ChatCustomDrawerContent';
 import ChatPage from './new';
 import ChatPageId from '../../components/ChatPage';
+import { useTheme } from '@/hooks/useTheme';
+import { Theme } from '@/constants/Types';
 
 const Drawer = createDrawerNavigator();
 
 const Layout = () => {
-
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const router = useRouter();
   const { createNewConversation, resetChat, isChatLoading } = useChat();
 
@@ -56,7 +59,7 @@ const Layout = () => {
           drawerInactiveTintColor: '#000',
           headerTintColor: Colors.light.tint,
           headerStyle: {
-            backgroundColor: Colors.light.background,
+            backgroundColor: theme.colors.background,
             height: 110,
           },
           headerShadowVisible: true,
@@ -84,8 +87,6 @@ const Layout = () => {
         }} />
 
         <Drawer.Screen name="[id]"
-
-
           component={ChatPageId} options={{
             title: 'Jaiime AI',
             headerRight: () => (
@@ -107,11 +108,11 @@ const Layout = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: Colors.grey,
+    color: theme.colors.grey,
     paddingVertical: 8,
   },
   footer: {
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.grey,
+    color: theme.colors.grey,
   },
   drawerIconContainer: {
     backgroundColor: '#F5F5F5',

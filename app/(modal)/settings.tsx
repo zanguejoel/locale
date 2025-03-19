@@ -5,6 +5,8 @@ import { View, Text, StyleSheet, Pressable, SafeAreaView, Image, ScrollView } fr
 import { Ionicons } from '@expo/vector-icons';
 import React from "react";
 import { useChat } from '@/hooks/useChat';
+import { Theme } from '@/constants/Types';
+import { useTheme } from '@/hooks/useTheme';
 
 const rawPage = [{
   id: 1,
@@ -31,6 +33,8 @@ interface IItemRaw {
 }
 
 const Page = () => {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const router = useRouter();
   const { signOut } = useAuth();
   const { createNewConversation } = useChat();
@@ -64,11 +68,11 @@ const Page = () => {
       >
         <View style={styles.menuItemContent}>
           <View style={styles.iconContainer}>
-            <Ionicons name={item.icon as any} size={22} color={Colors.primary} />
+            <Ionicons name={item.icon as any} size={20} color={theme.colors.primary} />
           </View>
           <Text style={styles.menuItemText}>{item.title}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={Colors.greyLight} />
+        <Ionicons name="chevron-forward" size={20} color={theme.colors.greyLight} />
       </Pressable>
     )
   }
@@ -81,7 +85,7 @@ const Page = () => {
             {rawPage.map((item, index) => renderRaw(item, index))}
           </View>
           <View style={styles.footer}>
-            <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
+            <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.logo} />
             <Text style={styles.appVersion}>App Version 1.0.0</Text>
           </View>
         </View>
@@ -90,14 +94,14 @@ const Page = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
     paddingHorizontal: 20,
   },
   contentContainer: {
@@ -124,10 +128,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.input,
+    borderBottomColor: theme.colors.greyLight,
   },
   menuItemPressed: {
-    backgroundColor: Colors.selected,
+    backgroundColor: theme.colors.selected,
   },
   menuItemLast: {
     borderBottomWidth: 0,
@@ -140,14 +144,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#e5f3f7',
+    backgroundColor: theme.colors.backgroundLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   menuItemText: {
     fontSize: 16,
-    color: Colors.grey,
+    color: theme.colors.text,
     fontWeight: '500',
   },
   footer: {
@@ -166,7 +170,7 @@ const styles = StyleSheet.create({
   },
   appVersion: {
     fontSize: 12,
-    color: Colors.greyLight,
+    color: theme.colors.greyLight,
   },
 });
 
