@@ -1,6 +1,6 @@
 import { RawImage } from '@huggingface/transformers';
 
-const cleanData = (data: unknown): any => {
+const cleanData = (data: any) => {
   if (data instanceof RawImage) {
     return `RawImage(${data.width}x${data.height}x${data.channels}, data: ${data.data.length})`;
   } else if (data instanceof ImageData) {

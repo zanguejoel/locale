@@ -24,9 +24,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Swipeable } from 'react-native-gesture-handler';
 import { FlashList } from '@shopify/flash-list';
 import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
+import { useTheme } from '@/hooks/useTheme';
+import { Theme } from '@/constants/Types';
 
 
 export const CustomDrawerContent = (props: any) => {
+    const theme = useTheme();
+    const styles = getStyles(theme);
     const drawerStatus = useDrawerStatus();
     const { bottom } = useSafeAreaInsets();
     const progressDrawer = useDrawerProgress()
@@ -282,7 +286,7 @@ export const CustomDrawerContent = (props: any) => {
                         >
                             <View style={styles.chatItemContent}>
                                 <View style={styles.chatIconContainer}>
-                                    <Ionicons name="chatbubble" size={18} color={Colors.primary} />
+                                    <Ionicons name="chatbubble" size={18} color={theme.colors.primary} />
                                 </View>
                                 <View style={styles.chatDetails}>
                                     <Text style={styles.chatTitle} numberOfLines={1}>
@@ -297,7 +301,7 @@ export const CustomDrawerContent = (props: any) => {
                                         style={styles.actionButton}
                                         onPress={() => onRenameChat(chatId, chatTitle)}
                                     >
-                                        <Ionicons name="pencil" size={16} color={Colors.greyLight} />
+                                        <Ionicons name="pencil" size={16} color={theme.colors.greyLight} />
                                     </Pressable>
                                 </View>
                             </View>
@@ -370,18 +374,18 @@ export const CustomDrawerContent = (props: any) => {
                 <View style={styles.searchContainer}>
                     <View style={styles.searchSection}>
 
-                        <Ionicons style={styles.searchIcon} name="search" size={20} color={Colors.greyLight} />
+                        <Ionicons style={styles.searchIcon} name="search" size={20} color={theme.colors.greyLight} />
                         <TextInput
                             style={styles.input}
                             placeholder="Search conversations"
-                            placeholderTextColor={Colors.greyLight}
+                            placeholderTextColor={theme.colors.greyLight}
                             underlineColorAndroid="transparent"
                             onChangeText={(value) => setQuery(value)}
                             value={query}
                         />
                         {query ? (
                             <TouchableOpacity onPress={() => setQuery('')}>
-                                <Ionicons name="close-circle" size={18} color={Colors.greyLight} />
+                                <Ionicons name="close-circle" size={18} color={theme.colors.greyLight} />
                             </TouchableOpacity>
                         ) : null}
                     </View>
@@ -430,7 +434,7 @@ export const CustomDrawerContent = (props: any) => {
                             </View>
                             <Text style={styles.userName}>{user?.first_name || 'John'}</Text>
                         </View>
-                        <Ionicons name="settings-outline" size={20} color={Colors.greyLight} />
+                        <Ionicons name="settings-outline" size={20} color={theme.colors.greyLight} />
                     </TouchableOpacity>
                 </Link>
             </View>
@@ -439,16 +443,16 @@ export const CustomDrawerContent = (props: any) => {
 };
 
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     drawerContainer: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.background,
     },
     headerContainer: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.background,
         paddingBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
+        borderBottomColor: theme.colors.greyLight,
         marginTop: 70,
     },
     searchContainer: {
@@ -461,12 +465,12 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         marginLeft: 20,
         marginTop: 8,
-        color: Colors.grey,
+        color: theme.colors.text,
     },
     searchSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F5F5F5',
+        backgroundColor: theme.colors.backgroundLight,
         borderRadius: 12,
         height: 40,
         paddingHorizontal: 12,
@@ -477,11 +481,11 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         fontSize: 15,
-        color: Colors.grey,
+        color: theme.colors.text,
         paddingVertical: 8,
     },
     scrollViewContent: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.background,
         paddingTop: 8,
         paddingHorizontal: 12,
     },
@@ -494,7 +498,7 @@ const styles = StyleSheet.create({
     emptyStateText: {
         fontSize: 18,
         fontWeight: '600',
-        color: Colors.grey,
+        color: theme.colors.text,
         marginTop: 16,
         textAlign: 'center',
     },
@@ -564,7 +568,7 @@ const styles = StyleSheet.create({
         padding: 16,
         borderTopWidth: 1,
         borderTopColor: '#F0F0F0',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.background,
     },
     footer: {
         flexDirection: 'row',
@@ -579,7 +583,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#e5f3f7',
+        backgroundColor: theme.colors.backgroundLight,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -587,17 +591,17 @@ const styles = StyleSheet.create({
     userInitials: {
         fontSize: 16,
         fontWeight: '600',
-        color: Colors.primary,
+        color: theme.colors.text,
     },
     userName: {
         fontSize: 15,
         fontWeight: '600',
-        color: Colors.grey,
+        color: theme.colors.text,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: Colors.grey,
+        color: theme.colors.text,
     },
     drawerIcon: {
         width: 20,

@@ -18,8 +18,8 @@ import SelectField from '../form/SelectField';
 import TextField from '../form/TextField';
 import Button from '../form/Button';
 import Progress from '../Progress';
-import { getImageData, createRawImage } from '../../utils/image';
-import { usePhoto } from '../../utils/photo';
+import { getImageData, createRawImage } from '@/utils/Image';
+import { usePhoto } from '@/utils/photo';
 
 export const title = 'Image Segmentation';
 

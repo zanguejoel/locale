@@ -6,9 +6,9 @@ import SelectField from '../form/SelectField';
 import TextField from '../form/TextField';
 import Button from '../form/Button';
 import Progress from '../Progress';
-import { getImageData, createRawImage, calcPosition } from '../../utils/image';
-import { usePhoto } from '../../utils/photo';
-import { log } from '../../utils/logger';
+import { getImageData, createRawImage, calcPosition } from '@/utils/Image';
+import { usePhoto } from '@/utils/photo';
+import { log } from '@/utils/logger';
 
 export const title = 'Object Detection';
 

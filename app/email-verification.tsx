@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
 import {
@@ -16,6 +16,8 @@ import {
 import Colors from "@/constants/Colors";
 import { router, useLocalSearchParams } from "expo-router";
 import CustomInput from "@/components/CustomInput";
+import { useTheme } from "@/hooks/useTheme";
+import { Theme } from "@/constants/Types";
 
 
 interface ErrorType {
@@ -25,6 +27,8 @@ interface ErrorType {
 const TIMER_DURATION = 60;
 
 const EmailVerification = () => {
+    const theme = useTheme();
+    const styles = getStyles(theme);
     const { isLoading, confirmEmail } = useAuth();
     const { email, password } = useLocalSearchParams();
 
@@ -53,12 +57,12 @@ const EmailVerification = () => {
             <SafeAreaView>
                 {isLoading && (
                     <View style={defaultStyles.loadingOverlay}>
-                        <ActivityIndicator size="large" color={Colors.primary} />
+                        <ActivityIndicator size="large" color={theme.colors.primary} />
                     </View>
                 )}
 
                 <View style={styles.headerContainer}>
-                    <Image source={require('@/assets/images/Jaiimelogodark.png')} style={styles.logo} />
+                    <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.logo} />
                     <Text style={styles.title}>Email verification</Text>
                     <Text style={styles.subtitle}>
                         A verification code has been sent to your inbox.
@@ -76,7 +80,7 @@ const EmailVerification = () => {
                         error={!!error.code}
                         autoCapitalize="none"
                         keyboardType="numeric"
-                        // autoComplete="email"
+                    // autoComplete="email"
                     />
                     {error.code && <Text style={styles.errorText}>{error.code}</Text>}
 
@@ -92,7 +96,7 @@ const EmailVerification = () => {
                             style={[defaultStyles.btnSecondary, styles.cancelButton]}
                             onPress={() => router.replace('/login')}
                         >
-                            <Text style={[styles.buttonText, { color: Colors.primary }]}>
+                            <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
                                 Back to Login
                             </Text>
                         </TouchableOpacity>
@@ -103,10 +107,10 @@ const EmailVerification = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.background,
     },
     headerContainer: {
         alignItems: 'center',
@@ -127,20 +131,20 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: "bold",
-        color: Colors.primary,
+        color: theme.colors.primary,
         marginBottom: 12,
         textAlign: 'center',
     },
     timerText: {
         fontSize: 13,
         marginLeft: 4,
-        color: Colors.primary,
+        color: theme.colors.primary,
         textAlign: 'center',
         lineHeight: 22,
     },
     subtitle: {
         fontSize: 16,
-        color: Colors.grey,
+        color: theme.colors.text,
         textAlign: 'center',
         lineHeight: 22,
     },
@@ -148,7 +152,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
     },
     errorText: {
-        color: Colors.red,
+        color: theme.colors.red,
         fontSize: 12,
         marginTop: 4,
         marginLeft: 12,
@@ -159,19 +163,19 @@ const styles = StyleSheet.create({
     },
     resetButton: {
         height: 50,
-        backgroundColor: Colors.primary,
+        backgroundColor: theme.colors.primary,
         borderRadius: 12,
     },
     cancelButton: {
         height: 50,
         borderRadius: 12,
         borderWidth: 1.5,
-        borderColor: Colors.primary,
+        borderColor: theme.colors.primary,
     },
     buttonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: theme.colors.light,
     },
     // Success screen styles
     successContainer: {
@@ -182,33 +186,33 @@ const styles = StyleSheet.create({
     },
     successMessage: {
         fontSize: 16,
-        color: Colors.grey,
+        color: theme.colors.text,
         textAlign: 'center',
         marginBottom: 8,
     },
     emailText: {
         fontSize: 18,
         fontWeight: '600',
-        color: Colors.primary,
+        color: theme.colors.primary,
         marginBottom: 16,
     },
     instructionText: {
         fontSize: 16,
-        color: Colors.grey,
+        color: theme.colors.text,
         textAlign: 'center',
         lineHeight: 22,
         marginBottom: 32,
     },
     returnButton: {
         height: 50,
-        backgroundColor: Colors.primary,
+        backgroundColor: theme.colors.primary,
         borderRadius: 12,
     },
     resendButton: {
         height: 50,
         borderRadius: 12,
         borderWidth: 1.5,
-        borderColor: Colors.primary,
+        borderColor: theme.colors.primary,
     },
 });
 

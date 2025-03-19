@@ -5,7 +5,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useColor } from '../../utils/style';
+import { useColor } from '@/utils/style';
 
 type SectionProps = PropsWithChildren<{
   title: string;

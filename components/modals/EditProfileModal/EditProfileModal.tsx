@@ -1,5 +1,7 @@
 import Colors from "@/constants/Colors";
+import { Theme } from "@/constants/Types";
 import { FormData } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -13,6 +15,8 @@ interface IEditProfileModalProps {
 }
 
 const EditProfileModal = ({ isModalVisible, setIsModalVisible, handleInputChange, formData, handleSave }: IEditProfileModalProps) => {
+    const theme = useTheme();
+    const styles = getStyles(theme);
 
     return (
         <Modal
@@ -33,7 +37,7 @@ const EditProfileModal = ({ isModalVisible, setIsModalVisible, handleInputChange
                                 onPress={() => setIsModalVisible(false)}
                                 style={styles.closeButton}
                             >
-                                <Ionicons name="close" size={24} color={Colors.grey} />
+                                <Ionicons name="close" size={24} color={theme.colors.greyLight} />
                             </TouchableOpacity>
                         </View>
 
@@ -112,7 +116,7 @@ const EditProfileModal = ({ isModalVisible, setIsModalVisible, handleInputChange
 
 export default React.memo(EditProfileModal)
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
         paddingHorizontal: 16,
@@ -131,13 +135,13 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 13,
-        color: Colors.greyLight,
+        color: theme.colors.text,
         marginBottom: 2,
     },
     value: {
         fontSize: 15,
         fontWeight: '500',
-        color: Colors.grey,
+        color: theme.colors.text,
     },
     buttonText: {
         color: '#FFFFFF',
@@ -151,7 +155,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modalContent: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.backgroundLight,
         borderRadius: 14,
         width: '85%',
         padding: 20,
@@ -165,7 +169,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: Colors.grey,
+        color: theme.colors.text,
     },
     closeButton: {
         padding: 4,
@@ -175,20 +179,21 @@ const styles = StyleSheet.create({
     },
     inputLabel: {
         fontSize: 13,
-        color: Colors.greyLight,
+        color: theme.colors.text,
         marginBottom: 6,
     },
     input: {
-        backgroundColor: '#F9F9F9',
+        color: theme.colors.text,
+        backgroundColor: theme.colors.backgroundLight,
         borderWidth: 1,
-        borderColor: '#EEEEEE',
+        borderColor: theme.colors.greyLight,
         borderRadius: 10,
         paddingHorizontal: 14,
         paddingVertical: 10,
         fontSize: 15,
     },
     saveButton: {
-        backgroundColor: Colors.primary,
+        backgroundColor: theme.colors.primary,
         paddingVertical: 12,
         borderRadius: 10,
         alignItems: 'center',

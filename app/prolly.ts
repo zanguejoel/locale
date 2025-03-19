@@ -1,5 +1,5 @@
 import 'react-native-skia-offscreencanvas/polyfill';
-import 'text-encoding-polyfill'; // support TextEncoder
+import 'text-encoding-polyfill';
 import { Buffer } from 'buffer';
 import XRegExp from 'xregexp';
 

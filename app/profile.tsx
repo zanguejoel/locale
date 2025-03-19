@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+
 import { FormData, useAuth } from "@/hooks/useAuth";
 import React, { useState } from "react";
 import {
@@ -12,9 +12,15 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import EditProfileModal from "@/components/modals/EditProfileModal/EditProfileModal";
 
+import { useTheme } from "@/hooks/useTheme";
+import { Theme } from "@/constants/Types";
+import Colors from "@/constants/Colors";
+
 
 
 const Profile = () => {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const { user, updateUser } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -50,7 +56,7 @@ const Profile = () => {
     return userData.map((item, index) => (
       <View key={index} style={[styles.infoCard, userData.length - 1 === index && { borderBottomWidth: 0 }]}>
         <View style={styles.iconContainer}>
-          <Ionicons name={item.icon as any} size={22} color={Colors.primary} />
+          <Ionicons name={item.icon as any} size={22} color={Colors.common.primary} />
         </View>
         <View style={styles.infoContent}>
           <Text style={styles.label}>{item.label}</Text>
@@ -87,14 +93,13 @@ const Profile = () => {
           <View style={styles.infoContainer}>
             {renderProfileInfo()}
           </View>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => setIsModalVisible(true)}
+          >
+            <Text style={styles.buttonText}>Edit Profile</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => setIsModalVisible(true)}
-        >
-          <Text style={styles.buttonText}>Edit Profile</Text>
-        </TouchableOpacity>
       </View>
       <EditProfileModal
         isModalVisible={isModalVisible}
@@ -108,20 +113,20 @@ const Profile = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
     marginBottom: 80,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 90,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.background,
 
   },
   container: {
@@ -147,17 +152,17 @@ const styles = StyleSheet.create({
   profileInitials: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: Colors.common.primary,
   },
   profileName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: Colors.grey,
+    color: theme.colors.text,
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 16,
-    color: Colors.greyLight,
+    color: Colors.common.greyLight,
   },
   sectionContainer: {
     marginBottom: 16,
@@ -166,10 +171,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
-    color: Colors.grey,
+    color: theme.colors.text,
   },
   infoContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.backgroundLight,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: {
@@ -186,7 +191,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: theme.colors.greyLight,
     marginBottom: 8,
   },
   iconContainer: {
@@ -203,20 +208,20 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: Colors.greyLight,
+    color: theme.colors.text,
     marginBottom: 2,
   },
   value: {
     fontSize: 15,
     fontWeight: '500',
-    color: Colors.grey,
+    color: theme.colors.text,
   },
   editButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 12,
   },
   buttonText: {
     color: '#FFFFFF',

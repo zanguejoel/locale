@@ -6,7 +6,7 @@ import TextField from '../form/TextField';
 import NumberField from '../form/NumberField';
 import BooleanField from '../form/BooleanField';
 import Button from '../form/Button';
-import { encodeBuffer, play } from '../../utils/audio';
+import { encodeBuffer, play } from '@/utils/audio';
 
 export const title = 'Text To Speech';
 

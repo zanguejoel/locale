@@ -8,7 +8,7 @@ import {
   Modal,
   useColorScheme,
 } from 'react-native';
-import { useColor } from '../../utils/style';
+import { useColor } from '@/utils/style';
 
 export type Option = { value: any; label: string };
 

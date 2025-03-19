@@ -6,6 +6,8 @@ import Markdown, {
 } from 'react-native-markdown-display';
 import { StyleSheet, Text, View, Image, Platform } from 'react-native';
 import Colors from '@/constants/Colors';
+import { Theme } from '@/constants/Types';
+import { useTheme } from './useTheme';
 
 // Define the navigation params for each screen
 interface NavigationParams {
@@ -87,10 +89,10 @@ const useMarkdownDisplay = () => {
   );
 
   // Custom styles for markdown elements with improved spacing and readability
-  const markdownStyles = StyleSheet.create({
+  const getStyles = (theme: Theme) => StyleSheet.create({
     // Base styles
     body: {
-      color: Colors.grey,
+      color: theme.colors.text,
       fontSize: 14,
       lineHeight: 24,
       marginTop: 0,
@@ -113,7 +115,7 @@ const useMarkdownDisplay = () => {
       fontWeight: 'bold',
       marginTop: 8,
       marginBottom: 4,
-      color: Colors.grey,
+      color: theme.colors.text,
       width: '100%',
     },
     heading2: {
@@ -121,7 +123,7 @@ const useMarkdownDisplay = () => {
       fontWeight: 'bold',
       marginTop: 8,
       marginBottom: 4,
-      color: Colors.grey,
+      color: theme.colors.text,
       width: '100%',
     },
     heading3: {
@@ -129,7 +131,7 @@ const useMarkdownDisplay = () => {
       fontWeight: 'bold',
       marginTop: 8,
       marginBottom: 4,
-      color: Colors.grey,
+      color: theme.colors.text,
       width: '100%',
     },
     heading4: {
@@ -137,7 +139,7 @@ const useMarkdownDisplay = () => {
       fontWeight: 'bold',
       marginTop: 8,
       marginBottom: 4,
-      color: Colors.grey,
+      color: theme.colors.text,
       width: '100%',
     },
     heading5: {
@@ -145,7 +147,7 @@ const useMarkdownDisplay = () => {
       fontWeight: 'bold',
       marginTop: 8,
       marginBottom: 4,
-      color: Colors.grey,
+      color: theme.colors.text,
       width: '100%',
     },
     heading6: {
@@ -153,7 +155,7 @@ const useMarkdownDisplay = () => {
       fontWeight: 'bold',
       marginTop: 8,
       marginBottom: 4,
-      color: Colors.grey,
+      color: theme.colors.text,
       width: '100%',
     },
 
@@ -178,7 +180,7 @@ const useMarkdownDisplay = () => {
       width: 5,
       height: 5,
       borderRadius: 2.5,
-      backgroundColor: Colors.grey,
+      backgroundColor: theme.colors.text,
       alignSelf: 'flex-start',
       marginTop: 8,
     },
@@ -245,14 +247,14 @@ const useMarkdownDisplay = () => {
 
     // Links
     link: {
-      color: Colors.primary,
+      color: theme.colors.primary,
       textDecorationLine: 'underline',
     },
 
     // Block quotes
     blockquote: {
       borderLeftWidth: 4,
-      borderLeftColor: Colors.primary + '80',
+      borderLeftColor: theme.colors.primary + '80',
       paddingLeft: 10,
       marginLeft: 4,
       marginVertical: 8,
@@ -324,17 +326,20 @@ const useMarkdownDisplay = () => {
     },
   });
 
+  const theme = useTheme();
+  const markdownStyles = getStyles(theme);
+
   const customRules: RenderRules = {
-   /*  list_item: (node, children, parent, styles) => {
-      return (
-        <View
-          key={node.key}
-          style={[styles.list_item, styles[`list_item_level_${node.level || 0}`]]}
-        >
-          {children}
-        </View>
-      );
-    }, */
+    /*  list_item: (node, children, parent, styles) => {
+       return (
+         <View
+           key={node.key}
+           style={[styles.list_item, styles[`list_item_level_${node.level || 0}`]]}
+         >
+           {children}
+         </View>
+       );
+     }, */
 
     code_block: (node, children, parent, styles) => {
       return (
@@ -367,7 +372,7 @@ const useMarkdownDisplay = () => {
       <Markdown
         rules={{ ...additionalRules }}
         onLinkPress={url => handleNavigation(url)}
-        style={{...markdownStyles, ...additionalStyles}}
+        style={{ ...markdownStyles, ...additionalStyles }}
       >
         {children}
       </Markdown>

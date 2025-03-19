@@ -5,7 +5,7 @@ import {
   View,
   Pressable,
 } from 'react-native';
-import { useColor } from '../../utils/style';
+import { useColor } from '@/utils/style';
 
 interface Props {
   title?: string;

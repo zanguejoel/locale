@@ -6,13 +6,13 @@ import TextField from '../form/TextField';
 import NumberField from '../form/NumberField';
 import BooleanField from '../form/BooleanField';
 import Button from '../form/Button';
-import Recorder from '../../utils/recorder';
+import Recorder from '@/utils/recorder';
 import InlineSection from '../form/InlineSection';
 import Section from '../form/Section';
-import { useColor } from '../../utils/style';
-import { decodeBuffer, toSingleChannel, downsample, toFloatArray, play } from '../../utils/audio';
-import { getFile } from '../../utils/fs-cache';
-import * as logger from '../../utils/logger';
+import { useColor } from '@/utils/style';
+import { decodeBuffer, toSingleChannel, downsample, toFloatArray, play } from '@/utils/audio';
+import { getFile } from '@/utils/fs-cache';
+import * as logger from '@/utils/logger';
 
 export const title = 'Speech Recognition';
 
