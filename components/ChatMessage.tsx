@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   botContent: {
-    backgroundColor: `${Colors.greyLight}20`,
+    backgroundColor: `${Colors.common.greyLight}20`,
     borderBottomLeftRadius: 4,
   },
   userContent: {
