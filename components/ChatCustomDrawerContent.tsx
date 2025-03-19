@@ -447,6 +447,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     drawerContainer: {
         flex: 1,
         backgroundColor: theme.colors.background,
+        borderRightWidth: 1,
+        borderRightColor: theme.colors.greyLight,
     },
     headerContainer: {
         backgroundColor: theme.colors.background,
@@ -511,11 +513,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     chatItem: {
         borderRadius: 12,
         marginBottom: 8,
-        backgroundColor: '#F9F9F9',
+        backgroundColor: theme.colors.chatItemBg,
         overflow: 'hidden',
     },
     activeChatItem: {
-        backgroundColor: '#e5f3f7',
+        backgroundColor: theme.colors.activeChatItem,
     },
     pressedChatItem: {
         opacity: 0.7,
@@ -529,7 +531,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#e5f3f7',
+        backgroundColor: theme.colors.chatIconContainer,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -540,11 +542,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     chatTitle: {
         fontSize: 15,
         fontWeight: '500',
-        color: Colors.grey,
+        color: theme.colors.text,
     },
     chatTimestamp: {
         fontSize: 12,
-        color: Colors.greyLight,
+        color: theme.colors.greyLight,
         marginTop: 2,
     },
     chatActions: {
