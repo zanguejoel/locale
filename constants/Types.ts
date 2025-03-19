@@ -14,6 +14,31 @@ export interface UserTeam {
   team: Team;
   roles: Role[];
 }
+export interface Theme {
+  colors: {
+    text: string;
+    background: string;
+    tint: string;
+    tabIconDefault: string;
+    tabIconSelected: string;
+    primary: string;
+
+    lime: string;
+    pink: string;
+    brown: string;
+    sky: string;
+    teal: string;
+    yellow: string;
+    orange: string;
+    red: string;
+    blue: string;
+    green: string;
+    grey: string;
+    greyLight: string;
+    input: string;
+    selected: string;
+  };
+}
 
 export interface User {
   first_name: string;

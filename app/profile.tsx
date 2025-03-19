@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+
 import { FormData, useAuth } from "@/hooks/useAuth";
 import React, { useState } from "react";
 import {
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import EditProfileModal from "@/components/modals/EditProfileModal/EditProfileModal";
+import Colors from "@/constants/Colors/index";
 
 
 
@@ -87,14 +88,13 @@ const Profile = () => {
           <View style={styles.infoContainer}>
             {renderProfileInfo()}
           </View>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => setIsModalVisible(true)}
+          >
+            <Text style={styles.buttonText}>Edit Profile</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => setIsModalVisible(true)}
-        >
-          <Text style={styles.buttonText}>Edit Profile</Text>
-        </TouchableOpacity>
       </View>
       <EditProfileModal
         isModalVisible={isModalVisible}

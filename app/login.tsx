@@ -22,6 +22,7 @@ import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
+import { Theme } from "@/constants/Types";
 
 interface ErrorType {
   email?: string;
@@ -31,6 +32,8 @@ interface ErrorType {
 const Login = () => {
   const { signIn, isLoading } = useAuth();
   const theme = useTheme();
+  const styles = getStyles(theme);
+
   const [errors, setErrors] = useState<ErrorType>({});
   const [isValidForm, setIsFormValid] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
@@ -62,7 +65,7 @@ const Login = () => {
       theme.colors.background
     ],
   });
-  
+
   // No rotation animation needed anymore
 
   // Setup animations
@@ -237,7 +240,7 @@ const Login = () => {
         });
       }, 3000);
     };
-    
+
     // Additional bubbles
     const animateBubble4 = () => {
       setTimeout(() => {
@@ -393,20 +396,20 @@ const Login = () => {
           </View>
         )}
         <SafeAreaView>
-          <Animated.View 
+          <Animated.View
             style={[
-              styles.headerContainer, 
-              { 
+              styles.headerContainer,
+              {
                 opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }] 
+                transform: [{ translateY: slideAnim }]
               }
             ]}
           >
-            <Image 
-              source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} 
-              style={styles.logo} 
+            <Image
+              source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
+              style={styles.logo}
             />
-            
+
             {/* Chat bubbles animation */}
             <View style={styles.bubbleContainer}>
               <Animated.View style={[styles.bubble, { transform: [{ scale: bubbleScale1 }], backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)' }]}>
@@ -428,25 +431,25 @@ const Login = () => {
                 <Ionicons name="planet-outline" size={16} color="#5AC8FA" />
               </Animated.View>
             </View>
-            
-            <Text style={[styles.title, { color: theme.colors.text }]}>Welcome Back</Text>
-            
+
+            <Text style={[styles.title]}>Welcome Back</Text>
+
             <View style={styles.typingContainer}>
-              <Text style={[styles.subtitle, { color: theme.colors.text }]}>Sign in to continue</Text>
+              <Text style={[styles.subtitle]}>Sign in to continue</Text>
               <View style={styles.typingDots}>
-                <Animated.View style={[styles.typingDot, { opacity: dotOpacity1, backgroundColor: theme.colors.primary }]} />
-                <Animated.View style={[styles.typingDot, { opacity: dotOpacity2, backgroundColor: theme.colors.primary }]} />
-                <Animated.View style={[styles.typingDot, { opacity: dotOpacity3, backgroundColor: theme.colors.primary }]} />
+                <Animated.View style={[styles.typingDot, { opacity: dotOpacity1 }]} />
+                <Animated.View style={[styles.typingDot, { opacity: dotOpacity2 }]} />
+                <Animated.View style={[styles.typingDot, { opacity: dotOpacity3 }]} />
               </View>
             </View>
           </Animated.View>
 
-          <Animated.View 
+          <Animated.View
             style={[
-              styles.formContainer, 
-              { 
+              styles.formContainer,
+              {
                 opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }] 
+                transform: [{ translateY: slideAnim }]
               }
             ]}
           >
@@ -465,7 +468,7 @@ const Login = () => {
               keyboardType="email-address"
               theme={theme}
             />
-            {errors.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.email}</Text>}
+            {errors.email && <Text style={[styles.errorText]}>{errors.email}</Text>}
 
             <CustomInput
               icon="lock-closed-outline"
@@ -478,24 +481,24 @@ const Login = () => {
               isPassword
               theme={theme}
             />
-            {errors.password && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.password}</Text>}
+            {errors.password && <Text style={[styles.errorText]}>{errors.password}</Text>}
 
             <View style={styles.optionsContainer}>
               <TouchableOpacity style={styles.rememberMeContainer} onPress={toggleRememberMe}>
-                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked, { borderColor: theme.colors.text }]}>
+                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
                   {rememberMe && <Text style={styles.checkmark}>✓</Text>}
                 </View>
-                <Text style={[styles.rememberMeText, { color: theme.colors.text }]}>Remember me</Text>
+                <Text style={[styles.rememberMeText]}>Remember me</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleForgotPassword}>
-                <Text style={[styles.forgotPasswordText, { color: theme.colors.primary }]}>Forgot Password?</Text>
+                <Text style={[styles.forgotPasswordText]}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.btnContainer}>
               <TouchableOpacity
-                style={[defaultStyles.btn, styles.signInButton, { backgroundColor: theme.colors.primary }]}
+                style={[defaultStyles.btn, styles.signInButton]}
                 onPress={onSignInPress}
               >
                 <Text style={{ color: '#fff' }}>Sign In</Text>
@@ -503,9 +506,9 @@ const Login = () => {
               </TouchableOpacity>
 
               <View style={styles.dividerContainer}>
-                <View style={[styles.divider, { backgroundColor: theme.colors.greyLight }]} />
-                <Text style={[styles.dividerText, { color: theme.colors.text }]}>OR</Text>
-                <View style={[styles.divider, { backgroundColor: theme.colors.greyLight }]} />
+                <View style={[styles.divider]} />
+                <Text style={[styles.dividerText]}>OR</Text>
+                <View style={[styles.divider]} />
               </View>
 
               <TouchableOpacity
@@ -513,7 +516,7 @@ const Login = () => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   router.replace("/registration");
                 }}
-                style={[defaultStyles.btnSecondary, styles.createAccountButton, { borderColor: theme.colors.primary }]}
+                style={[defaultStyles.btnSecondary, styles.createAccountButton]}
               >
                 <Text style={[{ color: theme.colors.primary }]}>
                   Create an Account
@@ -527,7 +530,7 @@ const Login = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -548,6 +551,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     marginBottom: 8,
+    color: theme.colors.text
   },
   typingContainer: {
     flexDirection: 'row',
@@ -557,6 +561,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     marginRight: 8,
+    color: theme.colors.text
   },
   typingDots: {
     flexDirection: 'row',
@@ -567,7 +572,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.primary,
+    backgroundColor: theme.colors.primary,
     marginHorizontal: 2,
   },
   formContainer: {
@@ -577,6 +582,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     marginLeft: 12,
+    color: theme.colors.red
   },
   optionsContainer: {
     flexDirection: "row",
@@ -600,8 +606,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary
   },
   checkmark: {
     color: "#fff",
@@ -609,9 +615,10 @@ const styles = StyleSheet.create({
   },
   rememberMeText: {
     fontSize: 14,
+    color: theme.colors.text
   },
   forgotPasswordText: {
-    color: Colors.primary,
+    color: theme.colors.primary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -623,11 +630,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
+    backgroundColor: theme.colors.primary
   },
   createAccountButton: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    borderColor: theme.colors.primary
   },
   dividerContainer: {
     display: 'flex',
@@ -639,11 +648,13 @@ const styles = StyleSheet.create({
   divider: {
     width: 140,
     height: 1,
+    backgroundColor: theme.colors.greyLight
   },
   dividerText: {
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 20,
+    color: theme.colors.text
   },
   bubbleContainer: {
     position: 'absolute',
