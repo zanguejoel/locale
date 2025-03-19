@@ -228,11 +228,11 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
           />
           {message.length > 0 ? (
             <TouchableOpacity disabled={isLoading} onPress={onSend}>
-              <Ionicons name="arrow-up-circle" size={30} color={isLoading ? Colors.greyLight : Colors.grey} />
+              <Ionicons name="arrow-up-circle" size={30} color={isLoading ? Colors.common.greyLight : Colors.common.grey} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity disabled={isLoading} onPress={isRecording ? stopRecording : startRecording}>
-              <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : (isLoading ? Colors.greyLight : Colors.grey)} />
+              <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.common.red : (isLoading ? Colors.common.greyLight : Colors.common.grey)} />
             </TouchableOpacity>
           )}
         </View>
@@ -266,14 +266,14 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 20,
     padding: 10,
-    borderColor: Colors.greyLight,
+    borderColor: Colors.common.greyLight,
     backgroundColor: Colors.light.background,
   },
   roundBtn: {
     width: 30,
     height: 30,
     borderRadius: 20,
-    backgroundColor: Colors.input,
+    backgroundColor: Colors.common.input,
     alignItems: 'center',
     justifyContent: 'center',
   },
