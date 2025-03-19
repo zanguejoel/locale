@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   botContent: {
-    backgroundColor: `${Colors.common.greyLight}20`,
+    // backgroundColor: `${Colors.common.greyLight}20`,
     borderBottomLeftRadius: 4,
   },
   userContent: {
@@ -752,10 +752,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   botText: {
-    color: Colors.grey,
+    color: Colors.common.grey,
   },
   userText: {
-    color: Colors.light,
+    color: Colors.light.text,
   },
   loadingVideo: {
     position: 'absolute',
