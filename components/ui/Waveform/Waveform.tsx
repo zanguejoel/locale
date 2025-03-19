@@ -56,7 +56,7 @@ const Waveform: React.FC<WaveformProps> = ({ progress = 0, onSeek }) => {
         <Pressable onPress={handlePress} onLayout={handleLayout} ref={containerRef}>
             <View style={styles.waveContainer}>
                 {waveData.map((height, index) => {
-                    const barColor = index < playedBarsCount ? Colors.primary : Colors.greyLight;
+                    const barColor = index < playedBarsCount ? Colors.common.primary : Colors.common.greyLight;
                     return (
                         <View
                             key={index}
