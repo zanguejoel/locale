@@ -1,23 +1,18 @@
 import Colors from "@/constants/Colors";
-import { useAuth } from "@/hooks/useAuth";
+import { FormData, useAuth } from "@/hooks/useAuth";
 import React, { useState } from "react";
 import {
   View,
   StyleSheet,
   Text,
   SafeAreaView,
-  Modal,
-  TextInput,
   TouchableOpacity,
   ScrollView,
-  Image
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
+import EditProfileModal from "@/components/modals/EditProfileModal/EditProfileModal";
 
-interface FormData {
-  firstName?: string;
-  lastName?: string;
-}
+
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -25,6 +20,10 @@ const Profile = () => {
   const [formData, setFormData] = useState<FormData>({
     firstName: user?.first_name,
     lastName: user?.last_name,
+    address: user?.address,
+    city: user?.city,
+    postalCode: user?.postal_code,
+    state: user?.state
   });
 
   const handleInputChange = (field: keyof FormData, value: string) => {
@@ -41,10 +40,15 @@ const Profile = () => {
       { label: "Email", value: user?.email, icon: "mail-outline" },
       { label: "Phone", value: user?.phone, icon: "call-outline" },
       { label: "Birth Date", value: user?.date_of_birth, icon: "calendar-outline" },
+      { label: "Street Address", value: user?.address, icon: "home-outline" },
+      { label: "City", value: user?.city, icon: "map-outline" },
+      { label: "State", value: user?.state, icon: "globe-outline" },
+      { label: "Postal Code", value: user?.postal_code, icon: "business-outline" },
     ];
 
+
     return userData.map((item, index) => (
-      <View key={index} style={[styles.infoCard, userData.length - 1 === index && { marginBottom: 0 }]}>
+      <View key={index} style={[styles.infoCard, userData.length - 1 === index && { borderBottomWidth: 0 }]}>
         <View style={styles.iconContainer}>
           <Ionicons name={item.icon as any} size={22} color={Colors.primary} />
         </View>
@@ -62,101 +66,63 @@ const Profile = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.container}>
-          <View style={styles.profileHeader}>
-            <View style={styles.profileImageContainer}>
-              <View style={styles.profileImage}>
-                <Text style={styles.profileInitials}>
-                  {user?.first_name?.[0]}{user?.last_name?.[0]}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.profileName}>
-              {user?.first_name} {user?.last_name}
-            </Text>
-            <Text style={styles.profileEmail}>{user?.email}</Text>
-          </View>
-
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
-            <View style={styles.infoContainer}>
-              {renderProfileInfo()}
+    <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.container}>
+        <View style={styles.profileHeader}>
+          <View style={styles.profileImageContainer}>
+            <View style={styles.profileImage}>
+              <Text style={styles.profileInitials}>
+                {user?.first_name?.[0]}{user?.last_name?.[0]}
+              </Text>
             </View>
           </View>
-
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => setIsModalVisible(true)}
-          >
-            <Text style={styles.buttonText}>Edit Profile</Text>
-          </TouchableOpacity>
+          <Text style={styles.profileName}>
+            {user?.first_name} {user?.last_name}
+          </Text>
+          <Text style={styles.profileEmail}>{user?.email}</Text>
         </View>
-      </ScrollView>
 
-      {/* Modal for editing profile */}
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsModalVisible(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Profile</Text>
-              <TouchableOpacity
-                onPress={() => setIsModalVisible(false)}
-                style={styles.closeButton}
-              >
-                <Ionicons name="close" size={24} color={Colors.grey} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>First Name</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.firstName}
-                onChangeText={(value) => handleInputChange("firstName", value)}
-                placeholder="Enter your first name"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Last Name</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.lastName}
-                onChangeText={(value) => handleInputChange("lastName", value)}
-                placeholder="Enter your last name"
-              />
-            </View>
-
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSave}
-            >
-              <Text style={styles.saveButtonText}>Save Changes</Text>
-            </TouchableOpacity>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <View style={styles.infoContainer}>
+            {renderProfileInfo()}
           </View>
         </View>
-      </Modal>
-    </SafeAreaView>
+
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => setIsModalVisible(true)}
+        >
+          <Text style={styles.buttonText}>Edit Profile</Text>
+        </TouchableOpacity>
+      </View>
+      <EditProfileModal
+        isModalVisible={isModalVisible}
+        setIsModalVisible={setIsModalVisible}
+        handleInputChange={handleInputChange}
+        formData={formData}
+        handleSave={handleSave}
+      />
+    </ScrollView>
+
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    marginBottom: 80,
     backgroundColor: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 90,
+    backgroundColor: '#FFFFFF',
+
   },
   container: {
     flex: 1,
@@ -257,40 +223,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  modalBackground: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    width: '85%',
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.grey,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 13,
-    color: Colors.greyLight,
-    marginBottom: 6,
-  },
   input: {
     backgroundColor: '#F9F9F9',
     borderWidth: 1,
@@ -299,18 +231,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
-  },
-  saveButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
   },
 });
 

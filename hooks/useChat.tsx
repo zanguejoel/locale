@@ -61,7 +61,7 @@ interface ChatContextType {
   isLoading: boolean;
   isSending: boolean;
   stream: string;
-  sendMessage: (message: string, messageType?: string, operation?: string | null) => Promise<void>;
+  sendMessage: (message: string, messageType?: string, operation?: string | null, additionalData?: string) => Promise<void>;
   fetchMessages: (conversationId: string) => Promise<void>;
   fetchConversation: (q?: string) => Promise<void>;
   createConversation: (participantIds: string[]) => Promise<string>;
@@ -72,6 +72,9 @@ interface ChatContextType {
   renameConversation: (conversationId: string, newTitle: string) => Promise<boolean>;
   resetChat: () => void;
   createNewConversation: () => Promise<string>;
+  intermediate: string
+  setChatLoading?: (a: boolean) => void
+  isChatLoading?: boolean
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -90,44 +93,62 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [inputDisabled, setInputDisabled] = useState(false);
   const [pastedActive, setPastedActive] = useState(false);
   const [streamWorking, setStreamWorking] = useState(false);
+  const [isChatLoading, setChatLoading] = useState(false)
+  const [additionalData, setAdditionalData] = useState([]);
+
 
   useEffect(() => {
-    fetchConversation();
+    fetchConversation(null, null, setCurrentRoom);
     Keyboard.dismiss();
   }, []);
 
-  useEffect(() => {
-    if (currentConversationId) {
-      fetchMessages(currentConversationId);
-    }
-  }, [currentConversationId]);
+  /*   useEffect(() => {
+      if (currentConversationId) {
+        fetchMessages(currentConversationId);
+      }
+    }, [currentConversationId]); */
 
   useEffect(() => {
     setMessages(prev => updateLastItem(prev, message => ({
       ...message,
       content: stream,
+      files: additionalData
     })));
-  }, [stream]);
+  }, [stream, additionalData]);
+
+
+  const handleSetConversation = (id: string) => {
+    setCurrentConversationId(id);
+    fetchMessages(id);
+  }
 
 
   const optimizeImage = useCallback(async (imagePath: string): Promise<string> => {
     try {
-      console.log(`Optimizing image at path: ${imagePath}`);
-      const fileInfo = await FileSystem.getInfoAsync(imagePath, { size: true });
-      console.log(`Original image size: ${fileInfo.size} bytes`);
-
-      if (!fileInfo.exists) {
-        throw new Error(`File does not exist at path: ${imagePath}`);
+      if (
+        Platform.OS === 'android' &&
+        !imagePath.startsWith('file://') &&
+        !imagePath.startsWith('content://')
+      ) {
+        imagePath = 'file://' + imagePath;
       }
+
+      const fileInfo = await FileSystem.getInfoAsync(imagePath, { size: true });
+      if (!fileInfo.exists) {
+        throw new Error(`${imagePath}`);
+      }
+
       if (fileInfo.size && fileInfo.size <= MAX_IMAGE_SIZE) {
-        console.log('Image already optimized (size within limits)');
         return imagePath;
       }
 
       let actions = [];
       if (fileInfo.size && fileInfo.size > MAX_IMAGE_SIZE * 1.5) {
-        actions.push({ resize: { width: MAX_IMAGE_DIMENSION, height: MAX_IMAGE_DIMENSION } });
+        actions.push({
+          resize: { width: MAX_IMAGE_DIMENSION, height: MAX_IMAGE_DIMENSION },
+        });
       }
+
       let compression = 0.8;
       if (fileInfo.size && fileInfo.size > MAX_IMAGE_SIZE * 3) {
         compression = 0.6;
@@ -138,8 +159,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         actions,
         { compress: compression, format: ImageManipulator.SaveFormat.JPEG }
       );
-      const optimizedInfo = await FileSystem.getInfoAsync(result.uri, { size: true });
 
+      const optimizedInfo = await FileSystem.getInfoAsync(result.uri, { size: true });
       if (optimizedInfo.size && optimizedInfo.size > MAX_IMAGE_SIZE) {
         const finalResult = await ImageManipulator.manipulateAsync(
           result.uri,
@@ -185,7 +206,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const saveBase64ToFile = useCallback(async (base64: string, filename: string) => {
     const path = FileSystem.documentDirectory + filename;
     try {
-      console.log('Saving base64 data to file:', path);
+
       if (!base64 || base64.length < 10) {
         throw new Error('Invalid base64 data');
       }
@@ -193,7 +214,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         encoding: FileSystem.EncodingType.Base64,
       });
       const fileInfo = await FileSystem.getInfoAsync(path);
-      console.log('File saved successfully:', fileInfo);
+
       return path;
     } catch (error) {
       console.error('Error saving file: ', error);
@@ -203,7 +224,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ---------------- Chat Operations ----------------
 
-  const sendMessage = useCallback(async (message: string, messageType = 'text', operation: string | null = null) => {
+  const sendMessage = useCallback(async (message: string, messageType = 'text', operation: string | null = null, additionalData: string) => {
+
+    setChatLoading(true)
     setError('');
     setStream('');
     setIntermediate('');
@@ -211,7 +234,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setMessages(prev => [
       ...prev,
-      { role: Role.User, content: message || '' },
+      { role: Role.User, content: messageType === 'image' ? additionalData : message || '', imageData: message },
       { role: Role.Bot, content: '' },
     ]);
 
@@ -226,7 +249,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (message.startsWith('file://')) {
         try {
           const filePath = message.replace('file://', '');
-          console.log('Processing file at path:', filePath);
+
           const fileExists = await checkFileExists(filePath);
           if (!fileExists) {
             Alert.alert('Error', 'The selected file could not be found.');
@@ -247,19 +270,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const optimizedImagePath = await optimizeImage(filePath);
               const mimeType = getFileType(optimizedImagePath);
               const extension = mimeType.split('/')[1];
-              formData.append('image', {
+              formData.append('files', {
                 uri: optimizedImagePath,
                 type: mimeType,
                 name: `image.${extension}`,
               });
+              formData.append('text', additionalData);
+
             } catch (imageError) {
               const fileData = await RNFS.readFile(filePath, 'base64');
               const savedFilePath = await saveBase64ToFile(fileData, 'image.png');
-              formData.append('image', {
+              formData.append('files', {
                 uri: savedFilePath,
                 type: 'image/png',
                 name: 'image.png',
               });
+              formData.append('text', additionalData);
+
             }
           }
         } catch (error) {
@@ -294,20 +321,33 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (operation) {
       formData.append('operations', JSON.stringify(operation));
     }
-
     const conversationId = currentConversationId || '';
+
     if (conversationId) {
       formData.append('conversation_id', conversationId);
     } else {
-      setIsSending(false);
-      setInputDisabled(false);
-      return;
+
+      const res = await api.post('/conversation', { title: 'New Chat' });
+      if (!res.ok || !res.data) {
+        throw new Error('Failed to create new conversation');
+      }
+
+      const conv = res.data?.id;
+      if (conv) {
+        formData.append('conversation_id', conv);
+        setConversations(prev => [...prev, res.data]);
+        setCurrentConversationId(conv);
+      } else {
+        setIsSending(false);
+        setInputDisabled(false);
+        throw new Error('Failed to create new conversation');
+      }
     }
 
     const _controller = new AbortController();
     try {
       for (let [key, value] of formData.entries()) {
-        console.log(`FormData: ${key} =`, value);
+
       }
 
       const _response = await fetch(`${BASE_URL}/chat`, {
@@ -329,6 +369,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         handleError,
         setIntermediate,
         setStreamWorking,
+        setAdditionalData
       );
       setInputDisabled(false);
       setPastedActive(false);
@@ -337,10 +378,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsSending(false);
       setInputDisabled(false);
+      setChatLoading(false)
     }
   }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError]);
 
-  const fetchConversation = useCallback(async (q?: string, limitValue?: number) => {
+  const fetchConversation = useCallback(async (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => {
     const effectiveLimit = limitValue || 20;
     try {
       await api.setAuthToken(user?.token || '');
@@ -364,7 +406,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setConversations(response.data);
         if (response.data.length > 0 && response.data[0].id) {
-          // setCurrentRoom(response.data[0].id);
+          // updateCurrentRoom?.(response.data[0].id);
         }
       }
       return response.data;
@@ -426,7 +468,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const setCurrentRoom = useCallback((conversationId: string) => {
-    setCurrentConversationId(conversationId);
+    handleSetConversation(conversationId);
     markAsRead(conversationId);
   }, [markAsRead]);
 
@@ -452,10 +494,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await api.setAuthToken(user?.token || '');
       const response = await api.delete(`/conversation/${conversationId}`);
       if (!response.ok) {
-        console.log(JSON.stringify(response.problem));
+        console.error(JSON.stringify(response.problem));
         return false;
       }
       setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      setMessages([]);
       if (currentConversationId === conversationId) {
         if (conversations.length > 1) {
           const nextConv = conversations.find(c => c.id !== conversationId);
@@ -485,7 +528,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await api.setAuthToken(user?.token || '');
       const response = await api.put(`/conversation/${conversationId}`, { title: newTitle });
       if (!response.ok) {
-        console.log(JSON.stringify(response.problem));
+        console.error(JSON.stringify(response.problem));
         return false;
       }
       setConversations(prev =>
@@ -522,7 +565,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, setConversations, setCurrentRoom, resetChat]);
 
   const handleError = useCallback((error: string) => {
-    console.log({
+    console.error({
       title: 'We encountered an error.',
       description: error,
       variant: 'destructive',
@@ -530,7 +573,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
+
   const contextValue = useMemo(() => ({
+    isChatLoading,
+    setChatLoading,
     messages,
     conversations,
     currentConversationId,
@@ -549,7 +595,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetChat,
     createNewConversation,
     streamWorking,
+    intermediate,
   }), [
+    isChatLoading,
+    setChatLoading,
+    intermediate,
     messages,
     conversations,
     currentConversationId,

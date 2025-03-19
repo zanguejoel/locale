@@ -22,12 +22,12 @@ export interface User {
   username: string;
   email: string;
   phone: string;
-  address: null | string;
+  address?: string;
   date_of_birth: string;
-  city: null | string;
-  state: null | string;
+  city?: string;
+  state?: string;
   country: null | string;
-  postal_code: null | string;
+  postal_code?: string;
   user_id: number;
   created_at: string;
   updated_at: string;

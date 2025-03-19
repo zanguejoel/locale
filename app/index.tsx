@@ -1,19 +1,19 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Redirect } from 'expo-router';
 import 'react-native-gesture-handler';
-import applyGlobalPolyfills from "./prolly" // <-- Change the path
-applyGlobalPolyfills()
+import applyGlobalPolyfills from './prolly';
 
-const Index = () => {
+// Apply polyfills before any other code runs
+applyGlobalPolyfills();
+
+export default function Index() {
   const { user, isSignedIn } = useAuth();
 
   if (user?.email) {
-    // console.log("User----", user)
-    Redirect({ href: "/(chat)/new" });
+    return <Redirect href="/(chat)/new" />;
   } else if (!isSignedIn) {
-    Redirect({ href: "/login" });
+    return <Redirect href="/login" />;
   }
 
+  return null;
 }
-
-export default Index;

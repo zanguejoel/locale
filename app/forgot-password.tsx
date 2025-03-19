@@ -13,9 +13,9 @@ import {
   Platform,
   SafeAreaView,
 } from "react-native";
-import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
+import { useTheme } from '@/hooks/useTheme';
 
 interface ErrorType {
   email?: string;
@@ -24,11 +24,11 @@ const TIMER_DURATION = 60;
 
 const ForgotPassword = () => {
   const { isLoading, forgotPassword } = useAuth();
+  const theme = useTheme();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<ErrorType>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-
   const [resendTimer, setResendTimer] = useState(0);
 
   useEffect(() => {
@@ -72,24 +72,24 @@ const ForgotPassword = () => {
 
   if (resetSent) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.successContainer}>
-          <Image
-            source={require('@/assets/images/icon.png')}
-            style={styles.logo}
+          <Image 
+            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} 
+            style={styles.logo} 
           />
-          <Text style={styles.title}>Check Your Email</Text>
-          <Text style={styles.successMessage}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Check Your Email</Text>
+          <Text style={[styles.successMessage, { color: theme.colors.text }]}>
             We've sent password reset instructions to:
           </Text>
-          <Text style={styles.emailText}>{email}</Text>
-          <Text style={styles.instructionText}>
+          <Text style={[styles.emailText, { color: theme.colors.primary }]}>{email}</Text>
+          <Text style={[styles.instructionText, { color: theme.colors.text }]}>
             Please check your email and follow the instructions to reset your password.
           </Text>
 
           <View style={styles.btnContainer}>
             <TouchableOpacity
-              style={[defaultStyles.btn, styles.returnButton]}
+              style={[defaultStyles.btn, styles.returnButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => router.replace('/login')}
             >
               <Text style={styles.buttonText}>Return to Login</Text>
@@ -97,22 +97,32 @@ const ForgotPassword = () => {
 
             <TouchableOpacity
               disabled={resendTimer > 0}
-              style={[defaultStyles.btnSecondary, styles.resendButton, { borderColor: resendTimer > 0 ? 'gray' : Colors.primary }]}
+              style={[
+                defaultStyles.btnSecondary, 
+                styles.resendButton, 
+                { 
+                  borderColor: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary 
+                }
+              ]}
               onPress={handleResetPassword}
             >
-              <Text style={[styles.buttonText, { color: resendTimer > 0 ? 'gray' : Colors.primary }]}>
+              <Text style={[
+                styles.buttonText, 
+                { 
+                  color: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary 
+                }
+              ]}>
                 Resend Email
               </Text>
             </TouchableOpacity>
           </View>
           {resendTimer > 0 && (
             <View style={styles.resendContainerTimer}>
-              <Text style={{ color: resendTimer > 0 ? 'gray' : Colors.primary }}>
+              <Text style={{ color: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary }}>
                 Resend the code
               </Text>
-              <Text style={styles.timerText}>{resendTimer}s</Text>
+              <Text style={[styles.timerText, { color: theme.colors.primary }]}>{resendTimer}s</Text>
             </View>
-
           )}
         </View>
       </View>
@@ -122,19 +132,22 @@ const ForgotPassword = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <SafeAreaView>
         {isLoading && (
-          <View style={defaultStyles.loadingOverlay}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+          <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         )}
 
         <View style={styles.headerContainer}>
-          <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
-          <Text style={styles.title}>Forgot Password?</Text>
-          <Text style={styles.subtitle}>
+          <Image 
+            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} 
+            style={styles.logo} 
+          />
+          <Text style={[styles.title, { color: theme.colors.text }]}>Forgot Password?</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.text }]}>
             Enter your email address to receive password reset instructions
           </Text>
         </View>
@@ -152,22 +165,23 @@ const ForgotPassword = () => {
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
+            theme={theme}
           />
-          {error.email && <Text style={styles.errorText}>{error.email}</Text>}
+          {error.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{error.email}</Text>}
 
           <View style={styles.btnContainer}>
             <TouchableOpacity
-              style={[defaultStyles.btn, styles.resetButton]}
+              style={[defaultStyles.btn, styles.resetButton, { backgroundColor: theme.colors.primary }]}
               onPress={handleResetPassword}
             >
               <Text style={styles.buttonText}>Send Reset Instructions</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[defaultStyles.btnSecondary, styles.cancelButton]}
+              style={[defaultStyles.btnSecondary, styles.cancelButton, { borderColor: theme.colors.primary }]}
               onPress={() => router.back()}
             >
-              <Text style={[styles.buttonText, { color: Colors.primary }]}>
+              <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
                 Back to Login
               </Text>
             </TouchableOpacity>
@@ -181,7 +195,6 @@ const ForgotPassword = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   headerContainer: {
     alignItems: 'center',
@@ -195,27 +208,24 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 150,
+    height: 75,
     marginBottom: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: Colors.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   timerText: {
     fontSize: 13,
     marginLeft: 4,
-    color: Colors.primary,
     textAlign: 'center',
     lineHeight: 22,
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.grey,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -223,7 +233,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   errorText: {
-    color: Colors.red,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 12,
@@ -234,14 +243,12 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     height: 50,
-    backgroundColor: Colors.primary,
     borderRadius: 12,
   },
   cancelButton: {
     height: 50,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
   },
   buttonText: {
     fontSize: 16,
@@ -257,33 +264,28 @@ const styles = StyleSheet.create({
   },
   successMessage: {
     fontSize: 16,
-    color: Colors.grey,
     textAlign: 'center',
     marginBottom: 8,
   },
   emailText: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.primary,
     marginBottom: 16,
   },
   instructionText: {
     fontSize: 16,
-    color: Colors.grey,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
   },
   returnButton: {
     height: 50,
-    backgroundColor: Colors.primary,
     borderRadius: 12,
   },
   resendButton: {
     height: 50,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
   },
 });
 

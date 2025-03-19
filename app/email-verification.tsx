@@ -26,20 +26,21 @@ const TIMER_DURATION = 60;
 
 const EmailVerification = () => {
     const { isLoading, confirmEmail } = useAuth();
-    const { email } = useLocalSearchParams();
+    const { email, password } = useLocalSearchParams();
 
     const [code, setCode] = useState("");
     const [error, setError] = useState<ErrorType>({});
     const [isSubmitted, setIsSubmitted] = useState(false);
 
-    const handleResetPassword = async () => {
+    const handleConfirm = async () => {
         setIsSubmitted(true);
+
         try {
-            await confirmEmail(email, code, router);
+            await confirmEmail(decodeURIComponent(`${email}`), code, router, decodeURIComponent(`${password}`));
         } catch (err: any) {
             Alert.alert(
                 "Error",
-                err.message || "Failed to send reset instructions. Please try again."
+                err || "Failed to send reset instructions. Please try again."
             );
         }
     };
@@ -66,7 +67,7 @@ const EmailVerification = () => {
 
                 <View style={styles.formContainer}>
                     <CustomInput
-                        icon="mail-outline"
+                        icon="code-outline"
                         placeholder="Enter your code"
                         value={code}
                         onChangeText={(text) => {
@@ -74,15 +75,15 @@ const EmailVerification = () => {
                         }}
                         error={!!error.code}
                         autoCapitalize="none"
-                        keyboardType="email-address"
-                        autoComplete="email"
+                        keyboardType="numeric"
+                        // autoComplete="email"
                     />
                     {error.code && <Text style={styles.errorText}>{error.code}</Text>}
 
                     <View style={styles.btnContainer}>
                         <TouchableOpacity
                             style={[defaultStyles.btn, styles.resetButton]}
-                            onPress={handleResetPassword}
+                            onPress={handleConfirm}
                         >
                             <Text style={styles.buttonText}>Submit</Text>
                         </TouchableOpacity>
@@ -119,8 +120,8 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
     logo: {
-        width: 80,
-        height: 80,
+        width: 150,
+        height: 75,
         marginBottom: 20,
     },
     title: {

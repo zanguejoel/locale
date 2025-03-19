@@ -3,33 +3,37 @@ import useMMKVStorage, { storage } from './useMMKVStorage';
 import api from '@/utils/ApiClient';
 import { User } from '@/constants/Types';
 
-interface FormData {
+export interface FormData {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   password: string;
   confirmPassword: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  state?: string
 }
 
 interface AuthContextType {
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (formatData: FormData, password: string, router: any) => Promise<void>;
+  signUp: (formatData: FormData, router: any) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => void;
   isLoading: boolean;
   isSignedIn: boolean;
   forgotPassword: (e: string) => {}
-  confirmEmail: (e: string, s: string) => {}
+  confirmEmail: (e: string, s: string, r: any, p: string) => {}
   updateUser: (formatData: FormData,) => Promise<void>;
+  changePassword: (oldPassword: string, newP: string, confirm: string) => void
 }
 
 
 
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useMMKVStorage<User | null>('user', null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const confirmEmail = async (email: string, code: string, router: any) => {
+  const confirmEmail = async (email: string, code: string, router: any, password: string) => {
     try {
       const response = await api.post<{ token: string } | any>(`/auth/verify-email`, {
         email: email,
@@ -85,11 +89,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (response.ok) {
-        router.push(`/login`)
+        router.replace(`/success-page?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`)
+      } else {
+        throw JSON.stringify(response.data.detail)
       }
 
     } catch (error) {
       console.error('Forgot password error:', JSON.stringify(error))
+      throw error
     }
   }
 
@@ -110,24 +117,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const signUp = async (formData: FormData, captchaToken: string, router: any) => {
+  const signUp = async (formData: FormData, router: any) => {
     try {
-
       setIsLoading(true);
-      const response = await api.post<{ token: string } | any>(`/auth/signup?recaptcha=${captchaToken}`, {
+
+      const response = await api.post<{ token: string } | any>("/auth/signup", {
         first_name: formData.firstName,
         last_name: formData.lastName,
         username: `${formData.firstName}${formData.lastName}`,
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
+        confirmPassword: formData.confirmPassword
+      }, {
+        headers: {
+          "X-Mobile-Recaptcha-Token": "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1",
+          "Content-Type": "application/json",
+        }
       });
+      // console.log('APL--------', JSON.stringify(response.data));
       if (response.ok) {
-        router.push(`/email-verification?email=${formData?.email}`)
+        router.push(`/email-verification?email=${encodeURIComponent(formData?.email)}&password=${encodeURIComponent(formData.password)}`)
+      } else {
+        throw JSON.stringify(response.data.detail)
       }
-
     } catch (error) {
-      console.error('Sign up error:', error);
+      console.error("Sign up error: ", error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -140,6 +155,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.patch<{ token: string } | any>(`/auth/update-user`, {
         first_name: formData.firstName,
         last_name: formData.lastName,
+        address: formData.address,
+        city: formData.city,
+        postal_code: formData.postalCode,
+        state: formData.state
       });
       if (response.ok) {
         const newUser = { ...response.data, token: user?.token };
@@ -155,6 +174,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+
+  const changePassword = async (oldPassword: string, newPassword: string, confirmPassword: string) => {
+    try {
+      const response = await api.patch<{ token: string } | any>(`/auth/change-password?`, {
+        old_password: oldPassword,
+        new_password: newPassword,
+      }, {
+        headers: {
+          "X-Mobile-Recaptcha-Token": "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1",
+          "Content-Type": "application/json",
+        }
+      });
+
+      if (response.ok) {
+
+        return response.data;
+      } else {
+        throw response.data
+      }
+
+
+    } catch (error) {
+      console.error('changePassword error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const resetPassword = async (email: string) => {
     try {
@@ -175,7 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

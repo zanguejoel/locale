@@ -5,10 +5,11 @@ export enum Role {
 
 export interface File {
   file_path: string;
-  file_type: string, 
-  id: number, 
+  file_type: string,
+  id: number,
   name: string,
   s3_url: string
+  data_type?: string
 }
 export interface Message {
   role: Role;

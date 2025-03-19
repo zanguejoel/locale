@@ -1,6 +1,6 @@
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -10,28 +10,36 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FontAwesome6 } from '@expo/vector-icons';
+
 import { useRef, useState } from 'react';
 import { BlurView } from 'expo-blur';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
+import { isLoaded } from 'expo-font';
+
 
 const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
+const MIN_HEIGHT = 40;
+
 export type Props = {
   onShouldSend: (message: string, type?: string) => void;
+  fetchMessages?: () => void
+  selectedImage?: ImagePicker.ImagePickerAsset
+  setSelectedImage?: (a: ImagePicker.ImagePickerAsset) => void,
+  isLoading?: boolean
 };
 
-const ChatInput = ({ onShouldSend }: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading }: Props) => {
   const [message, setMessage] = useState('');
   const { bottom } = useSafeAreaInsets();
   const expanded = useSharedValue(0);
   const inputRef = useRef<TextInput>(null);
+  const [inputHeight, setInputHeight] = useState(MIN_HEIGHT);
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-
   const startRecording = async () => {
     try {
       const { status } = await Audio.getPermissionsAsync();
@@ -74,7 +82,6 @@ const ChatInput = ({ onShouldSend }: Props) => {
         return;
       }
 
-      console.log('Audio file saved at:', uri);
       onShouldSend(uri, 'audio');
     } catch (err) {
       console.error('Error stopping the recording:', err);
@@ -115,25 +122,31 @@ const ChatInput = ({ onShouldSend }: Props) => {
   };
 
   const onSend = () => {
-    onShouldSend(message);
+    Keyboard.dismiss();
+    if (selectedImage) {
+      onShouldSend(selectedImage?.uri, 'image', null, message);
+      fetchMessages?.()
+    } else {
+      onShouldSend(message);
+    }
+    setSelectedImage?.('')
     setMessage('');
-  };
+    setInputHeight(MIN_HEIGHT);
 
-  const onSelectFile = () => {
   };
 
   const pickImageFromGallery = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images, // Дозволяє вибирати тільки зображення
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 1,
       });
 
       if (!result.canceled) {
-        const uri = result.assets[0].uri;
-        console.log('Selected Image URI:', uri);
-        onShouldSend(uri, 'image');
+        const assets = result.assets[0];
+        setSelectedImage?.(assets)
+        // onShouldSend(assets.uri, 'image');
       }
     } catch (error) {
       console.error('Error picking image from gallery:', error);
@@ -154,9 +167,10 @@ const ChatInput = ({ onShouldSend }: Props) => {
       });
 
       if (!result.canceled) {
-        const uri = result.assets[0].uri;
-        console.log('Photo taken URI:', uri);
-        onShouldSend(uri, 'image');
+        const assets = result.assets[0];
+        setSelectedImage?.(assets)
+
+        // onShouldSend(uri, 'image');
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -170,9 +184,10 @@ const ChatInput = ({ onShouldSend }: Props) => {
       });
 
       if (result.canceled) return;
+      const assets = result.assets[0];
+      setSelectedImage(assets)
 
-      console.log('Selected document:', result);
-      onShouldSend(result.uri, 'file');
+      // onShouldSend(result.uri, 'file');
     } catch (error) {
       console.error('Error picking document:', error);
     }
@@ -180,71 +195,85 @@ const ChatInput = ({ onShouldSend }: Props) => {
 
 
   return (
-    <BlurView intensity={90} tint="extraLight" style={{ paddingBottom: bottom, paddingTop: 10 }}>
-      <View style={styles.row}>
-        <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
-          <Ionicons name="add" size={24} color={Colors.grey} />
-        </ATouchableOpacity>
+    <View style={[styles.container]}>
+      <View style={styles.inputContainer}>
+        <View style={styles.row}>
+          <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
+            <Ionicons name="add" size={24} color={Colors.grey} />
+          </ATouchableOpacity>
 
-        <Animated.View style={[styles.buttonView, buttonViewStyle]}>
-          <TouchableOpacity onPress={takePhoto}>
-            <Ionicons name="camera-outline" size={24} color={Colors.grey} />
-          </TouchableOpacity>
+          <Animated.View style={[styles.buttonView, buttonViewStyle]}>
+            <TouchableOpacity onPress={takePhoto}>
+              <Ionicons name="camera-outline" size={24} color={Colors.grey} />
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={pickImageFromGallery}>
-            <Ionicons name="image-outline" size={24} color={Colors.grey} />
-          </TouchableOpacity>
+            <TouchableOpacity onPress={pickImageFromGallery}>
+              <Ionicons name="image-outline" size={24} color={Colors.grey} />
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={pickDocument}>
-            <Ionicons name="folder-outline" size={24} color={Colors.grey} />
-          </TouchableOpacity>
-        </Animated.View>
+            <TouchableOpacity onPress={pickDocument}>
+              <Ionicons name="folder-outline" size={24} color={Colors.grey} />
+            </TouchableOpacity>
+          </Animated.View>
 
-        <TextInput
-          autoFocus
-          ref={inputRef}
-          placeholder="Message"
-          style={styles.messageInput}
-          onFocus={collapseItems}
-          onChangeText={onChangeText}
-          value={message}
-          multiline
-        />
-        {message.length > 0 ? (
-          <TouchableOpacity onPress={onSend}>
-            <Ionicons name="arrow-up-circle" size={30} color={Colors.grey} />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={isRecording ? stopRecording : startRecording}>
-            <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.red : Colors.grey} />
-            {/* <FontAwesome6 name="microphone" size={24} color={isRecording ? Colors.red : Colors.grey} /> */}
-          </TouchableOpacity>
-        )}
+          <TextInput
+            // autoFocus
+            ref={inputRef}
+            placeholder="Message"
+            style={[styles.messageInput]}
+            onFocus={collapseItems}
+            onChangeText={onChangeText}
+            value={message}
+            multiline={true}
+          />
+          {message.length > 0 ? (
+            <TouchableOpacity disabled={isLoading} onPress={onSend}>
+              <Ionicons name="arrow-up-circle" size={30} color={isLoading ? Colors.common.greyLight : Colors.common.grey} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity disabled={isLoading} onPress={isRecording ? stopRecording : startRecording}>
+              <Ionicons name="mic-outline" size={30} color={isRecording ? Colors.common.red : (isLoading ? Colors.common.greyLight : Colors.common.grey)} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-    </BlurView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'rgba(230,230,230,0.5)'
+  },
+  inputContainer: {
+    paddingTop: 10,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
   row: {
+    paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
   },
   messageInput: {
     flex: 1,
+    zIndex: 10000,
+    maxHeight: 75,
     marginHorizontal: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 20,
     padding: 10,
-    borderColor: Colors.greyLight,
+    borderColor: Colors.common.greyLight,
     backgroundColor: Colors.light.background,
   },
   roundBtn: {
     width: 30,
     height: 30,
     borderRadius: 20,
-    backgroundColor: Colors.input,
+    backgroundColor: Colors.common.input,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -253,5 +282,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  previewImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+  },
+  selectedFileContainer: {
+    marginBottom: 4,
+    marginLeft: 16,
+  },
+  closeIcon: {
+    left: 33,
+    top: 2,
+    zIndex: 1000
+  }
 });
 export default ChatInput;
