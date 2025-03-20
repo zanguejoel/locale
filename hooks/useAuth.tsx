@@ -27,11 +27,10 @@ interface AuthContextType {
   forgotPassword: (e: string) => {}
   confirmEmail: (e: string, s: string, r: any, p: string) => {}
   updateUser: (formatData: FormData,) => Promise<void>;
-  changePassword: (oldPassword: string, newP: string, confirm: string) => void
+  changePassword: (oldPassword: string, newP: string, confirm: string) => void;
+  confirmCode: (code: string) => void;
+  handleForgotPasswordChange: (a: string, s: string, r: any) => void
 }
-
-
-
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -102,6 +101,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const forgotPassword = async (email: string) => {
+    try {
+      const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${email}`);
+
+      return response;
+
+
+    } catch (error) {
+      console.error('Forgot password error:', JSON.stringify(error))
+    }
+  }
+
+  const confirmCode = async (email: string) => {
     try {
       const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${email}`);
 
@@ -216,13 +227,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const handleForgotPasswordChange = async (email: string, newPassword: string, router: any) => {
+    try {
+      const response = await api.patch<{ token: string } | any>(`/auth/forgot-password/change`, {
+        new_password: newPassword,
+      }, {
+        headers: {
+          "X-Mobile-Recaptcha-Token": "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1",
+          "Content-Type": "application/json",
+        }
+      });
+      if (response.ok) {
+        router.replace(`/success-page?email=${encodeURIComponent(email)}&password=${encodeURIComponent(newPassword)}`)
+      }
+
+    } catch (error) {
+      console.error('handleForgotPasswordChange error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signOut = () => {
     setUser(null);
     setIsSignedIn(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser, changePassword }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser, changePassword, confirmCode, handleForgotPasswordChange }}>
       {children}
     </AuthContext.Provider>
   );

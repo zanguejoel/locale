@@ -13,12 +13,11 @@ import {
     Platform,
     SafeAreaView,
 } from "react-native";
-import Colors from "@/constants/Colors";
+
 import { router, useLocalSearchParams } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from "@/hooks/useTheme";
 import { Theme } from "@/constants/Types";
-
 
 interface ErrorType {
     email?: string;

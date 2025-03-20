@@ -19,6 +19,7 @@ import { useTheme } from '@/hooks/useTheme';
 
 interface ErrorType {
   email?: string;
+  code?: string
 }
 const TIMER_DURATION = 60;
 
@@ -30,6 +31,8 @@ const ForgotPassword = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [code, setCode] = useState("");
+
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -59,9 +62,17 @@ const ForgotPassword = () => {
       try {
         setResendTimer(TIMER_DURATION);
 
-        await forgotPassword(email);
-        setResetSent(true);
+        const res = await forgotPassword(email);
+        if (res?.ok) {
+          setResetSent(true)
+        } else {
+          Alert.alert(
+            "Error",
+            res?.data?.detail || "Failed to send . Please try again."
+          );
+        }
       } catch (err: any) {
+        setError({ code: err })
         Alert.alert(
           "Error",
           err.message || "Failed to send reset instructions. Please try again."
@@ -70,49 +81,70 @@ const ForgotPassword = () => {
     }
   };
 
+  const handleValidCode = async () => {
+    try {
+      // await confirmCode(code);
+      router.replace(`/forgot-password-change?email=${email}`)
+      setResetSent(true);
+    } catch (err: any) {
+      setError({ code: err })
+      Alert.alert(
+        "Error",
+        err.message || "Failed to send reset instructions. Please try again."
+      );
+    }
+  }
+
   if (resetSent) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.successContainer}>
-          <Image 
-            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} 
-            style={styles.logo} 
+          <Image
+            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
+            style={styles.logo}
           />
           <Text style={[styles.title, { color: theme.colors.text }]}>Check Your Email</Text>
           <Text style={[styles.successMessage, { color: theme.colors.text }]}>
-            We've sent password reset instructions to:
+            We've sent verification code to:
           </Text>
           <Text style={[styles.emailText, { color: theme.colors.primary }]}>{email}</Text>
-          <Text style={[styles.instructionText, { color: theme.colors.text }]}>
-            Please check your email and follow the instructions to reset your password.
-          </Text>
-
+          <CustomInput
+            icon="code-outline"
+            placeholder="Enter your code"
+            value={code}
+            onChangeText={(text) => {
+              setCode(text);
+            }}
+            error={!!error.code}
+            autoCapitalize="none"
+            keyboardType="numeric"
+          />
           <View style={styles.btnContainer}>
             <TouchableOpacity
               style={[defaultStyles.btn, styles.returnButton, { backgroundColor: theme.colors.primary }]}
-              onPress={() => router.replace('/login')}
+              onPress={handleValidCode}
             >
-              <Text style={styles.buttonText}>Return to Login</Text>
+              <Text style={styles.buttonText}>Confirm</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               disabled={resendTimer > 0}
               style={[
-                defaultStyles.btnSecondary, 
-                styles.resendButton, 
-                { 
-                  borderColor: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary 
+                defaultStyles.btnSecondary,
+                styles.resendButton,
+                {
+                  borderColor: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary
                 }
               ]}
               onPress={handleResetPassword}
             >
               <Text style={[
-                styles.buttonText, 
-                { 
-                  color: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary 
+                styles.buttonText,
+                {
+                  color: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary
                 }
               ]}>
-                Resend Email
+                Resend code
               </Text>
             </TouchableOpacity>
           </View>
@@ -142,13 +174,13 @@ const ForgotPassword = () => {
         )}
 
         <View style={styles.headerContainer}>
-          <Image 
-            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} 
-            style={styles.logo} 
+          <Image
+            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
+            style={styles.logo}
           />
           <Text style={[styles.title, { color: theme.colors.text }]}>Forgot Password?</Text>
           <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-            Enter your email address to receive password reset instructions
+            Enter your email address to receive verification code
           </Text>
         </View>
 
@@ -174,7 +206,7 @@ const ForgotPassword = () => {
               style={[defaultStyles.btn, styles.resetButton, { backgroundColor: theme.colors.primary }]}
               onPress={handleResetPassword}
             >
-              <Text style={styles.buttonText}>Send Reset Instructions</Text>
+              <Text style={styles.buttonText}>Send Reset Code</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -239,6 +271,7 @@ const styles = StyleSheet.create({
   },
   btnContainer: {
     gap: 16,
+    width: '100%',
     marginTop: 24,
   },
   resetButton: {
