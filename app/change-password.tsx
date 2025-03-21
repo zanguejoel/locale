@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
 } from "react-native";
 
 import { getErrorMessage } from "@/utils/ErrorValidation";
@@ -114,6 +115,14 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     marginBottom: 80,
     backgroundColor: theme.colors.background,
   },
+  logo: {
+    width: 150,
+    height: 75,
+    marginBottom: 20,
+  },
+  headerContainer: {
+    alignItems: 'center'
+  },
   scrollView: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -165,6 +174,23 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   modalContent: {
     flex: 1,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  successMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 8,
   },
 });
 
