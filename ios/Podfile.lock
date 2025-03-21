@@ -96,10 +96,7 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
-  - onnxruntime-c (1.21.0)
-  - onnxruntime-react-native (1.20.1):
-    - onnxruntime-c
-    - React-Core
+  - opencv-rne (0.1.0)
   - PurchasesHybridCommon (13.22.0):
     - RevenueCat (= 5.18.0)
   - RCT-Folly (2024.01.01.00):
@@ -1339,6 +1336,28 @@ PODS:
     - Yoga
   - react-native-context-menu-view (1.17.0):
     - React
+  - react-native-executorch (0.3.1):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - opencv-rne (~> 0.1.0)
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - react-native-image-picker (8.2.0):
     - DoubleConversion
     - glog
@@ -1872,6 +1891,71 @@ PODS:
     - React-perflogger (= 0.76.6)
     - React-utils (= 0.76.6)
   - RevenueCat (5.18.0)
+  - RNAudioAPI (0.5.2):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - RNAudioAPI/audioapi (= 0.5.2)
+    - Yoga
+  - RNAudioAPI/audioapi (0.5.2):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - RNAudioAPI/audioapi/ios (= 0.5.2)
+    - Yoga
+  - RNAudioAPI/audioapi/ios (0.5.2):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNAudioPcmStream (1.1.4):
     - React
   - RNCAsyncStorage (1.23.1):
@@ -2159,7 +2243,6 @@ DEPENDENCIES:
   - "fmt (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/third-party-podspecs/fmt.podspec`)"
   - "glog (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/third-party-podspecs/glog.podspec`)"
   - "hermes-engine (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)"
-  - onnxruntime-react-native (from `../node_modules/onnxruntime-react-native`)
   - "RCT-Folly (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)"
   - "RCT-Folly/Fabric (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)"
   - "RCTDeprecation (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)"
@@ -2192,6 +2275,7 @@ DEPENDENCIES:
   - "React-Mapbuffer (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/ReactCommon`)"
   - "React-microtasksnativemodule (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)"
   - react-native-context-menu-view (from `../node_modules/react-native-context-menu-view`)
+  - react-native-executorch (from `../node_modules/react-native-executorch`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - react-native-ios-context-menu (from `../node_modules/react-native-ios-context-menu`)
   - react-native-ios-utilities (from `../node_modules/react-native-ios-utilities`)
@@ -2228,6 +2312,7 @@ DEPENDENCIES:
   - "React-utils (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/ReactCommon/react/utils`)"
   - ReactCodegen (from `build/generated/ios`)
   - "ReactCommon/turbomodule/core (from `../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/ReactCommon`)"
+  - RNAudioAPI (from `../node_modules/react-native-audio-api`)
   - "RNAudioPcmStream (from `../node_modules/@fugood/react-native-audio-pcm-stream`)"
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNFlashList (from `../node_modules/@shopify/flash-list`)"
@@ -2246,7 +2331,7 @@ SPEC REPOS:
     - ContextMenuAuxiliaryPreview
     - DGSwiftUtilities
     - libwebp
-    - onnxruntime-c
+    - opencv-rne
     - PurchasesHybridCommon
     - RevenueCat
     - SDWebImage
@@ -2313,8 +2398,6 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-2024-11-12-RNv0.76.2-5b4aa20c719830dcf5684832b89a6edb95ac3d64
-  onnxruntime-react-native:
-    :path: "../node_modules/onnxruntime-react-native"
   RCT-Folly:
     :podspec: "../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -2375,6 +2458,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
   react-native-context-menu-view:
     :path: "../node_modules/react-native-context-menu-view"
+  react-native-executorch:
+    :path: "../node_modules/react-native-executorch"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
   react-native-ios-context-menu:
@@ -2447,6 +2532,8 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../node_modules/.pnpm/react-native@0.76.6_@babel+core@7.26.10_@babel+preset-env@7.26.9_@babel+core@7.26.10__@_208e0b7e656111465509081766072df3/node_modules/react-native/ReactCommon"
+  RNAudioAPI:
+    :path: "../node_modules/react-native-audio-api"
   RNAudioPcmStream:
     :path: "../node_modules/@fugood/react-native-audio-pcm-stream"
   RNCAsyncStorage:
@@ -2504,8 +2591,7 @@ SPEC CHECKSUMS:
   glog: 08b301085f15bcbb6ff8632a8ebaf239aae04e6a
   hermes-engine: 1949ca944b195a8bde7cbf6316b9068e19cf53c6
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
-  onnxruntime-c: ac65025f01072d25d7d394a2b43ac30d9397b260
-  onnxruntime-react-native: 381e407520842f6ba8fbc3b50e2478b52a6eaa3a
+  opencv-rne: 63e933ae2373fc91351f9a348dc46c3f523c2d3f
   PurchasesHybridCommon: 16367f792481e8e2d61101ecb607b566937aa67f
   RCT-Folly: 84578c8756030547307e4572ab1947de1685c599
   RCTDeprecation: 063fc281b30b7dc944c98fe53a7e266dab1a8706
@@ -2537,6 +2623,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 89885d1518433a462fe64b68bf5e097997380090
   React-microtasksnativemodule: 36341e09dcd1df535503e6ed2ddf88f10da56d52
   react-native-context-menu-view: f72a7edd2a54cdb14e57a48ce8ac50d3b1602a9d
+  react-native-executorch: 31b53984ab9c32e489203b3a3ea5cd7f12ef07e4
   react-native-image-picker: 732212151b686ff27ff57a7ea90f5d07d1a0c813
   react-native-ios-context-menu: 837fd07fbd55aba005e2c10994548629d506f864
   react-native-ios-utilities: 417649ec9578d57e01203c4cffc1f6d918d3aa1f
@@ -2574,6 +2661,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 55467bcfcd9c17760af0b33c9e8c2f9303534d7b
   ReactCommon: 3c1c8c6d777103c0e60e37c6c5f08e828e2a77c9
   RevenueCat: e825836f5d6baa870c53d7281be25a5fd91abd91
+  RNAudioAPI: 4dfd77e5898157b4cacfaf0e34eab27cce36d634
   RNAudioPcmStream: 7f54645cfad8a18daebdc45111ebc7be99b4c2a3
   RNCAsyncStorage: ff8f69859448bde50f1c25d3e7eb37555fed33ab
   RNFlashList: c989a55fd69b28ca158551cdf2d885348d50e154

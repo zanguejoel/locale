@@ -26,6 +26,7 @@ import { FlashList } from '@shopify/flash-list';
 import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
+import ModelToggle from './ModelToggle';
 
 
 export const CustomDrawerContent = (props: any) => {
@@ -42,7 +43,9 @@ export const CustomDrawerContent = (props: any) => {
         fetchConversation,
         isLoading,
         deleteConversation,
-        renameConversation
+        renameConversation,
+        setIsLocal,
+        isLocal
     } = useChat();
 
     const router = useRouter();
@@ -370,7 +373,13 @@ export const CustomDrawerContent = (props: any) => {
                 </View>
             )}
 
+         
+
             <View style={styles.headerContainer}>
+            
+           
+                <ModelToggle onSelectModel={(model) => setIsLocal(model === 'local')} initialState={isLocal} disableLocal={false} />
+        
                 <View style={styles.searchContainer}>
                     <View style={styles.searchSection}>
 
@@ -455,7 +464,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         paddingBottom: 12,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.greyLight,
-        marginTop: 70,
+        marginTop: 50,
     },
     searchContainer: {
         paddingHorizontal: 16,
@@ -632,5 +641,23 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         alignItems: 'center',
         borderTopRightRadius: 12,
         borderBottomRightRadius: 12,
+    },
+    actionButtonContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerButton: {
+        padding: 12,
+        marginRight: 12,
+        backgroundColor: theme.colors.backgroundLight,
+        borderRadius: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    headerButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: theme.colors.text,
     },
 });

@@ -6,6 +6,12 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
+import {
+  LLAMA3_2_1B,
+  LLAMA3_2_1B_TOKENIZER,
+  useLLM,
+} from 'react-native-executorch';
+
 import useMMKVStorage, { storage } from './useMMKVStorage';
 import api from '@/utils/ApiClient';
 import { polyfill as polyfillURL } from 'react-native-polyfill-globals/src/url';
@@ -13,6 +19,7 @@ import { polyfill as polyfillFetch } from 'react-native-polyfill-globals/src/fet
 import { polyfill as polyfillEncoding } from 'react-native-polyfill-globals/src/encoding';
 import { polyfill as polyfillReadableStream } from 'react-native-polyfill-globals/src/readable-stream';
 import { Message, Role } from '@/utils/Interfaces';
+
 
 import { processStream } from '@/utils/ChatStream';
 import { Keyboard, Alert, Platform } from 'react-native';
@@ -72,9 +79,13 @@ interface ChatContextType {
   renameConversation: (conversationId: string, newTitle: string) => Promise<boolean>;
   resetChat: () => void;
   createNewConversation: () => Promise<string>;
-  intermediate: string
-  setChatLoading?: (a: boolean) => void
-  isChatLoading?: boolean
+  intermediate: string;
+  setChatLoading?: (a: boolean) => void;
+  isChatLoading?: boolean;
+  appendToMessageHistory: (message: string, role: Role) => void;
+  handleSendLocalMessage: (message: string) => void;
+  isLocal: boolean;
+  setIsLocal: (a: boolean) => void
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -95,6 +106,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [streamWorking, setStreamWorking] = useState(false);
   const [isChatLoading, setChatLoading] = useState(false)
   const [additionalData, setAdditionalData] = useState([]);
+  const [isLocal, setIsLocal] = useState(false);
+  const llm = useLLM({
+    modelSource: LLAMA3_2_1B,
+    tokenizerSource: LLAMA3_2_1B_TOKENIZER
+  });
 
 
   useEffect(() => {
@@ -102,11 +118,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     Keyboard.dismiss();
   }, []);
 
-  /*   useEffect(() => {
-      if (currentConversationId) {
-        fetchMessages(currentConversationId);
-      }
-    }, [currentConversationId]); */
 
   useEffect(() => {
     setMessages(prev => updateLastItem(prev, message => ({
@@ -116,11 +127,34 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })));
   }, [stream, additionalData]);
 
+  useEffect(() => {
+    if(llm.response) {
+
+      setStream(llm.response);
+    }
+  }, [llm.response]);
+
+ 
+  const handleSendLocalMessage = async (message: string) => {
+    console.log("Sending message");
+    
+    // Add user message to chat
+    appendToMessageHistory(message, Role.User);
+    appendToMessageHistory('...', Role.Bot);
+    
+    const result = await llm.generate(message);
+    console.log("Result", result);
+    
+    
+    
+    return result;
+  };
 
   const handleSetConversation = (id: string) => {
     setCurrentConversationId(id);
     fetchMessages(id);
   }
+
 
 
   const optimizeImage = useCallback(async (imagePath: string): Promise<string> => {
@@ -220,6 +254,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error saving file: ', error);
       throw error;
     }
+  }, []);
+  const appendToMessageHistory = useCallback((message: string, role: Role) => {
+    setMessages(prev => [...prev, { role, content: message }]);
   }, []);
 
   // ---------------- Chat Operations ----------------
@@ -596,6 +633,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     createNewConversation,
     streamWorking,
     intermediate,
+    appendToMessageHistory,
+    handleSendLocalMessage,
+    isLocal,
+    setIsLocal
   }), [
     isChatLoading,
     setChatLoading,
@@ -618,6 +659,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetChat,
     createNewConversation,
     streamWorking,
+    appendToMessageHistory,
+    handleSendLocalMessage,
+    isLocal,
+    setIsLocal
   ]);
 
   return (

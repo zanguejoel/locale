@@ -46,7 +46,7 @@ const ChatPage = () => {
 
   // Hooks
   const chat = useChat();
-  const { messages, sendMessage, setCurrentRoom, isSending, stream, fetchMessages, intermediate } = chat;
+  const { messages, isLocal, sendMessage, handleSendLocalMessage, setCurrentRoom, isSending, stream, fetchMessages, intermediate } = chat;
 
 
   const id = params?.id
@@ -276,6 +276,7 @@ const ChatPage = () => {
             >
               <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.image} />
               <Text style={styles.welcomeText}>How can I assist you today?</Text>
+              <Text style={{ color: theme.isDark ? 'white': 'black' }}>{isLocal? '(Local Model)' : ''}</Text>
             </Animated.View>
           )}
           <CustomView style={{ flex: 1 }}>
@@ -309,7 +310,7 @@ const ChatPage = () => {
             </TouchableOpacity>
           )}
         </View>
-        {messages.length === 0 && <MessageIdeas onSelectCard={sendMessage} />}
+        {messages.length === 0 && <MessageIdeas onSelectCard={isLocal ? handleSendLocalMessage : sendMessage} />}
         {selectedImage && renderSelectedFile()}
         <BlurView intensity={80} tint="light" style={[styles.inputBlurContainer]}>
           <MessageInput
@@ -320,7 +321,7 @@ const ChatPage = () => {
               isManualScrollRef.current = false;
               setAutoScrollEnabled(true);
               scrollToBottomWithDelay(300);
-              return sendMessage(message, type, operation, additionalData);
+              return isLocal ? handleSendLocalMessage(message) : sendMessage(message, type, operation, additionalData);
             }}
             isLoading={isSending}
           />
