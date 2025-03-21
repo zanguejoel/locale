@@ -185,7 +185,7 @@ const ChatPage = () => {
     scrollToBottomWithDelay(0);
   };
 
-  const handleContentSizeChange = (width, height) => {
+  const handleContentSizeChange = (width: number, height: number) => {
     contentHeightRef.current = height;
 
     if (autoScrollEnabled && !isManualScrollRef.current && messages.length > 0) {
@@ -329,7 +329,7 @@ const ChatPage = () => {
 
     </View>
   );
-};
+}
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   pageContainer: {

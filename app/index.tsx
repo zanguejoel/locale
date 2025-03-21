@@ -2,15 +2,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { Redirect } from 'expo-router';
 import 'react-native-gesture-handler';
 
-const Index = () => {
+
+export default function Index() {
   const { user, isSignedIn } = useAuth();
 
   if (user?.email) {
-    Redirect({ href: "/(chat)/new" });
+    return <Redirect href="/(chat)/new" />;
   } else if (!isSignedIn) {
-    Redirect({ href: "/login" });
+    return <Redirect href="/login" />;
   }
 
+  return null;
 }
-
-export default Index;

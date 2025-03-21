@@ -11,6 +11,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
 import { TouchableOpacity, View } from "react-native";
+import 'text-encoding-polyfill';
 
 import { useColorScheme } from "@/components/useColorScheme";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
@@ -27,6 +28,26 @@ export {
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+// Polyfill TextDecoder
+if (typeof global.TextDecoder !== 'undefined') {
+  const OriginalTextDecoder = global.TextDecoder;
+  const decoderMap = new Map();
+
+  global.TextDecoder = function(encoding = 'utf-8', options = {}) {
+    const key = encoding.toLowerCase();
+    
+    if (key === 'latin1' || key === 'iso-8859-1') {
+      if (!decoderMap.has(key)) {
+        decoderMap.set(key, new OriginalTextDecoder('utf-8', options));
+      }
+      return decoderMap.get(key);
+    }
+    
+    return new OriginalTextDecoder(encoding, options);
+  } as any;
+
+  global.TextDecoder.prototype = OriginalTextDecoder.prototype;
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({

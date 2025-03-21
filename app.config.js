@@ -11,6 +11,7 @@ export default {
                     kotlinVersion: '1.9.25',
                 },
             },
+            
         ],
     ],
 };
