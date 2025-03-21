@@ -73,6 +73,8 @@ const Layout = () => {
         }}
       >
 
+
+
         <Drawer.Screen name="new" component={ChatPage} options={{
           title: 'Jaiime AI',
           headerRight: () => (
