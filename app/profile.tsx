@@ -174,7 +174,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.text,
   },
   infoContainer: {
-    backgroundColor: theme.colors.backgroundLight,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: {
@@ -189,16 +188,16 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.greyLight,
-    marginBottom: 8,
+
   },
   iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#e5f3f7',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.backgroundLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
