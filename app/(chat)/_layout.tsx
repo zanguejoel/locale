@@ -1,7 +1,6 @@
-import { Drawer } from 'expo-router/drawer';
-import { DrawerContentScrollView, DrawerItem, DrawerItemList } from '@react-navigation/drawer';
-import { Link, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useRouter } from 'expo-router';
+
 import {
   Image,
   Text,
@@ -9,265 +8,156 @@ import {
   StyleSheet,
   TouchableOpacity,
   useWindowDimensions,
-  TextInput,
   Alert,
+
 } from 'react-native';
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
-import { FontAwesome6 } from '@expo/vector-icons';
-import { useDrawerStatus } from '@react-navigation/drawer';
-import * as ContextMenu from 'zeego/context-menu';
-import { useRevenueCat } from '@/providers/RevenueCat';
-import { useAuth } from '@/hooks/useAuth';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useChat } from '@/hooks/useChat';
-import { useState } from 'react';
+import React from 'react';
 
+import { CustomDrawerContent } from '@/components/ChatCustomDrawerContent';
+import ChatPage from './new';
+import ChatPageId from '../../components/ChatPage';
+import { useTheme } from '@/hooks/useTheme';
+import { Theme } from '@/constants/Types';
 
-export const CustomDrawerContent = (props: any) => {
-  const { bottom, top } = useSafeAreaInsets()
-
-  // const isDrawerOpen = useDrawerStatus() === 'open';
-  const { conversations, currentConversationId, fetchConversation, } = useChat();
-  const router = useRouter();
-  const {user} = useAuth();
-  const [query, setQuery] = useState('');
-
-
-  
-
-  const onDeleteChat = (chatId: string) => {
-    Alert.alert('Delete Chat', 'Are you sure you want to delete this chat?', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Delete',
-        onPress: async () => {
-          // Delete the chat
-          
-        },
-      },
-    ]);
-  };
-
-  const onRenameChat = (chatId: string) => {
-    Alert.prompt('Rename Chat', 'Enter a new name for the chat', async (newName) => {
-      if (newName) {
-        // Rename the chat
-       
-      }
-    });
-  };
-
-  return (
-    <View style={{ flex: 1, marginTop: top }}>
-      <View style={{ backgroundColor: '#fff', paddingBottom: 10 }}>
-        <View style={styles.searchSection}>
-          <Ionicons style={styles.searchIcon} name="search" size={20} color={Colors.greyLight} />
-          <TextInput
-            style={styles.input}
-            placeholder="Search"
-            underlineColorAndroid="transparent"
-            onChangeText={(value) => setQuery(value)}
-          />
-        </View>
-      </View>
-      
-
-      <DrawerContentScrollView
-        {...props}
-        contentContainerStyle={{ backgroundColor: '#fff', paddingTop: 0 }}>
-       
-        {conversations?.length && conversations.filter( c => !query || c.title?.toLowerCase()?.includes(query.toLowerCase())).map((chat) => (
-          <ContextMenu.Root key={chat.id}>
-            <ContextMenu.Trigger>
-              <DrawerItem
-                label={chat.title || ''}
-                onPress={() => router.push(`/(chat)/${chat.id}`)}
-                inactiveTintColor="#000"
-              />
-            </ContextMenu.Trigger>
-            <ContextMenu.Content>
-              <ContextMenu.Preview>
-                {() => (
-                  <View style={{ padding: 16, height: 200, backgroundColor: '#fff' }}>
-                    <Text>{chat.title}</Text>
-                  </View>
-                )}
-              </ContextMenu.Preview>
-
-              <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chat.id || '')}>
-                <ContextMenu.ItemTitle>Rename</ContextMenu.ItemTitle>
-                <ContextMenu.ItemIcon
-                  ios={{
-                    name: 'pencil',
-                    pointSize: 18,
-                  }}
-                />
-              </ContextMenu.Item>
-              <ContextMenu.Item key={'delete'} onSelect={() => onDeleteChat(chat.id|| '')} destructive>
-                <ContextMenu.ItemTitle>Delete</ContextMenu.ItemTitle>
-                <ContextMenu.ItemIcon
-                  ios={{
-                    name: 'trash',
-                    pointSize: 18,
-                  }}
-                />
-              </ContextMenu.Item>
-            </ContextMenu.Content>
-          </ContextMenu.Root>
-        ))}
-      </DrawerContentScrollView>
-
-      <View
-        style={{
-          padding: 16,
-          paddingBottom: 10 + bottom,
-          backgroundColor: Colors.light.background,
-        }}>
-        <Link href="/(modal)/settings" asChild>
-          <TouchableOpacity style={styles.footer}>
-            <Text style={styles.userName}>{user?.first_name || 'John'}</Text>
-            <Ionicons name="ellipsis-horizontal" size={24} color={Colors.greyLight} />
-          </TouchableOpacity>
-        </Link>
-      </View>
-    </View>
-  );
-};
+const Drawer = createDrawerNavigator();
 
 const Layout = () => {
-  //const navigation = useNavigation();
-  const dimensions = useWindowDimensions();
-  const { user } = useRevenueCat();
+  const theme = useTheme();
+  const styles = getStyles(theme);
   const router = useRouter();
+  const { createNewConversation, resetChat, isChatLoading } = useChat();
+
+  const handleNewChat = async () => {
+    try {
+      // Create a new conversation and get its ID
+      const newChatId = await createNewConversation();
+
+      // Navigate to the new conversation
+      router.push(`/(chat)/${newChatId}`);
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+      Alert.alert('Error', 'Failed to create a new chat');
+
+      // If there's an error, still try to navigate to the new chat route
+      resetChat();
+      router.push('/(chat)/new');
+    }
+  };
 
   return (
-    <Drawer
-      drawerContent={CustomDrawerContent}
-      screenOptions={(navigation) => ({
-        headerLeft: () => (
-          <TouchableOpacity
-            onPress={() => navigation.navigation.toggleDrawer()}
-            style={{ marginLeft: 16 }}>
-            <FontAwesome6 name="bars" size={24} color={Colors.grey} />
-          </TouchableOpacity>
-        ),
-        headerStyle: {
-          backgroundColor: Colors.light.background,
-        },
-        headerShadowVisible: false,
-        drawerActiveBackgroundColor: Colors.selected,
-        drawerActiveTintColor: '#000',
-        drawerInactiveTintColor: '#000',
-        overlayColor: 'rgba(0, 0, 0, 0.2)',
-        drawerItemStyle: { borderRadius: 12 },
-        drawerLabelStyle: { marginLeft: -20 },
-        drawerStyle: { width: dimensions.width * 0.86 },
-      })}>
-      <Drawer.Screen
-        name="new"
-        getId={() => Math.random().toString()}
-        options={{
-          title: 'Jaiime Chat',
-          drawerIcon: () => (
-            <View style={[styles.item, { backgroundColor: '#000' }]}>
-              <Image source={require('@/assets/images/icon.png')} style={styles.btnImage} />
-            </View>
-          ),
-          headerRight: () => (
-            <Link href={'/(chat)/new'} push asChild>
-              <TouchableOpacity>
-                <Ionicons
-                  name="create-outline"
-                  size={24}
-                  color={Colors.grey}
-                  style={{ marginRight: 16 }}
-                />
-              </TouchableOpacity>
-            </Link>
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="[id]"
-        options={{
-          drawerItemStyle: {
-            display: 'none',
+    <View style={{ flex: 1 }}>
+
+      <Drawer.Navigator
+        drawerContent={(props) => <CustomDrawerContent {...props} />}
+        screenOptions={{
+          drawerActiveBackgroundColor: '#selectedColor',
+          drawerActiveTintColor: '#000',
+          drawerInactiveTintColor: '#000',
+          headerTintColor: Colors.light.tint,
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+            height: 110,
           },
+          headerShadowVisible: true,
+          overlayColor: 'rgba(0, 0, 0, 0.2)',
+          drawerItemStyle: { borderRadius: 12 },
+          drawerLabelStyle: { marginLeft: -20 },
+          drawerStyle: {
+            backgroundColor: '#FFFFFF',
+          },
+          drawerType: 'slide',
+        }}
+      >
+
+
+
+        <Drawer.Screen name="new" component={ChatPage} options={{
+          title: 'Jaiime AI',
           headerRight: () => (
-            <Link href={'/(chat)/new'} push asChild>
-              <TouchableOpacity>
+            <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
+              <Ionicons
+                name="add"
+                size={24}
+                color={Colors.light.tint}
+              />
+            </TouchableOpacity>
+          ),
+        }} />
+
+        <Drawer.Screen name="[id]"
+          component={ChatPageId} options={{
+            title: 'Jaiime AI',
+            headerRight: () => (
+              <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
                 <Ionicons
-                  name="create-outline"
+                  name="add"
                   size={24}
-                  color={Colors.grey}
-                  style={{ marginRight: 16 }}
+                  color={Colors.light.tint}
                 />
               </TouchableOpacity>
-            </Link>
-          ),
-        }}
-      />
-    </Drawer>
+            ),
+          }} />
+
+      </Drawer.Navigator>
+      {isChatLoading && <View style={styles.disabledArea} />
+      }
+    </View>
+
   );
 };
 
-const styles = StyleSheet.create({
-  searchSection: {
-    marginHorizontal: 16,
-    borderRadius: 10,
-    height: 34,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.input,
-  },
-  searchIcon: {
-    padding: 6,
-  },
+const getStyles = (theme: Theme) => StyleSheet.create({
   input: {
     flex: 1,
-    paddingTop: 8,
-    paddingRight: 8,
-    paddingBottom: 8,
-    paddingLeft: 0,
-    alignItems: 'center',
-    color: '#424242',
+    fontSize: 15,
+    color: theme.colors.grey,
+    paddingVertical: 8,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
   },
-  roundImage: {
-    width: 30,
-    height: 30,
+  headerButton: {
+    padding: 12,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  userName: {
-    fontSize: 16,
+  disabledArea: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100000000
+  },
+  headerLogo: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
     fontWeight: '600',
-    flex: 1,
+    color: theme.colors.grey,
   },
-  item: {
-    borderRadius: 15,
-    overflow: 'hidden',
+  drawerIconContainer: {
+    backgroundColor: '#F5F5F5',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  btnImage: {
-    margin: 6,
-    width: 16,
-    height: 16,
-  },
-  dallEImage: {
-    width: 28,
-    height: 28,
-    resizeMode: 'cover',
+  drawerIcon: {
+    width: 20,
+    height: 20,
   },
 });
 

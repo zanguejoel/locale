@@ -16,71 +16,75 @@ export const processStream = async (
   response: ReadableStream<Uint8Array> | null,
   setStream: SetStreamFunction,
   handleError: (error: string) => void,
-  setIntermediate: (value: string) => void
+  setIntermediate: (value: string) => void,
+  setStreamWorking: (v: boolean) => void,
+  setAdditionalData?: (a: []) => void
 ): Promise<StreamData | null> => {
+  setStreamWorking(true)
   let res: StreamData | null = null;
   let buffer = '';
 
-  if(!response) {
-    console.log("Error ----");
+  if (!response) {
+    console.error("Error ----");
     throw "error"
   }
-  
+
   const decoder = new TextDecoder();
 
   const reader = response.getReader();
 
   if (!reader) return null;
-  
 
-  
+
+
   while (true) {
     const { value, done } = await reader.read();
-   
     if (done) break;
 
     const chunk = decoder.decode(value, { stream: true });
     buffer += chunk;
 
-      const { results, remaining } = processJSONChunks(buffer);
-      buffer = remaining;
-     
+    const { results, remaining } = processJSONChunks(buffer);
+    buffer = remaining;
+
     for (const line of results) {
       if (line) {
-       
+
         try {
           const data: StreamData = line;
           switch (data.type) {
             case 'stream':
               if (data.content) {
-                console.log(`Raw line: ${data.content}`);
                 setStream((prev) => prev + data.content);
               }
               break;
             case 'state':
               if (data.content) {
+
                 setIntermediate(data.content);
               }
               break;
             case 'final':
               res = data;
-              // setStream('');
+              if (data?.data?.additional_data) {
+                setAdditionalData?.(data?.data?.additional_data)
+              }
               break;
             case 'error':
               if (data.error) {
-                console.log(`\nError occurred: ${data.error}`);
+                console.error(`\nError occurred: ${data.error}`);
                 handleError(data.error);
               }
               break;
           }
         } catch (e) {
-          console.log(`\nError parsing JSON: ${e instanceof Error ? e.message : String(e)}`);
-          console.log(`Raw line: ${line}`);
+          console.error(`\nError parsing JSON: ${e instanceof Error ? e.message : String(e)}`);
+          console.error(`Raw line: ${line}`);
         }
       }
     }
   }
-  
+  setStreamWorking(false)
   return res;
 };
 

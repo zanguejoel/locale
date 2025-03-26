@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
 import {
@@ -13,20 +13,35 @@ import {
   Platform,
   SafeAreaView,
 } from "react-native";
-import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
+import { useTheme } from '@/hooks/useTheme';
 
 interface ErrorType {
   email?: string;
+  code?: string
 }
+const TIMER_DURATION = 60;
 
 const ForgotPassword = () => {
-  const { resetPassword, isLoading } = useAuth();
+  const { isLoading, forgotPassword } = useAuth();
+  const theme = useTheme();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<ErrorType>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [code, setCode] = useState("");
+
+
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setInterval(() => {
+        setResendTimer(prev => (prev > 1 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [resendTimer]);
 
   const validateEmail = () => {
     if (!email) {
@@ -45,9 +60,19 @@ const ForgotPassword = () => {
 
     if (validateEmail()) {
       try {
-        await resetPassword(email);
-        setResetSent(true);
+        setResendTimer(TIMER_DURATION);
+
+        const res = await forgotPassword(email);
+        if (res?.ok) {
+          setResetSent(true)
+        } else {
+          Alert.alert(
+            "Error",
+            res?.data?.detail || "Failed to send . Please try again."
+          );
+        }
       } catch (err: any) {
+        setError({ code: err })
         Alert.alert(
           "Error",
           err.message || "Failed to send reset instructions. Please try again."
@@ -56,40 +81,81 @@ const ForgotPassword = () => {
     }
   };
 
+  const handleValidCode = async () => {
+    try {
+      // await confirmCode(code);
+      router.replace(`/forgot-password-change?email=${email}`)
+      setResetSent(true);
+    } catch (err: any) {
+      setError({ code: err })
+      Alert.alert(
+        "Error",
+        err.message || "Failed to send reset instructions. Please try again."
+      );
+    }
+  }
+
   if (resetSent) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.successContainer}>
           <Image
-            source={require('@/assets/images/icon.png')}
+            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
             style={styles.logo}
           />
-          <Text style={styles.title}>Check Your Email</Text>
-          <Text style={styles.successMessage}>
-            We've sent password reset instructions to:
+          <Text style={[styles.title, { color: theme.colors.text }]}>Check Your Email</Text>
+          <Text style={[styles.successMessage, { color: theme.colors.text }]}>
+            We've sent verification code to:
           </Text>
-          <Text style={styles.emailText}>{email}</Text>
-          <Text style={styles.instructionText}>
-            Please check your email and follow the instructions to reset your password.
-          </Text>
-
+          <Text style={[styles.emailText, { color: theme.colors.primary }]}>{email}</Text>
+          <CustomInput
+            icon="code-outline"
+            placeholder="Enter your code"
+            value={code}
+            onChangeText={(text) => {
+              setCode(text);
+            }}
+            error={!!error.code}
+            autoCapitalize="none"
+            keyboardType="numeric"
+          />
           <View style={styles.btnContainer}>
             <TouchableOpacity
-              style={[defaultStyles.btn, styles.returnButton]}
-              onPress={() => router.replace('/login')}
+              style={[defaultStyles.btn, styles.returnButton, { backgroundColor: theme.colors.primary }]}
+              onPress={handleValidCode}
             >
-              <Text style={styles.buttonText}>Return to Login</Text>
+              <Text style={styles.buttonText}>Confirm</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[defaultStyles.btnSecondary, styles.resendButton]}
+              disabled={resendTimer > 0}
+              style={[
+                defaultStyles.btnSecondary,
+                styles.resendButton,
+                {
+                  borderColor: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary
+                }
+              ]}
               onPress={handleResetPassword}
             >
-              <Text style={[styles.buttonText, { color: Colors.primary }]}>
-                Resend Email
+              <Text style={[
+                styles.buttonText,
+                {
+                  color: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary
+                }
+              ]}>
+                Resend code
               </Text>
             </TouchableOpacity>
           </View>
+          {resendTimer > 0 && (
+            <View style={styles.resendContainerTimer}>
+              <Text style={{ color: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary }}>
+                Resend the code
+              </Text>
+              <Text style={[styles.timerText, { color: theme.colors.primary }]}>{resendTimer}s</Text>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -98,57 +164,61 @@ const ForgotPassword = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-    <SafeAreaView>
-      {isLoading && (
-        <View style={defaultStyles.loadingOverlay}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+      <SafeAreaView>
+        {isLoading && (
+          <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        )}
+
+        <View style={styles.headerContainer}>
+          <Image
+            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
+            style={styles.logo}
+          />
+          <Text style={[styles.title, { color: theme.colors.text }]}>Forgot Password?</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.text }]}>
+            Enter your email address to receive verification code
+          </Text>
         </View>
-      )}
 
-      <View style={styles.headerContainer}>
-        <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
-        <Text style={styles.title}>Forgot Password?</Text>
-        <Text style={styles.subtitle}>
-          Enter your email address to receive password reset instructions
-        </Text>
-      </View>
+        <View style={styles.formContainer}>
+          <CustomInput
+            icon="mail-outline"
+            placeholder="Enter your email"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (isSubmitted) validateEmail();
+            }}
+            error={!!error.email}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
+            theme={theme}
+          />
+          {error.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{error.email}</Text>}
 
-      <View style={styles.formContainer}>
-        <CustomInput
-          icon="mail-outline"
-          placeholder="Enter your email"
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            if (isSubmitted) validateEmail();
-          }}
-          error={!!error.email}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-        />
-        {error.email && <Text style={styles.errorText}>{error.email}</Text>}
+          <View style={styles.btnContainer}>
+            <TouchableOpacity
+              style={[defaultStyles.btn, styles.resetButton, { backgroundColor: theme.colors.primary }]}
+              onPress={handleResetPassword}
+            >
+              <Text style={styles.buttonText}>Send Reset Code</Text>
+            </TouchableOpacity>
 
-        <View style={styles.btnContainer}>
-          <TouchableOpacity
-            style={[defaultStyles.btn, styles.resetButton]}
-            onPress={handleResetPassword}
-          >
-            <Text style={styles.buttonText}>Send Reset Instructions</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[defaultStyles.btnSecondary, styles.cancelButton]}
-            onPress={() => router.back()}
-          >
-            <Text style={[styles.buttonText, { color: Colors.primary }]}>
-              Back to Login
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[defaultStyles.btnSecondary, styles.cancelButton, { borderColor: theme.colors.primary }]}
+              onPress={() => router.back()}
+            >
+              <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
+                Back to Login
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -157,7 +227,6 @@ const ForgotPassword = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   headerContainer: {
     alignItems: 'center',
@@ -165,21 +234,30 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     paddingHorizontal: 24,
   },
+  resendContainerTimer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
   logo: {
-    width: 80,
-    height: 80,
+    width: 150,
+    height: 75,
     marginBottom: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: Colors.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
+  timerText: {
+    fontSize: 13,
+    marginLeft: 4,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
   subtitle: {
     fontSize: 16,
-    color: Colors.grey,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -187,25 +265,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   errorText: {
-    color: Colors.red,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 12,
   },
   btnContainer: {
     gap: 16,
+    width: '100%',
     marginTop: 24,
   },
   resetButton: {
     height: 50,
-    backgroundColor: Colors.primary,
     borderRadius: 12,
   },
   cancelButton: {
     height: 50,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
   },
   buttonText: {
     fontSize: 16,
@@ -221,33 +297,28 @@ const styles = StyleSheet.create({
   },
   successMessage: {
     fontSize: 16,
-    color: Colors.grey,
     textAlign: 'center',
     marginBottom: 8,
   },
   emailText: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.primary,
     marginBottom: 16,
   },
   instructionText: {
     fontSize: 16,
-    color: Colors.grey,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
   },
   returnButton: {
     height: 50,
-    backgroundColor: Colors.primary,
     borderRadius: 12,
   },
   resendButton: {
     height: 50,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
   },
 });
 

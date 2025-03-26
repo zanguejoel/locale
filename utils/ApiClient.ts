@@ -47,7 +47,7 @@ const CACHE_DURATIONS: CacheDurations = {
 
 // Endpoint-specific cache configuration
 const ENDPOINT_CACHE_CONFIG = new Map<string, number>([
- 
+
 ]);
 
 // Cacheable POST endpoints
@@ -102,7 +102,7 @@ class ApiClient {
   constructor(baseURL: string = API_URL_PROD) {
     this.cache = new LRUCache(CONFIG.CACHE_SIZE);
     this.retryCount = new Map();
-    
+
     this.api = create({
       baseURL,
       headers: {
@@ -253,7 +253,7 @@ class ApiClient {
     const currentRetryCount = this.retryCount.get(this.getCacheKey(requestConfig)) || 0;
 
     if (
-      [404, 429].includes(error.response?.status ?? 0) && 
+      [404, 429].includes(error.response?.status ?? 0) &&
       currentRetryCount < CONFIG.MAX_RETRIES
     ) {
       this.retryCount.set(this.getCacheKey(requestConfig), currentRetryCount + 1);
@@ -272,7 +272,7 @@ class ApiClient {
       } */
 
       if (response.problem === 'NETWORK_ERROR') {
-        console.log({
+        console.error({
           message: 'Please check your internet connection.',
           duration: 5000,
           title: 'Network Error',

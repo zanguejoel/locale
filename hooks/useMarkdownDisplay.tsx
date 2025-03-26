@@ -4,6 +4,10 @@ import Markdown, {
   MarkdownProps,
   RenderRules,
 } from 'react-native-markdown-display';
+import { StyleSheet, Text, View, Image, Platform } from 'react-native';
+import Colors from '@/constants/Colors';
+import { Theme } from '@/constants/Types';
+import { useTheme } from './useTheme';
 
 // Define the navigation params for each screen
 interface NavigationParams {
@@ -84,15 +88,278 @@ const useMarkdownDisplay = () => {
     [navigation],
   );
 
-
-
-  // Custom styles for markdown elements
-  const markdownStyles = {
+  // Custom styles for markdown elements with improved spacing and readability
+  const getStyles = (theme: Theme) => StyleSheet.create({
+    // Base styles
     body: {
+      color: theme.colors.text,
       fontSize: 14,
-      lineHeight: 20,
+      lineHeight: 24,
+      marginTop: 0,
+      marginBottom: 0,
+      width: '100%',
     },
-    strong: { fontWeight: '700' },
+
+    // Text formatting
+    strong: {
+      fontWeight: '700',
+    },
+    em: {
+      fontStyle: 'italic',
+    },
+
+    // Headings with proper spacing
+    heading1: {
+      fontSize: 20,
+      lineHeight: 24,
+      fontWeight: 'bold',
+      marginTop: 8,
+      marginBottom: 4,
+      color: theme.colors.text,
+      width: '100%',
+    },
+    heading2: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      marginTop: 8,
+      marginBottom: 4,
+      color: theme.colors.text,
+      width: '100%',
+    },
+    heading3: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginTop: 8,
+      marginBottom: 4,
+      color: theme.colors.text,
+      width: '100%',
+    },
+    heading4: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginTop: 8,
+      marginBottom: 4,
+      color: theme.colors.text,
+      width: '100%',
+    },
+    heading5: {
+      fontSize: 15,
+      fontWeight: 'bold',
+      marginTop: 8,
+      marginBottom: 4,
+      color: theme.colors.text,
+      width: '100%',
+    },
+    heading6: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      marginTop: 8,
+      marginBottom: 4,
+      color: theme.colors.text,
+      width: '100%',
+    },
+
+    // Lists with proper indentation and spacing
+    bullet_list: {
+      marginVertical: 4,
+      width: '100%',
+    },
+    ordered_list: {
+      marginVertical: 4,
+      width: '100%',
+    },
+    list_item: {
+      flexDirection: 'row',
+      marginVertical: 3,
+      width: '100%',
+      alignItems: 'flex-start',
+    },
+    bullet_list_icon: {
+      marginLeft: 4,
+      marginRight: 8,
+      width: 5,
+      height: 5,
+      borderRadius: 2.5,
+      backgroundColor: theme.colors.text,
+      alignSelf: 'flex-start',
+      marginTop: 8,
+    },
+    bullet_list_content: {
+      flex: 1,
+      paddingRight: 4,
+    },
+    ordered_list_icon: {
+      marginLeft: 4,
+      marginRight: 8,
+      alignSelf: 'flex-start',
+      minWidth: 14,
+    },
+    ordered_list_content: {
+      flex: 1,
+      paddingRight: 4,
+    },
+
+    list_item_level_1: {
+      paddingLeft: 16,
+    },
+    list_item_level_2: {
+      paddingLeft: 32,
+    },
+    list_item_level_3: {
+      paddingLeft: 48,
+    },
+
+    code_inline: {
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      backgroundColor: '#f0f0f0',
+      borderRadius: 3,
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+      fontSize: 13,
+      color: '#333',
+    },
+    code_block: {
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      backgroundColor: '#f5f5f5',
+      borderRadius: 6,
+      padding: 10,
+      marginVertical: 8,
+      fontSize: 13,
+      lineHeight: 18,
+      color: '#333',
+      width: '100%',
+      borderWidth: 1,
+      borderColor: '#e0e0e0',
+    },
+    fence: {
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      backgroundColor: '#f5f5f5',
+      borderRadius: 6,
+      padding: 10,
+      marginVertical: 8,
+      fontSize: 13,
+      lineHeight: 18,
+      color: '#333',
+      width: '100%',
+      borderWidth: 1,
+      borderColor: '#e0e0e0',
+    },
+
+    // Links
+    link: {
+      color: theme.colors.primary,
+      textDecorationLine: 'underline',
+    },
+
+    // Block quotes
+    blockquote: {
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.primary + '80',
+      paddingLeft: 10,
+      marginLeft: 4,
+      marginVertical: 8,
+      fontStyle: 'italic',
+      width: '95%',
+    },
+
+    // Paragraphs
+    paragraph: {
+      marginVertical: 6,
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    hardbreak: {
+      width: '100%',
+      height: 12,
+    },
+    softbreak: {
+      width: '100%',
+      height: 8,
+    },
+
+    // Tables
+    table: {
+      borderWidth: 1,
+      borderColor: '#e0e0e0',
+      borderRadius: 4,
+      marginVertical: 10,
+      width: '100%',
+      overflow: 'hidden',
+    },
+    thead: {
+      backgroundColor: '#f7f7f7',
+      borderBottomWidth: 1,
+      borderBottomColor: '#e0e0e0',
+    },
+    tbody: {
+      backgroundColor: '#ffffff',
+    },
+    th: {
+      padding: 8,
+      fontWeight: 'bold',
+    },
+    tr: {
+      borderBottomWidth: 0.5,
+      borderBottomColor: '#e0e0e0',
+      flexDirection: 'row',
+    },
+    td: {
+      padding: 8,
+      flex: 1,
+    },
+
+    // Horizontal rule
+    hr: {
+      backgroundColor: '#e0e0e0',
+      height: 1,
+      width: '100%',
+      marginVertical: 12,
+    },
+
+    // Image
+    image: {
+      marginVertical: 8,
+      alignSelf: 'center',
+      maxWidth: '100%',
+      borderRadius: 4,
+    },
+  });
+
+  const theme = useTheme();
+  const markdownStyles = getStyles(theme);
+
+  const customRules: RenderRules = {
+    /*  list_item: (node, children, parent, styles) => {
+       return (
+         <View
+           key={node.key}
+           style={[styles.list_item, styles[`list_item_level_${node.level || 0}`]]}
+         >
+           {children}
+         </View>
+       );
+     }, */
+
+    code_block: (node, children, parent, styles) => {
+      return (
+        <View key={node.key} style={styles.code_block}>
+          <Text selectable>{node.content}</Text>
+        </View>
+      );
+    },
+
+    image: (node, children, parent, styles) => {
+      const { src, alt } = node.attributes;
+      return (
+        <Image
+          key={node.key}
+          source={{ uri: src }}
+          style={[styles.image, { width: 300, height: 200, resizeMode: 'contain' }]}
+          accessibilityLabel={alt || 'Image'}
+        />
+      );
+    },
   };
 
   // Render function that returns a configured Markdown component
@@ -105,11 +372,12 @@ const useMarkdownDisplay = () => {
       <Markdown
         rules={{ ...additionalRules }}
         onLinkPress={url => handleNavigation(url)}
-        style={{ ...markdownStyles, ...additionalStyles }}>
+        style={{ ...markdownStyles, ...additionalStyles }}
+      >
         {children}
       </Markdown>
     ),
-    [markdownStyles],
+    [markdownStyles, customRules],
   );
 
   return MarkdownDisplay;

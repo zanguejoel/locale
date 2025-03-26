@@ -31,7 +31,7 @@ const Page = () => {
       />
 
       <Text style={styles.description}>
-        Get access to more features by unlocking DallE for just {pack?.product.priceString}!
+        Get access to more features by unlocking premium features for just {pack?.product.priceString}!
       </Text>
 
       <View style={{ flex: 1 }} />

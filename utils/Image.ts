@@ -5,14 +5,45 @@ import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 
 // https://stackoverflow.com/questions/73706343/i-want-to-download-an-image-with-react-native-expo-from-a-url
-export const downloadAndSaveImage = async (imageUrl: string) => {
-  let fileUri = FileSystem.documentDirectory + `${new Date().getTime()}.jpg`;
+export const downloadAndSaveImage = async (imageUrl: string): Promise<any> => {
+
+  const fileUri = `${FileSystem.documentDirectory}${Date.now()}.jpg`;
 
   try {
-    const res = await FileSystem.downloadAsync(imageUrl, fileUri);
-    return saveFile(res.uri);
-  } catch (err) {
-    console.log('FS Err: ', err);
+
+    const response = await FileSystem.downloadAsync(imageUrl, fileUri);
+
+    await saveFile(response.uri);
+
+  } catch (error) {
+    console.error('File system error:', error);
+  }
+};
+
+
+export const downloadAndSaveVideo = async (videoUrl?: string) => {
+  if (!videoUrl) {
+    return;
+  }
+  try {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Media library permissions are needed to save the video.');
+      return;
+    }
+
+    const fileName = videoUrl.split('/').pop();
+    const fileUri = FileSystem.cacheDirectory + fileName;
+
+    const { uri } = await FileSystem.downloadAsync(videoUrl, fileUri);
+
+    const asset = await MediaLibrary.createAssetAsync(uri);
+
+    await MediaLibrary.createAlbumAsync('Downloaded Videos', asset, false);
+
+    Alert.alert('Success', 'Video downloaded and saved successfully!');
+  } catch (error) {
+    console.log('Error downloading video:', error);
   }
 };
 
@@ -34,7 +65,7 @@ const saveFile = async (fileUri: string) => {
         }
       }
     } catch (err) {
-      console.log('Save err: ', err);
+      console.error('Save err: ', err);
     }
   } else if (status === 'denied') {
     Alert.alert('please allow permissions to download');
@@ -52,10 +83,23 @@ export const copyImageToClipboard = async (imageUrl: string) => {
 
     await Clipboard.setImageAsync(base64);
   } catch (err) {
-    console.log('FS Err: ', err);
+    console.error('FS Err: ', err);
   }
 };
 
 export const shareImage = async (imageUrl: string) => {
-  Sharing.shareAsync(imageUrl);
+  try {
+
+    const fileUri = FileSystem.documentDirectory + `${Date.now()}.jpg`;
+
+    const downloadResult = await FileSystem.downloadAsync(imageUrl, fileUri);
+
+    await Sharing.shareAsync(downloadResult.uri, {
+      mimeType: 'image/jpeg',
+      dialogTitle: 'Share Image',
+      UTI: 'public.image',
+    });
+  } catch (error) {
+    console.error('Error sharing image:', error);
+  }
 };

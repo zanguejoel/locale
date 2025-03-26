@@ -14,6 +14,36 @@ export interface UserTeam {
   team: Team;
   roles: Role[];
 }
+export interface Theme {
+  colors: {
+    text: string;
+    background: string;
+    tint: string;
+    tabIconDefault: string;
+    tabIconSelected: string;
+    primary: string;
+    backgroundLight: string;
+    lime: string;
+    pink: string;
+    brown: string;
+    sky: string;
+    teal: string;
+    yellow: string;
+    orange: string;
+    red: string;
+    blue: string;
+    green: string;
+    grey: string;
+    greyLight: string;
+    input: string;
+    selected: string;
+    light: string;
+    chatIcons: string
+    chatInputBg: string
+    chaRawHistoryBG: string
+
+  };
+}
 
 export interface User {
   first_name: string;
@@ -22,12 +52,12 @@ export interface User {
   username: string;
   email: string;
   phone: string;
-  address: null | string;
+  address?: string;
   date_of_birth: string;
-  city: null | string;
-  state: null | string;
+  city?: string;
+  state?: string;
   country: null | string;
-  postal_code: null | string;
+  postal_code?: string;
   user_id: number;
   created_at: string;
   updated_at: string;
