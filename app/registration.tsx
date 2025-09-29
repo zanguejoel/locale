@@ -201,10 +201,12 @@ const Registration = () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.headerContainer}>
-            <Image
-              source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
+            {/* Logo commented out */}
+            {/* <Image
+              source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
               style={styles.logo}
-            />
+            /> */}
+            <Text style={[styles.appTitle, { color: theme.colors.primary }]}>Odyssey</Text>
             <Text style={[styles.title, { color: theme.colors.text }]}>Create Account</Text>
             <Text style={[styles.subtitle, { color: theme.colors.text }]}>Sign up to get started</Text>
           </View>
@@ -368,22 +370,30 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 20,
+    marginTop: 60,
+    marginBottom: 30,
+    paddingVertical: 20,
   },
   logo: {
     width: 180,
     height: 100,
   },
-  title: {
-    fontSize: 28,
+  appTitle: {
+    fontSize: 42,
     fontWeight: "bold",
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "600",
     color: Colors.primary,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: Colors.grey,
+    opacity: 0.8,
   },
   formContainer: {
     paddingHorizontal: 24,

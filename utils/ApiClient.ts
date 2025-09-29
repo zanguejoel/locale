@@ -1,6 +1,6 @@
 import { ApiResponse, ApisauceInstance, create } from 'apisauce';
 import { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-const API_URL_PROD = "https://jaiime-dev.app.neptunetech.io";
+const API_URL_PROD = "https://odyssey-dev.app.neptunetech.io";
 // Types and Interfaces
 interface Config {
   MAX_RETRIES: number;

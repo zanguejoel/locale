@@ -33,7 +33,7 @@ polyfillFetch();
 polyfillEncoding();
 polyfillReadableStream();
 
-const BASE_URL = 'https://jaiime-dev.app.neptunetech.io';
+const BASE_URL = 'https://odyssey-dev.app.neptunetech.io';
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 1200;

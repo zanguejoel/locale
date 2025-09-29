@@ -85,7 +85,9 @@ const Page = () => {
             {rawPage.map((item, index) => renderRaw(item, index))}
           </View>
           <View style={styles.footer}>
-            <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.logo} />
+            {/* Logo commented out */}
+            {/* <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} /> */}
+            <Text style={styles.appTitle}>Odyssey</Text>
             <Text style={styles.appVersion}>App Version 1.0.0</Text>
           </View>
         </View>
@@ -157,11 +159,19 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   footer: {
     alignItems: 'center',
     marginBottom: 80,
+    paddingTop: 20,
   },
   logo: {
     width: 150,
     height: 75,
     marginBottom: 10,
+  },
+  appTitle: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    marginBottom: 10,
+    letterSpacing: 1,
   },
   appLogoText: {
     fontSize: 24,

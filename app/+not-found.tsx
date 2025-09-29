@@ -36,7 +36,7 @@ export default function NotFoundScreen() {
 
         <View style={styles.footer}>
           <Image
-            source={require('@/assets/images/Jaiimelogodark.png')}
+            source={require('@/assets/images/Odysseylogodark.png')}
             style={styles.logo}
             resizeMode="contain"
           />

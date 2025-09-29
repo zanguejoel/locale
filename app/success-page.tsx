@@ -42,8 +42,10 @@ const SuccessPage = () => {
         <View style={styles.container} >
             <SafeAreaView style={styles.content}>
                 <View style={styles.headerContainer}>
-                    <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.logo} />
-                    <View style={{ flex: 1, justifyContent: 'center', bottom: 60 }}>
+                    {/* Logo commented out */}
+                    {/* <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} /> */}
+                    <Text style={styles.appTitle}>Odyssey</Text>
+                    <View style={{ flex: 1, justifyContent: 'center', bottom: 20 }}>
                         <View style={styles.titleContainer}>
                             <Text style={styles.title}>Success!</Text>
                             <Text style={styles.subtitle}>
@@ -80,9 +82,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     headerContainer: {
         flex: 1,
         alignItems: 'center',
-        marginTop: 60,
-        marginBottom: 40,
+        marginTop: 80,
+        marginBottom: 50,
         paddingHorizontal: 24,
+        paddingVertical: 20,
     },
     resendContainerTimer: {
         flexDirection: 'row',
@@ -96,8 +99,15 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         height: 75,
         marginBottom: 20,
     },
+    appTitle: {
+        fontSize: 42,
+        fontWeight: "bold",
+        marginBottom: 8,
+        letterSpacing: 1,
+        color: theme.colors.primary,
+    },
     title: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: "bold",
         color: theme.colors.primary,
         marginBottom: 12,

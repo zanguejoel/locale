@@ -34,8 +34,8 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="jaiime"/>
-        <data android:scheme="com.neptunetech.Jaiime"/>
+        <data android:scheme="odyssey"/>
+        <data android:scheme="com.neptunetech.Odyssey"/>
       </intent-filter>
 
     </activity>

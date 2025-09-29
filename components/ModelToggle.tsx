@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 
 interface ModelToggleProps {
-  onSelectModel: (modelType: 'local' | 'Jaiime') => void;
+  onSelectModel: (modelType: 'local' | 'Odyssey') => void;
   initialState?: boolean;
   disableLocal?: boolean;
 }
@@ -20,7 +20,7 @@ const ModelToggle: React.FC<ModelToggleProps> = ({
 
   const handleToggle = (local: boolean): void => {
     setIsLocal(local);
-    onSelectModel(local ? 'local' : 'Jaiime');
+    onSelectModel(local ? 'local' : 'Odyssey');
     
     Animated.timing(animation, {
       toValue: local ? 0 : 1,
@@ -70,13 +70,13 @@ const ModelToggle: React.FC<ModelToggleProps> = ({
             styles.optionText, 
             { color: !isLocal ? '#FFFFFF' : theme.isDark ? '#BBBBBB' : '#9E9E9E' }
           ]}>
-            Jaiime
+          Odyssey
           </Text>
         </TouchableOpacity>
       </View>
       
       <Text style={[styles.modelInfo, { color: theme.isDark ? '#BBBBBB' : '#757575' }]}>
-        {isLocal ? 'Using local model (works offline)' : 'Using Jaiime (more powerful)'}
+        {isLocal ? 'Using local model (works offline)' : 'Using Odyssey (more powerful)'}
       </Text>
     </View>
   );
@@ -123,5 +123,5 @@ export default ModelToggle;
 // Usage:
 // <ModelToggle 
 //   initialState={true}
-//   onSelectModel={(modelType: 'local' | 'Jaiime') => console.log(`Selected: ${modelType}`)} 
+//   onSelectModel={(modelType: 'local' | 'Odyssey') => console.log(`Selected: ${modelType}`)} 
 // />

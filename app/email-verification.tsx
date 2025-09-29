@@ -61,8 +61,10 @@ const EmailVerification = () => {
                 )}
 
                 <View style={styles.headerContainer}>
-                    <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.logo} />
-                    <Text style={styles.title}>Email verification</Text>
+                    {/* Logo commented out */}
+                    {/* <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} /> */}
+                    <Text style={styles.appTitle}>Odyssey</Text>
+                    <Text style={styles.title}>Email Verification</Text>
                     <Text style={styles.subtitle}>
                         A verification code has been sent to your inbox.
                     </Text>
@@ -113,9 +115,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     headerContainer: {
         alignItems: 'center',
-        marginTop: 60,
-        marginBottom: 40,
+        marginTop: 80,
+        marginBottom: 50,
         paddingHorizontal: 24,
+        paddingVertical: 20,
     },
     resendContainerTimer: {
         flexDirection: 'row',
@@ -127,10 +130,17 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         height: 75,
         marginBottom: 20,
     },
-    title: {
-        fontSize: 28,
+    appTitle: {
+        fontSize: 42,
         fontWeight: "bold",
+        marginBottom: 8,
+        letterSpacing: 1,
         color: theme.colors.primary,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: "600",
+        color: theme.colors.text,
         marginBottom: 12,
         textAlign: 'center',
     },
@@ -142,10 +152,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         lineHeight: 22,
     },
     subtitle: {
-        fontSize: 16,
+        fontSize: 18,
         color: theme.colors.text,
         textAlign: 'center',
-        lineHeight: 22,
+        lineHeight: 24,
+        opacity: 0.8,
     },
     formContainer: {
         paddingHorizontal: 24,

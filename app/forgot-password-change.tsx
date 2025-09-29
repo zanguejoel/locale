@@ -91,13 +91,15 @@ const ForgotPasswordChange = () => {
         )}
 
         <View style={styles.headerContainer}>
-          <Image
-            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
+          {/* Logo commented out */}
+          {/* <Image
+            source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
             style={styles.logo}
-          />
-          <Text style={[styles.title, { color: theme.colors.text }]}>Forgot Password?</Text>
+          /> */}
+          <Text style={[styles.appTitle, { color: theme.colors.primary }]}>Odyssey</Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Reset Password</Text>
           <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-            Enter your email address to receive password reset instructions
+            Enter your new password below
           </Text>
         </View>
 
@@ -149,25 +151,33 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   headerContainer: {
     alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 40,
+    marginTop: 80,
+    marginBottom: 50,
     paddingHorizontal: 24,
+    paddingVertical: 20,
   },
   logo: {
     width: 150,
     height: 75,
     marginBottom: 20,
   },
-  title: {
-    fontSize: 28,
+  appTitle: {
+    fontSize: 42,
     fontWeight: "bold",
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "600",
     marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
+    opacity: 0.8,
   },
   formContainer: {
     paddingHorizontal: 24,

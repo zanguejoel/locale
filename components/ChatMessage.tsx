@@ -395,7 +395,7 @@ const ChatMessage = memo(({
     }
 
     // Ensure URL is properly encoded
-    const processedUrl = imageData ? instructionForImageChatDisplay() : `https://app-dev.jaiime.com/api/local-media?file=${encodeURI(files[0].file_path)}`;
+    const processedUrl = imageData ? instructionForImageChatDisplay() : `https://app-dev.odyssey.com/api/local-media?file=${encodeURI(files[0].file_path)}`;
 
     return (
       <ContextMenu.Root>

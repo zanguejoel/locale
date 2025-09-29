@@ -405,10 +405,11 @@ const Login = () => {
               }
             ]}
           >
-            <Image
-              source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
+            {/* Logo commented out */}
+            {/* <Image
+              source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
               style={styles.logo}
-            />
+            /> */}
 
             {/* Chat bubbles animation */}
             <View style={styles.bubbleContainer}>
@@ -432,7 +433,8 @@ const Login = () => {
               </Animated.View>
             </View>
 
-            <Text style={[styles.title]}>Welcome Back</Text>
+            <Text style={[styles.title]}>Odyssey</Text>
+            <Text style={[styles.welcomeText]}>Welcome Back</Text>
 
             <View style={styles.typingContainer}>
               <Text style={[styles.subtitle]}>Sign in to continue</Text>
@@ -539,19 +541,27 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   headerContainer: {
     alignItems: "center",
-    marginTop: 60,
-    marginBottom: 40,
+    marginTop: 80,
+    marginBottom: 50,
     position: "relative",
+    paddingVertical: 20,
   },
   logo: {
     width: 180,
     height: 100,
   },
   title: {
-    fontSize: 28,
+    fontSize: 42,
     fontWeight: "bold",
     marginBottom: 8,
-    color: theme.colors.text
+    color: theme.colors.primary,
+    letterSpacing: 1,
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: "600",
+    marginBottom: 8,
+    color: theme.colors.text,
   },
   typingContainer: {
     flexDirection: 'row',
@@ -559,9 +569,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     marginRight: 8,
-    color: theme.colors.text
+    color: theme.colors.text,
+    opacity: 0.8,
   },
   typingDots: {
     flexDirection: 'row',
@@ -664,9 +675,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   bubble: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -675,43 +686,43 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
-    right: -10,
-    top: 20,
+    right: -15,
+    top: -10,
   },
   bubble2: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    left: -10,
+    top: 20,
+  },
+  bubble3: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    left: 0,
-    top: 50,
+    left: 30,
+    top: 70,
   },
-  bubble3: {
+  bubble4: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    right: 20,
+    top: 60,
+  },
+  bubble5: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    left: 40,
-    top: 90,
+    right: 60,
+    top: 5,
   },
-  bubble4: {
+  bubble6: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    right: 30,
-    top: 80,
-  },
-  bubble5: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    right: 70,
-    top: 30,
-  },
-  bubble6: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    left: 70,
-    top: 40,
+    left: 60,
+    top: 15,
   },
   // Removed orbit-related styles
 });

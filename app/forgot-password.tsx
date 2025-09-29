@@ -99,10 +99,12 @@ const ForgotPassword = () => {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.successContainer}>
-          <Image
-            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
+          {/* Logo commented out */}
+          {/* <Image
+            source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
             style={styles.logo}
-          />
+          /> */}
+          <Text style={[styles.appTitle, { color: theme.colors.primary }]}>Odyssey</Text>
           <Text style={[styles.title, { color: theme.colors.text }]}>Check Your Email</Text>
           <Text style={[styles.successMessage, { color: theme.colors.text }]}>
             We've sent verification code to:
@@ -174,10 +176,12 @@ const ForgotPassword = () => {
         )}
 
         <View style={styles.headerContainer}>
-          <Image
-            source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')}
+          {/* Logo commented out */}
+          {/* <Image
+            source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
             style={styles.logo}
-          />
+          /> */}
+          <Text style={[styles.appTitle, { color: theme.colors.primary }]}>Odyssey</Text>
           <Text style={[styles.title, { color: theme.colors.text }]}>Forgot Password?</Text>
           <Text style={[styles.subtitle, { color: theme.colors.text }]}>
             Enter your email address to receive verification code
@@ -230,9 +234,10 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 40,
+    marginTop: 80,
+    marginBottom: 50,
     paddingHorizontal: 24,
+    paddingVertical: 20,
   },
   resendContainerTimer: {
     flexDirection: 'row',
@@ -244,9 +249,15 @@ const styles = StyleSheet.create({
     height: 75,
     marginBottom: 20,
   },
-  title: {
-    fontSize: 28,
+  appTitle: {
+    fontSize: 42,
     fontWeight: "bold",
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "600",
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -257,9 +268,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
+    opacity: 0.8,
   },
   formContainer: {
     paddingHorizontal: 24,
@@ -293,7 +305,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 80,
+    paddingVertical: 20,
   },
   successMessage: {
     fontSize: 16,

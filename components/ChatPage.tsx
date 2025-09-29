@@ -243,7 +243,7 @@ const ChatPage = () => {
     <View style={styles.pageContainer}>
       <Stack.Screen options={{
         headerTitleAlign: 'center',
-        headerTitle: () => <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.logo} />
+        // headerTitle: () => <Image source={theme.isDark ? require('@/assets/images/') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} />
       }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -274,7 +274,8 @@ const ChatPage = () => {
                 }
               ]}
             >
-              <Image source={theme.isDark ? require('@/assets/images/Jaiimelogodark.png') : require('@/assets/images/Jaiimelogowhite.png')} style={styles.image} />
+             {/*  <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.image} /> */}
+             <Text style={styles.logoText}>Odyssey</Text>
               <Text style={styles.welcomeText}>How can I assist you today?</Text>
               <Text style={{ color: theme.isDark ? 'white': 'black' }}>{isLocal? '(Local Model)' : ''}</Text>
             </Animated.View>
@@ -342,6 +343,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logoText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: theme.colors.text,
   },
   selectedFileContainer: {
     marginBottom: 4,

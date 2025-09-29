@@ -76,7 +76,7 @@ const Layout = () => {
 
 
         <Drawer.Screen name="new" component={ChatPage} options={{
-          title: 'Jaiime AI',
+          title: 'Odyssey',
           headerRight: () => (
             <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
               <Ionicons
@@ -90,7 +90,7 @@ const Layout = () => {
 
         <Drawer.Screen name="[id]"
           component={ChatPageId} options={{
-            title: 'Jaiime AI',
+            title: 'Odyssey',
             headerRight: () => (
               <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
                 <Ionicons

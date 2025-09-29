@@ -4,7 +4,7 @@ import Markdown, {
   MarkdownProps,
   RenderRules,
 } from 'react-native-markdown-display';
-import { StyleSheet, Text, View, Image, Platform } from 'react-native';
+import { StyleSheet, Text, View, Image, Platform, Linking } from 'react-native';
 import Colors from '@/constants/Colors';
 import { Theme } from '@/constants/Types';
 import { useTheme } from './useTheme';
@@ -89,7 +89,7 @@ const useMarkdownDisplay = () => {
   );
 
   // Custom styles for markdown elements with improved spacing and readability
-  const getStyles = (theme: Theme) => StyleSheet.create({
+  const getStyles = (theme: { isDark: boolean; colors: Theme['colors'] }) => StyleSheet.create({
     // Base styles
     body: {
       color: theme.colors.text,
@@ -211,38 +211,38 @@ const useMarkdownDisplay = () => {
 
     code_inline: {
       fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-      backgroundColor: '#f0f0f0',
+      backgroundColor: theme.isDark ? '#2a2a2a' : '#f0f0f0',
       borderRadius: 3,
       paddingHorizontal: 4,
       paddingVertical: 1,
       fontSize: 13,
-      color: '#333',
+      color: theme.isDark ? '#e0e0e0' : '#333',
     },
     code_block: {
       fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-      backgroundColor: '#f5f5f5',
+      backgroundColor: theme.isDark ? '#1e1e1e' : '#f5f5f5',
       borderRadius: 6,
       padding: 10,
       marginVertical: 8,
       fontSize: 13,
       lineHeight: 18,
-      color: '#333',
+      color: theme.isDark ? '#d4d4d4' : '#333',
       width: '100%',
       borderWidth: 1,
-      borderColor: '#e0e0e0',
+      borderColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
     },
     fence: {
       fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-      backgroundColor: '#f5f5f5',
+      backgroundColor: theme.isDark ? '#1e1e1e' : '#f5f5f5',
       borderRadius: 6,
       padding: 10,
       marginVertical: 8,
       fontSize: 13,
       lineHeight: 18,
-      color: '#333',
+      color: theme.isDark ? '#d4d4d4' : '#333',
       width: '100%',
       borderWidth: 1,
-      borderColor: '#e0e0e0',
+      borderColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
     },
 
     // Links
@@ -281,19 +281,19 @@ const useMarkdownDisplay = () => {
     // Tables
     table: {
       borderWidth: 1,
-      borderColor: '#e0e0e0',
+      borderColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
       borderRadius: 4,
       marginVertical: 10,
       width: '100%',
       overflow: 'hidden',
     },
     thead: {
-      backgroundColor: '#f7f7f7',
+      backgroundColor: theme.isDark ? '#2a2a2a' : '#f7f7f7',
       borderBottomWidth: 1,
-      borderBottomColor: '#e0e0e0',
+      borderBottomColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
     },
     tbody: {
-      backgroundColor: '#ffffff',
+      backgroundColor: theme.isDark ? '#1a1a1a' : '#ffffff',
     },
     th: {
       padding: 8,
@@ -301,7 +301,7 @@ const useMarkdownDisplay = () => {
     },
     tr: {
       borderBottomWidth: 0.5,
-      borderBottomColor: '#e0e0e0',
+      borderBottomColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
       flexDirection: 'row',
     },
     td: {
@@ -311,7 +311,7 @@ const useMarkdownDisplay = () => {
 
     // Horizontal rule
     hr: {
-      backgroundColor: '#e0e0e0',
+      backgroundColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
       height: 1,
       width: '100%',
       marginVertical: 12,
@@ -326,7 +326,9 @@ const useMarkdownDisplay = () => {
     },
   });
 
-  const theme = useTheme();
+  const themeData = useTheme();
+  // Type assertion to access isDark property that exists in runtime but not in type
+  const theme = themeData as unknown as { isDark: boolean; colors: Theme['colors'] };
   const markdownStyles = getStyles(theme);
 
   const customRules: RenderRules = {
@@ -360,6 +362,14 @@ const useMarkdownDisplay = () => {
         />
       );
     },
+    link: (node, children, parent, styles) => {
+      return (
+        <Text key={node.key} style={styles.link} onPress={() => Linking.openURL(node.attributes.href)}>
+          {children}
+        </Text>
+      );
+    }
+    
   };
 
   // Render function that returns a configured Markdown component

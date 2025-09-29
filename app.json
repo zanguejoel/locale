@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Jaiime",
-    "slug": "Jaiime",
+    "name": "Odyssey",
+    "slug": "Odyssey",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "jaiime",
+    "scheme": "odyssey",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.neptunetech.Jaiime"
+      "bundleIdentifier": "com.neptunetech.Odyssey"
     },
     "android": {
       "adaptiveIcon": {
