@@ -58,7 +58,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password
       });
       if (!response.ok) {
-        throw response.data;
+        const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Login failed';
+        throw errorMessage;
       }
       if (!response.data?.token) {
         throw { detail: "Error, Try again later." }
@@ -90,7 +91,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         router.replace(`/success-page?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`)
       } else {
-        throw JSON.stringify(response.data.detail)
+        // Handle error properly when response.data is null or doesn't have detail
+        const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Email verification failed';
+        throw errorMessage;
       }
 
     } catch (error) {
@@ -117,7 +120,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${email}`);
 
       if (!response.ok) {
-        throw response.data;
+        const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Reset password request failed';
+        throw errorMessage;
       }
       if (!response.data?.token) {
         throw { detail: "Error, Try again later." }
@@ -137,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         last_name: formData.lastName,
         username: `${formData.firstName}${formData.lastName}`,
         email: formData.email,
-        phone: formData.phone,
+        phone: formData.phone?.length > 5 ? formData.phone : undefined,
         password: formData.password,
         confirmPassword: formData.confirmPassword
       }, {
@@ -150,7 +154,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         router.push(`/email-verification?email=${encodeURIComponent(formData?.email)}&password=${encodeURIComponent(formData.password)}`)
       } else {
-        throw JSON.stringify(response.data.detail)
+        // Handle error properly when response.data is null or doesn't have detail
+        const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Registration failed';
+        throw errorMessage;
       }
     } catch (error) {
       console.error("Sign up error: ", error);
@@ -202,7 +208,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         return response.data;
       } else {
-        throw response.data
+        const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Password change failed';
+        throw errorMessage;
       }
 
 

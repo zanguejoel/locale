@@ -99,11 +99,9 @@ const Registration = () => {
       errors.email = "Email is invalid";
     }
 
-    // Validate phone - checking only the number part without the country code
+    // Validate phone - now optional, only validate if provided
     const phoneWithoutCode = formData.phone.replace(/\D/g, '');
-    if (!phoneWithoutCode) {
-      errors.phone = "Phone number is required";
-    } else if (!phoneRegex.test(phoneWithoutCode)) {
+    if (phoneWithoutCode && !phoneRegex.test(phoneWithoutCode)) {
       errors.phone = "Please enter a valid phone number";
     }
 
@@ -171,11 +169,11 @@ const Registration = () => {
 
     if (validateForm()) {
       try {
-        // Combine the country code with the phone number
-        const completePhoneNumber = `${selectedCountry.dial_code}${formData.phone.replace(/\D/g, '')}`;
+        // Only add phone number if provided
+        const phoneWithoutCode = formData.phone.replace(/\D/g, '');
         const updatedFormData = {
           ...formData,
-          phone: completePhoneNumber
+          phone: phoneWithoutCode ? `${selectedCountry.dial_code}${phoneWithoutCode}` : ''
         };
 
         await signUp(updatedFormData, router);
@@ -207,7 +205,6 @@ const Registration = () => {
               style={styles.logo}
             /> */}
             <Text style={[styles.appTitle, { color: theme.colors.primary }]}>Odyssey</Text>
-            <Text style={[styles.title, { color: theme.colors.text }]}>Create Account</Text>
             <Text style={[styles.subtitle, { color: theme.colors.text }]}>Sign up to get started</Text>
           </View>
 
@@ -261,7 +258,7 @@ const Registration = () => {
                 <Ionicons name="call-outline" size={20} color={theme.colors.text} style={styles.phoneIcon} />
                 <TextInput
                   style={[styles.phoneInput, { color: theme.colors.text }]}
-                  placeholder="Phone Number"
+                  placeholder="Phone Number (Optional)"
                   placeholderTextColor={theme.colors.greyLight}
                   value={formData.phone}
                   onChangeText={(value) => handleInputChange("phone", value)}
