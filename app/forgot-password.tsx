@@ -99,12 +99,10 @@ const ForgotPassword = () => {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.successContainer}>
-          {/* Logo commented out */}
-          {/* <Image
+          <Image
             source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
             style={styles.logo}
-          /> */}
-          <Text style={[styles.appTitle, { color: theme.colors.primary }]}>Odyssey</Text>
+          />
           <Text style={[styles.title, { color: theme.colors.text }]}>Check Your Email</Text>
           <Text style={[styles.successMessage, { color: theme.colors.text }]}>
             We've sent verification code to:
@@ -176,12 +174,10 @@ const ForgotPassword = () => {
         )}
 
         <View style={styles.headerContainer}>
-          {/* Logo commented out */}
-          {/* <Image
+          <Image
             source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
             style={styles.logo}
-          /> */}
-          <Text style={[styles.appTitle, { color: theme.colors.primary }]}>Odyssey</Text>
+          />
           <Text style={[styles.title, { color: theme.colors.text }]}>Forgot Password?</Text>
           <Text style={[styles.subtitle, { color: theme.colors.text }]}>
             Enter your email address to receive verification code
@@ -245,7 +241,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   logo: {
-    width: 150,
+    width: 180,
+    resizeMode: 'contain',
     height: 75,
     marginBottom: 20,
   },
@@ -268,7 +265,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
     opacity: 0.8,

@@ -199,12 +199,10 @@ const Registration = () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.headerContainer}>
-            {/* Logo commented out */}
-            {/* <Image
+            <Image
               source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
               style={styles.logo}
-            /> */}
-            <Text style={[styles.appTitle, { color: theme.colors.primary }]}>Odyssey</Text>
+            />
             <Text style={[styles.subtitle, { color: theme.colors.text }]}>Sign up to get started</Text>
           </View>
 
@@ -367,11 +365,12 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: 'center',
-    marginTop: 60,
+    // marginTop: 30,
     marginBottom: 30,
     paddingVertical: 20,
   },
   logo: {
+    resizeMode: 'contain',
     width: 180,
     height: 100,
   },
@@ -388,7 +387,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: Colors.grey,
     opacity: 0.8,
   },

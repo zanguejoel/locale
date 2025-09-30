@@ -65,7 +65,7 @@ const theme: AppTheme = {
     tint: tintColorDark,
     tabIconDefault: "#ccc",
     tabIconSelected: tintColorDark,
-    primary: "#51b0cb",
+    primary: "rgb(81, 176, 203)",
     light: '#fff',
     chatIcons: '#fff',
     chatInputBg: '#242424',

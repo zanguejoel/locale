@@ -174,7 +174,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
     opacity: 0.8,

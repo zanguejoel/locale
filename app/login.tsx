@@ -406,10 +406,10 @@ const Login = () => {
             ]}
           >
             {/* Logo commented out */}
-            {/* <Image
+            <Image
               source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
               style={styles.logo}
-            /> */}
+            /> 
 
             {/* Chat bubbles animation */}
             <View style={styles.bubbleContainer}>
@@ -433,16 +433,12 @@ const Login = () => {
               </Animated.View>
             </View>
 
-            <Text style={[styles.title]}>Odyssey</Text>
+          
             <Text style={[styles.welcomeText]}>Welcome Back</Text>
 
             <View style={styles.typingContainer}>
               <Text style={[styles.subtitle]}>Sign in to continue</Text>
-              <View style={styles.typingDots}>
-                <Animated.View style={[styles.typingDot, { opacity: dotOpacity1 }]} />
-                <Animated.View style={[styles.typingDot, { opacity: dotOpacity2 }]} />
-                <Animated.View style={[styles.typingDot, { opacity: dotOpacity3 }]} />
-              </View>
+             
             </View>
           </Animated.View>
 
@@ -503,7 +499,7 @@ const Login = () => {
                 style={[defaultStyles.btn, styles.signInButton]}
                 onPress={onSignInPress}
               >
-                <Text style={{ color: '#fff' }}>Sign In</Text>
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Sign In</Text>
                 <Ionicons name="arrow-forward-outline" size={18} color="#fff" />
               </TouchableOpacity>
 
@@ -549,6 +545,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   logo: {
     width: 180,
     height: 100,
+    resizeMode: 'contain',
   },
   title: {
     fontSize: 42,
@@ -569,7 +566,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: 'center',
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     marginRight: 8,
     color: theme.colors.text,
     opacity: 0.8,
