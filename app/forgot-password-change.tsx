@@ -91,12 +91,10 @@ const ForgotPasswordChange = () => {
         )}
 
         <View style={styles.headerContainer}>
-          {/* Logo commented out */}
-          {/* <Image
+          <Image
             source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
             style={styles.logo}
-          /> */}
-          <Text style={[styles.appTitle, { color: theme.colors.primary }]}>Odyssey</Text>
+          />
           <Text style={[styles.title, { color: theme.colors.text }]}>Reset Password</Text>
           <Text style={[styles.subtitle, { color: theme.colors.text }]}>
             Enter your new password below
@@ -157,15 +155,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     paddingVertical: 20,
   },
   logo: {
-    width: 150,
+    width: 180,
+    resizeMode: 'contain',
     height: 75,
     marginBottom: 20,
-  },
-  appTitle: {
-    fontSize: 42,
-    fontWeight: "bold",
-    marginBottom: 8,
-    letterSpacing: 1,
   },
   title: {
     fontSize: 24,
