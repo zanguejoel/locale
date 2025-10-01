@@ -94,7 +94,7 @@ const Layout = () => {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
-  const { user, isLoading, isSignedIn } = useAuth();
+  const { user, isInitialLoading, isSignedIn } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const theme = useTheme();
@@ -111,7 +111,7 @@ const Layout = () => {
   }, [loaded]);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isInitialLoading) return;
 
     // const notInAuthGroup = ["login", "registration"].includes(segments[0]);
 
@@ -122,7 +122,7 @@ const Layout = () => {
     }
   }, [isSignedIn]);
 
-  if (!loaded || isLoading) {
+  if (!loaded || isInitialLoading) {
     return <Slot />;
   }
 

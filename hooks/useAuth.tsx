@@ -23,31 +23,36 @@ interface AuthContextType {
   resetPassword: (email: string, code: string, recaptchaToken: string) => Promise<any>;
   signOut: () => void;
   isLoading: boolean;
+  isInitialLoading: boolean;
   isSignedIn: boolean;
   forgotPassword: (e: string) => Promise<any>;
   confirmEmail: (e: string, s: string, r: any, p: string) => {}
   updateUser: (formatData: FormData, captchaToken: string, router: any) => Promise<void>;
   changePassword: (oldPassword: string, newP: string, confirm: string) => void;
   confirmCode: (code: string) => void;
-  handleForgotPasswordChange: (a: string, s: string, r: any) => void
+  handleForgotPasswordChange: (email: string, token: string, newPassword: string, router: any) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useMMKVStorage<User | null>('user', null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSignedIn, setIsSignedIn] = useState(false);
 
+  // Set initial loading state only once on mount
   useEffect(() => {
-    // Initial loading state is handled by useMMKVStorage
-    setIsLoading(false);
+    setIsInitialLoading(false);
+  }, []);
+
+  // Handle user authentication state changes
+  useEffect(() => {
     if (!user?.user_id) {
       setIsSignedIn(false);
     } else {
       api.setAuthToken(user?.token);
       setIsSignedIn(true);
     }
-
   }, [user]);
 
   const signIn = async (email: string, password: string) => {
@@ -285,7 +290,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser, changePassword, confirmCode, handleForgotPasswordChange }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isInitialLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser, changePassword, confirmCode, handleForgotPasswordChange }}>
       {children}
     </AuthContext.Provider>
   );
