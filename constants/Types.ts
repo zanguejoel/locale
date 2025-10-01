@@ -15,6 +15,7 @@ export interface UserTeam {
   roles: Role[];
 }
 export interface Theme {
+  isDark?: boolean;
   colors: {
     text: string;
     background: string;

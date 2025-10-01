@@ -21,7 +21,7 @@ import { Theme } from "@/constants/Types";
 
 interface ErrorType {
   email?: string;
-  code?: string
+  token?: string
 }
 
 const ForgotPasswordChange = () => {
@@ -42,7 +42,7 @@ const ForgotPasswordChange = () => {
     confirmNewPassword: false,
   });
 
-  const { email } = useLocalSearchParams();
+  const { email, token } = useLocalSearchParams();
 
 
   const passwordFields = [
@@ -65,9 +65,10 @@ const ForgotPasswordChange = () => {
     try {
       setLoading(true);
       await handleForgotPasswordChange(
-        email,
+        email as string,
+        token as string,
         formData.newPassword,
-        router
+        router 
       );
     } catch (err: any) {
       Alert.alert("Error", getErrorMessage(err));

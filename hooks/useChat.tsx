@@ -29,7 +29,7 @@ import api from '@/utils/ApiClient';
 import { Message, Role } from '@/utils/Interfaces';
 
 
-import { processStream } from '@/utils/ChatStream';
+import { processStream, filterSpecialTokens } from '@/utils/ChatStream';
 import { Keyboard, Alert, Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import * as FileSystem from 'expo-file-system';
@@ -37,7 +37,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuth } from './useAuth';
 
 // Import API_URL_PROD from ApiClient configuration
-const API_URL_PROD = "https://api-alpha.odysseytech.ai";
+const API_URL_PROD = "https://api.odysseytech.ai";
 const BASE_URL = API_URL_PROD;
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -134,8 +134,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if(llm.response) {
-
-      setStream(llm.response);
+      // Filter out special tokens like <|python_tag|>, <|end|>, etc.
+      const filteredResponse = filterSpecialTokens(llm.response);
+      setStream(filteredResponse);
     }
   }, [llm.response]);
 

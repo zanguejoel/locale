@@ -1,6 +1,6 @@
 import { ApiResponse, ApisauceInstance, create } from 'apisauce';
 import { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-export const API_URL_PROD = "https://api-alpha.odysseytech.ai";
+export const API_URL_PROD = "https://api.odysseytech.ai";
 // Types and Interfaces
 interface Config {
   MAX_RETRIES: number;
@@ -76,7 +76,10 @@ class LRUCache<K, V> {
     if (this.#cache.has(key)) {
       this.#cache.delete(key);
     } else if (this.#cache.size >= this.#maxSize) {
-      this.#cache.delete(this.#cache.keys().next().value);
+      const firstKey = this.#cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.#cache.delete(firstKey);
+      }
     }
     this.#cache.set(key, value);
   }

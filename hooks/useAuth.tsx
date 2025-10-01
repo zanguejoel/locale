@@ -20,13 +20,13 @@ interface AuthContextType {
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (formatData: FormData, router: any) => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, code: string, recaptchaToken: string) => Promise<any>;
   signOut: () => void;
   isLoading: boolean;
   isSignedIn: boolean;
-  forgotPassword: (e: string) => {}
+  forgotPassword: (e: string) => Promise<any>;
   confirmEmail: (e: string, s: string, r: any, p: string) => {}
-  updateUser: (formatData: FormData,) => Promise<void>;
+  updateUser: (formatData: FormData, captchaToken: string, router: any) => Promise<void>;
   changePassword: (oldPassword: string, newP: string, confirm: string) => void;
   confirmCode: (code: string) => void;
   handleForgotPasswordChange: (a: string, s: string, r: any) => void
@@ -104,20 +104,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const forgotPassword = async (email: string) => {
+    // setIsLoading(true);
     try {
-      const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${email}`);
-
+      const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${encodeURIComponent(email)}`);
+      
+     //  alert(JSON.stringify(response.ok ? 'true' : 'false'));
       return response;
 
 
     } catch (error) {
       console.error('Forgot password error:', JSON.stringify(error))
+    } finally {
+      // setIsLoading(false);
     }
   }
 
   const confirmCode = async (email: string) => {
+    setIsLoading(true);
     try {
-      const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${email}`);
+      const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${encodeURIComponent(email)}`);
 
       if (!response.ok) {
         const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Reset password request failed';
@@ -129,6 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error('Forgot password error:', JSON.stringify(error))
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -146,7 +153,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         confirmPassword: formData.confirmPassword
       }, {
         headers: {
-          "X-Mobile-Recaptcha-Token": "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1",
           "Content-Type": "application/json",
         }
       });
@@ -168,6 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const updateUser = async (formData: FormData, captchaToken: string, router: any) => {
+    setIsLoading(true);
     try {
       const response = await api.patch<{ token: string } | any>(`/auth/update-user`, {
         first_name: formData.firstName,
@@ -193,6 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const changePassword = async (oldPassword: string, newPassword: string, confirmPassword: string) => {
+    setIsLoading(true);
     try {
       const response = await api.patch<{ token: string } | any>(`/auth/change-password?`, {
         old_password: oldPassword,
@@ -221,26 +229,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string, code: string, recaptchaToken: string) => {
     try {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      const response = await api.patch<any>(
+        `/auth/forgot-password/redeem`,
+        {
+          email,
+          code
+        }
+      );
+      
+      if (!response.ok) {
+        const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Password reset failed';
+        throw errorMessage;
+      }
+      
+      return { data: response.data, status: response.status };
     } catch (error) {
-      console.error('Sign up error:', error);
+      console.error('Reset password error:', error);
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleForgotPasswordChange = async (email: string, newPassword: string, router: any) => {
+
+
+  const handleForgotPasswordChange = async (email: string, token: string, newPassword: string, router: any) => {
+    setIsLoading(true);
     try {
       const response = await api.patch<{ token: string } | any>(`/auth/forgot-password/change`, {
         new_password: newPassword,
       }, {
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `${token}`
         }
       });
       if (response.ok) {

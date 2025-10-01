@@ -24,7 +24,7 @@ interface ErrorType {
 const TIMER_DURATION = 60;
 
 const ForgotPassword = () => {
-  const { isLoading, forgotPassword } = useAuth();
+  const { isLoading, forgotPassword, resetPassword } = useAuth();
   const theme = useTheme();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<ErrorType>({});
@@ -56,6 +56,7 @@ const ForgotPassword = () => {
   };
 
   const handleResetPassword = async () => {
+    // e.preventDefault();
     setIsSubmitted(true);
 
     if (validateEmail()) {
@@ -75,22 +76,33 @@ const ForgotPassword = () => {
         setError({ code: err })
         Alert.alert(
           "Error",
-          err.message || "Failed to send reset instructions. Please try again."
+          err || "Failed to send reset instructions. Please try again."
         );
       }
     }
   };
 
-  const handleValidCode = async () => {
+  const handleValidCode = async (e: any) => {
+    // e.preventDefault();
+    if (!code) {
+      setError({ code: "Code is required" });
+      return;
+    }
+
     try {
-      // await confirmCode(code);
-      router.replace(`/forgot-password-change?email=${email}`)
-      setResetSent(true);
+      const recaptchaToken = "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1";
+      const result = await resetPassword(email, code, recaptchaToken);
+        // alert(JSON.stringify(result?.data));
+      if (result?.data) {
+      
+        // Code validated successfully, navigate to password change page
+        router.replace(`/forgot-password-change?email=${encodeURIComponent(email)}&token=${encodeURIComponent(result?.data?.detail?.token)}`);
+      }
     } catch (err: any) {
-      setError({ code: err })
+      setError({ code: err });
       Alert.alert(
         "Error",
-        err.message || "Failed to send reset instructions. Please try again."
+        err?.message || err || "Invalid code. Please try again."
       );
     }
   }
@@ -197,14 +209,13 @@ const ForgotPassword = () => {
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
-            theme={theme}
           />
           {error.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{error.email}</Text>}
 
           <View style={styles.btnContainer}>
             <TouchableOpacity
               style={[defaultStyles.btn, styles.resetButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handleResetPassword}
+              onPress={() => handleResetPassword()}
             >
               <Text style={styles.buttonText}>Send Reset Code</Text>
             </TouchableOpacity>

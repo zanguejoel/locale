@@ -72,53 +72,80 @@ const Registration = () => {
     confirmPassword: "",
   });
 
-  const validateForm = () => {
-    let errors: ErrorType = {};
-    // Using a more flexible regex for international phone numbers
+  // Validate a specific field
+  const validateField = (field: keyof FormData, value: string, allFormData: FormData): string | undefined => {
     const phoneRegex = /^\d{4,15}$/;
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-    // Validate first name
-    if (!formData.firstName.trim()) {
-      errors.firstName = "First name is required";
-    } else if (formData.firstName.length < 2) {
-      errors.firstName = "First name must be at least 2 characters";
+    switch (field) {
+      case 'firstName':
+        if (!value.trim()) {
+          return "First name is required";
+        } else if (value.length < 2) {
+          return "First name must be at least 2 characters";
+        }
+        break;
+
+      case 'lastName':
+        if (!value.trim()) {
+          return "Last name is required";
+        } else if (value.length < 2) {
+          return "Last name must be at least 2 characters";
+        }
+        break;
+
+      case 'email':
+        if (!value) {
+          return "Email is required";
+        } else if (!/\S+@\S+\.\S+/.test(value)) {
+          return "Email is invalid";
+        }
+        break;
+
+      case 'phone':
+        const phoneWithoutCode = value.replace(/\D/g, '');
+        if (phoneWithoutCode && !phoneRegex.test(phoneWithoutCode)) {
+          return "Please enter a valid phone number";
+        }
+        break;
+
+      case 'password':
+        if (!value) {
+          return "Password is required";
+        } else if (!passwordRegex.test(value)) {
+          return "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character";
+        }
+        break;
+
+      case 'confirmPassword':
+        if (!value) {
+          return "Please confirm your password";
+        } else if (allFormData.password !== value) {
+          return "Passwords do not match";
+        }
+        break;
     }
 
-    // Validate last name
-    if (!formData.lastName.trim()) {
-      errors.lastName = "Last name is required";
-    } else if (formData.lastName.length < 2) {
-      errors.lastName = "Last name must be at least 2 characters";
-    }
+    return undefined;
+  };
 
-    // Validate email
-    if (!formData.email) {
-      errors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = "Email is invalid";
-    }
+  const validateForm = () => {
+    let errors: ErrorType = {};
+    
+    // Validate all fields
+    errors.firstName = validateField('firstName', formData.firstName, formData);
+    errors.lastName = validateField('lastName', formData.lastName, formData);
+    errors.email = validateField('email', formData.email, formData);
+    errors.phone = validateField('phone', formData.phone, formData);
+    errors.password = validateField('password', formData.password, formData);
+    errors.confirmPassword = validateField('confirmPassword', formData.confirmPassword, formData);
 
-    // Validate phone - now optional, only validate if provided
-    const phoneWithoutCode = formData.phone.replace(/\D/g, '');
-    if (phoneWithoutCode && !phoneRegex.test(phoneWithoutCode)) {
-      errors.phone = "Please enter a valid phone number";
-    }
-
-    // Validate password
-    if (!formData.password) {
-      errors.password = "Password is required";
-    } else if (!passwordRegex.test(formData.password)) {
-      errors.password =
-        "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character";
-    }
-
-    // Validate confirm password
-    if (!formData.confirmPassword) {
-      errors.confirmPassword = "Please confirm your password";
-    } else if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = "Passwords do not match";
-    }
+    // Remove undefined errors
+    Object.keys(errors).forEach(key => {
+      if (errors[key as keyof ErrorType] === undefined) {
+        delete errors[key as keyof ErrorType];
+      }
+    });
 
     setErrors(errors);
     setIsFormValid(Object.keys(errors).length === 0);
@@ -131,10 +158,38 @@ const Registration = () => {
       value = formatPhoneNumber(value);
     }
 
-    setFormData(prev => ({
-      ...prev,
+    const updatedFormData = {
+      ...formData,
       [field]: value
-    }));
+    };
+
+    setFormData(updatedFormData);
+
+    // Revalidate the field if it currently has an error or if form has been submitted
+    if (errors[field] || formSubmitted) {
+      const fieldError = validateField(field, value, updatedFormData);
+      
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        if (fieldError) {
+          newErrors[field] = fieldError;
+        } else {
+          delete newErrors[field];
+        }
+        
+        // Special case: if password changes, revalidate confirmPassword too
+        if (field === 'password' && (prev.confirmPassword || formSubmitted)) {
+          const confirmPasswordError = validateField('confirmPassword', updatedFormData.confirmPassword, updatedFormData);
+          if (confirmPasswordError) {
+            newErrors.confirmPassword = confirmPasswordError;
+          } else {
+            delete newErrors.confirmPassword;
+          }
+        }
+        
+        return newErrors;
+      });
+    }
   };
 
   // Format phone number as user types
@@ -164,7 +219,8 @@ const Registration = () => {
     )
     : countryCodes;
 
-  const onSignUpPress = async () => {
+  const onSignUpPress = async (e: any) => {
+    e.preventDefault();
     setFormSubmitted(true);
 
     if (validateForm()) {

@@ -239,6 +239,43 @@ const parseJSONSafely = (str: string) => {
   }
 };
 
+/**
+ * Filters out special control tokens from LLM responses
+ * These tokens are used internally by the model but should not be displayed to users
+ */
+export const filterSpecialTokens = (text: string): string => {
+  if (!text) return text;
+  
+  // List of special tokens to filter out
+  const specialTokens = [
+    '<|python_tag|>',
+    '<|end|>',
+    '<|im_start|>',
+    '<|im_end|>',
+    '<|eot_id|>',
+    '<|start_header_id|>',
+    '<|end_header_id|>',
+    '<|begin_of_text|>',
+    '<|end_of_text|>',
+    '<|pad|>',
+    '<|reserved_special_token_',  // Catches numbered special tokens
+  ];
+  
+  let filteredText = text;
+  
+  // Remove each special token
+  for (const token of specialTokens) {
+    // Use a more robust regex pattern
+    const regex = new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    filteredText = filteredText.replace(regex, '');
+  }
+  
+  // Also handle any remaining tokens that match the pattern <|...|>
+  filteredText = filteredText.replace(/<\|[^|]*\|>/g, '');
+  
+  return filteredText;
+};
+
 const getHumanSize = (
   number: number,
   currencyCode?: string,
