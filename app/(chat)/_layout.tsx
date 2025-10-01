@@ -70,6 +70,11 @@ const Layout = () => {
             backgroundColor: '#FFFFFF',
           },
           drawerType: 'slide',
+          swipeEdgeWidth: 50,
+          swipeMinDistance: 10,
+          sceneContainerStyle: {
+            backgroundColor: theme.colors.background,
+          },
         }}
       >
 

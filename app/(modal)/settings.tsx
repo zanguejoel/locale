@@ -3,10 +3,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, Pressable, SafeAreaView, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import React from "react";
+import React, { useState } from "react";
 import { useChat } from '@/hooks/useChat';
 import { Theme } from '@/constants/Types';
 import { useTheme } from '@/hooks/useTheme';
+import useMMKVStorage from '@/hooks/useMMKVStorage';
+import { DEFAULT_MODEL_ID, getModelById } from '@/constants/Models';
+import ModelSelectorModal from '@/components/modals/ModelSelectorModal/ModelSelectorModal';
+import LocalModelSelectorModal from '@/components/modals/LocalModelSelectorModal/LocalModelSelectorModal';
+import { DEFAULT_LOCAL_MODEL_ID, getLocalModelById } from '@/constants/LocalModels';
+import { isLocalLLMSupported } from '@/utils/DeviceCapabilities';
 
 const rawPage = [{
   id: 1,
@@ -15,11 +21,21 @@ const rawPage = [{
   icon: 'person-outline'
 }, {
   id: 2,
+  key: 'default-model',
+  title: 'Default AI Model',
+  icon: 'chatbubbles-outline'
+}, {
+  id: 3,
+  key: 'local-model',
+  title: 'Local AI Model',
+  icon: 'phone-portrait-outline'
+}, {
+  id: 4,
   key: 'change-password',
   title: 'Change password',
   icon: 'settings-outline'
 }, {
-  id: 3,
+  id: 5,
   key: 'sign_out',
   title: 'Sign Out',
   icon: 'log-out-outline'
@@ -37,17 +53,36 @@ const Page = () => {
   const styles = getStyles(theme);
   const router = useRouter();
   const { signOut } = useAuth();
-  const { createNewConversation } = useChat();
-
+  const { createNewConversation, isLocalLLMSupported: deviceSupportsLocal } = useChat();
+  const [isModelSelectorVisible, setIsModelSelectorVisible] = useState(false);
+  const [isLocalModelSelectorVisible, setIsLocalModelSelectorVisible] = useState(false);
+  const [defaultModelId, setDefaultModelId] = useMMKVStorage('default_model_id', DEFAULT_MODEL_ID);
+  const [defaultLocalModelId, setDefaultLocalModelId] = useMMKVStorage('default_local_model_id', DEFAULT_LOCAL_MODEL_ID);
 
   const handleSignOut = async () => {
     await createNewConversation()
     signOut()
   }
+
+  const handleModelSelect = (modelId: string) => {
+    setDefaultModelId(modelId);
+  };
+
+  const handleLocalModelSelect = (modelId: string) => {
+    setDefaultLocalModelId(modelId);
+  };
+
+  const selectedModel = getModelById(defaultModelId);
+  const selectedLocalModel = getLocalModelById(defaultLocalModelId);
+
   const handleInstruction = (type: string) => {
     switch (type) {
       case 'profile':
         return router.push('/profile')
+      case 'default-model':
+        return setIsModelSelectorVisible(true)
+      case 'local-model':
+        return setIsLocalModelSelectorVisible(true)
       case 'change-password':
         return router.push('/change-password')
       case 'sign_out':
@@ -55,14 +90,14 @@ const Page = () => {
     }
   }
 
-  const renderRaw = (item: IItemRaw, index: number) => {
+  const renderRaw = (item: IItemRaw, index: number, visibleItems: IItemRaw[]) => {
     return (
       <Pressable
         key={item.id}
         style={({ pressed }) => [
           styles.menuItem,
           pressed && styles.menuItemPressed,
-          rawPage.length - 1 === index && styles.menuItemLast
+          visibleItems.length - 1 === index && styles.menuItemLast
         ]}
         onPress={() => handleInstruction(item.key)}
       >
@@ -70,19 +105,38 @@ const Page = () => {
           <View style={styles.iconContainer}>
             <Ionicons name={item.icon as any} size={20} color={theme.colors.primary} />
           </View>
-          <Text style={styles.menuItemText}>{item.title}</Text>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuItemText}>{item.title}</Text>
+            {item.key === 'default-model' && selectedModel && (
+              <Text style={styles.menuItemSubtext}>{selectedModel.displayName}</Text>
+            )}
+            {item.key === 'local-model' && selectedLocalModel && (
+              <Text style={styles.menuItemSubtext}>
+                {deviceSupportsLocal ? selectedLocalModel.displayName : 'Not supported'}
+              </Text>
+            )}
+          </View>
         </View>
         <Ionicons name="chevron-forward" size={20} color={theme.colors.greyLight} />
       </Pressable>
     )
   }
+  
+  // Filter menu items based on device support
+  const visibleMenuItems = rawPage.filter(item => {
+    // Hide local-model option if device doesn't support it
+    if (item.key === 'local-model' && !deviceSupportsLocal) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
         <View style={styles.contentContainer}>
           <View style={styles.menuContainer}>
-            {rawPage.map((item, index) => renderRaw(item, index))}
+            {visibleMenuItems.map((item, index) => renderRaw(item, index, visibleMenuItems))}
           </View>
           <View style={styles.footer}>
             {/* Logo commented out */}
@@ -92,6 +146,18 @@ const Page = () => {
           </View>
         </View>
       </ScrollView>
+      <ModelSelectorModal
+        visible={isModelSelectorVisible}
+        onClose={() => setIsModelSelectorVisible(false)}
+        selectedModelId={defaultModelId}
+        onSelectModel={handleModelSelect}
+      />
+      <LocalModelSelectorModal
+        visible={isLocalModelSelectorVisible}
+        onClose={() => setIsLocalModelSelectorVisible(false)}
+        selectedModelId={defaultLocalModelId}
+        onSelectModel={handleLocalModelSelect}
+      />
     </SafeAreaView>
   );
 };
@@ -141,6 +207,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   menuItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   iconContainer: {
     width: 40,
@@ -151,10 +218,18 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
+  menuTextContainer: {
+    flex: 1,
+  },
   menuItemText: {
     fontSize: 16,
     color: theme.colors.text,
     fontWeight: '500',
+  },
+  menuItemSubtext: {
+    fontSize: 13,
+    color: theme.colors.greyLight,
+    marginTop: 2,
   },
   footer: {
     alignItems: 'center',

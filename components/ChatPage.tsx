@@ -345,6 +345,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: 'center',
   },
   logoText: {
+    paddingTop: 20,
     fontSize: 24,
     fontWeight: 'bold',
     color: theme.colors.text,

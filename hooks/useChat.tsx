@@ -35,6 +35,8 @@ import RNFS from 'react-native-fs';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuth } from './useAuth';
+import { getDefaultModelId } from './useDefaultModel';
+import { isLocalLLMSupported, getLocalLLMUnsupportedMessage } from '@/utils/DeviceCapabilities';
 
 // Import API_URL_PROD from ApiClient configuration
 const API_URL_PROD = "https://api.odysseytech.ai";
@@ -90,12 +92,15 @@ interface ChatContextType {
   appendToMessageHistory: (message: string, role: Role) => void;
   handleSendLocalMessage: (message: string) => void;
   isLocal: boolean;
-  setIsLocal: (a: boolean) => void
+  setIsLocal: (a: boolean) => void;
+  isLocalLLMSupported: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+
+  
   const { user } = useAuth();
   const [conversations, setConversations] = useState([])
   const [messages, setMessages] = useState<Message[]>([]);
@@ -112,10 +117,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isChatLoading, setChatLoading] = useState(false)
   const [additionalData, setAdditionalData] = useState([]);
   const [isLocal, setIsLocal] = useState(false);
-  const llm = useLLM({
+  
+  // Check if device supports local LLM
+  const deviceSupportsLocalLLM = useMemo(() => isLocalLLMSupported(), []);
+  
+  // Conditionally initialize LLM only on supported devices
+  const llm = deviceSupportsLocalLLM ? useLLM({
     modelSource: LLAMA3_2_1B,
     tokenizerSource: LLAMA3_2_1B_TOKENIZER
-  });
+  }) : null;
 
 
   useEffect(() => {
@@ -133,27 +143,43 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [stream, additionalData]);
 
   useEffect(() => {
-    if(llm.response) {
+    if(llm && llm.response) {
       // Filter out special tokens like <|python_tag|>, <|end|>, etc.
       const filteredResponse = filterSpecialTokens(llm.response);
       setStream(filteredResponse);
     }
-  }, [llm.response]);
+  }, [llm?.response]);
 
  
   const handleSendLocalMessage = async (message: string) => {
+    // Check if device supports local LLM
+    if (!deviceSupportsLocalLLM || !llm) {
+      Alert.alert(
+        'Local LLM Not Supported',
+        getLocalLLMUnsupportedMessage(),
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     console.log("Sending message");
     
     // Add user message to chat
     appendToMessageHistory(message, Role.User);
     appendToMessageHistory('...', Role.Bot);
     
-    const result = await llm.generate(message);
-    console.log("Result", result);
-    
-    
-    
-    return result;
+    try {
+      const result = await llm.generate(message);
+      console.log("Result", result);
+      return result;
+    } catch (error) {
+      console.error('Local LLM generation error:', error);
+      Alert.alert(
+        'Error',
+        'Failed to generate response with local LLM. Please try again or switch to cloud models.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const handleSetConversation = (id: string) => {
@@ -373,6 +399,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (operation) {
       formData.append('operations', JSON.stringify(operation));
     }
+    
+    // Add the default model ID to the request
+    const modelId = getDefaultModelId();
+    formData.append('model', modelId);
+    
     const conversationId = currentConversationId || '';
 
     if (conversationId) {
@@ -648,7 +679,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     appendToMessageHistory,
     handleSendLocalMessage,
     isLocal,
-    setIsLocal
+    setIsLocal,
+    isLocalLLMSupported: deviceSupportsLocalLLM
   }), [
     isChatLoading,
     setChatLoading,
@@ -674,7 +706,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     appendToMessageHistory,
     handleSendLocalMessage,
     isLocal,
-    setIsLocal
+    setIsLocal,
+    deviceSupportsLocalLLM
   ]);
 
   return (

@@ -42,7 +42,7 @@ const ModelToggle: React.FC<ModelToggleProps> = ({
         <TouchableOpacity 
             disabled={disableLocal}
           onPress={() => handleToggle(true)} 
-          style={styles.option}
+          style={[styles.option, disableLocal && styles.disabledOption]}
         >
           <Ionicons 
             name="phone-portrait-outline" 
@@ -76,7 +76,11 @@ const ModelToggle: React.FC<ModelToggleProps> = ({
       </View>
       
       <Text style={[styles.modelInfo, { color: theme.isDark ? '#BBBBBB' : '#757575' }]}>
-        {isLocal ? 'Using local model (works offline)' : 'Using Odyssey (more powerful)'}
+        {disableLocal 
+          ? 'Local model not supported on this device' 
+          : isLocal 
+            ? 'Using local model (works offline)' 
+            : 'Using Odyssey (more powerful)'}
       </Text>
     </View>
   );
@@ -107,6 +111,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
+  },
+  disabledOption: {
+    opacity: 0.4,
   },
   optionText: {
     marginLeft: 8,

@@ -17,8 +17,9 @@ import { useColorScheme } from "@/components/useColorScheme";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Colors from "@/constants/Colors";
-import { ChatProvider, useChat } from "@/hooks/useChat";
+import { ChatProvider } from "@/hooks/useChat";
 import { useTheme } from "@/hooks/useTheme";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -232,6 +233,7 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
+    <SafeAreaProvider >
     <AuthProvider>
       <ChatProvider>
         <ThemeProvider
@@ -243,5 +245,6 @@ function RootLayoutNav() {
         </ThemeProvider>
       </ChatProvider>
     </AuthProvider>
+    </SafeAreaProvider>
   );
 }

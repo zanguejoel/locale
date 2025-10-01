@@ -45,7 +45,10 @@ export const CustomDrawerContent = (props: any) => {
         deleteConversation,
         renameConversation,
         setIsLocal,
-        isLocal
+        isLocal,
+        createNewConversation,
+        resetChat,
+        isLocalLLMSupported
     } = useChat();
 
     const router = useRouter();
@@ -171,6 +174,46 @@ export const CustomDrawerContent = (props: any) => {
             currentTitle
         );
     };
+
+    const handleModelSwitch = async (modelType: 'local' | 'Odyssey') => {
+        const newIsLocal = modelType === 'local';
+        
+        // Check if trying to switch to local mode on unsupported device
+        if (newIsLocal && !isLocalLLMSupported) {
+            Alert.alert(
+                'Local LLM Not Supported',
+                'Your device does not support local LLM. Please use cloud models instead.',
+                [{ text: 'OK' }]
+            );
+            return;
+        }
+        
+        // Check if the model type has changed
+        if (newIsLocal !== isLocal) {
+            try {
+                setLocalLoading(true);
+                setIsLocal(newIsLocal);
+                
+                if (newIsLocal) {
+                    // For local mode, just reset the chat (no server-side conversation needed)
+                    resetChat();
+                    router.push('/(chat)/new');
+                } else {
+                    // For non-local mode, create a new server-side conversation
+                    const newConvId = await createNewConversation();
+                    if (newConvId) {
+                        router.push(`/(chat)/${newConvId}`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error handling model switch:', error);
+                Alert.alert('Error', 'Failed to switch model');
+            } finally {
+                setLocalLoading(false);
+            }
+        }
+    };
+
     const loadMoreConversations = useCallback(async () => {
         if (isFetchingMore || !hasMore) return;
         setIsFetchingMore(true);
@@ -259,6 +302,12 @@ export const CustomDrawerContent = (props: any) => {
         [closeOpenSwipeable, onDeleteChat]
     );
 
+    const handleConversationSelect = useCallback((chatId: string) => {
+        // Switch to Odyssey mode when selecting a conversation
+        setIsLocal(false);
+        router.push(`/(chat)/${chatId}`);
+    }, [router, setIsLocal]);
+
     const renderItem = useCallback(({ item }) => {
         const chatId = item?.id || '';
         const chatTitle = item?.title || 'Untitled Chat';
@@ -285,7 +334,7 @@ export const CustomDrawerContent = (props: any) => {
                                 chatId.toString() === currentConversationId?.toString() && styles.activeChatItem,
                                 pressed && styles.pressedChatItem,
                             ]}
-                            onPress={() => router.push(`/(chat)/${chatId}`)}
+                            onPress={() => handleConversationSelect(chatId)}
                         >
                             <View style={styles.chatItemContent}>
                                 <View style={styles.chatIconContainer}>
@@ -350,7 +399,7 @@ export const CustomDrawerContent = (props: any) => {
         onRenameChat,
         openSwipeableId,
         renderRightActions,
-        router
+        handleConversationSelect
     ]);
 
     const keyExtractor = useCallback((item) => item?.id?.toString(), []);
@@ -378,7 +427,7 @@ export const CustomDrawerContent = (props: any) => {
             <View style={styles.headerContainer}>
             
            
-                <ModelToggle onSelectModel={(model) => setIsLocal(model === 'local')} initialState={isLocal} disableLocal={false} />
+                <ModelToggle onSelectModel={handleModelSwitch} initialState={isLocal} disableLocal={!isLocalLLMSupported} />
         
                 <View style={styles.searchContainer}>
                     <View style={styles.searchSection}>
@@ -456,7 +505,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     drawerContainer: {
         flex: 1,
         backgroundColor: theme.colors.background,
-        borderRightWidth: 1,
+        borderRightWidth: theme.isDark ? 0.5 : 1,
         borderRightColor: theme.colors.greyLight,
     },
     headerContainer: {

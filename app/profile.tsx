@@ -24,12 +24,12 @@ const Profile = () => {
   const { user, updateUser } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [formData, setFormData] = useState<FormData>({
-    firstName: user?.first_name,
-    lastName: user?.last_name,
-    address: user?.address,
-    city: user?.city,
-    postalCode: user?.postal_code,
-    state: user?.state
+    firstName: user?.first_name || '',
+    lastName: user?.last_name || '',
+    address: user?.address || '',
+    city: user?.city || '',
+    postalCode: user?.postal_code || '',
+    state: user?.state || ''
   });
 
   const handleInputChange = (field: keyof FormData, value: string) => {
