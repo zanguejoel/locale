@@ -1,3 +1,15 @@
+// Apply polyfills FIRST before any other imports
+import { polyfill as polyfillEncoding } from 'react-native-polyfill-globals/src/encoding';
+import { polyfill as polyfillReadableStream } from 'react-native-polyfill-globals/src/readable-stream';
+import { polyfill as polyfillFetch } from 'react-native-polyfill-globals/src/fetch';
+import { polyfill as polyfillURL } from 'react-native-polyfill-globals/src/url';
+
+// Apply polyfills immediately in correct order
+polyfillEncoding();
+polyfillReadableStream();
+polyfillFetch();
+polyfillURL();
+
 import React, {
   createContext,
   useContext,
@@ -14,10 +26,6 @@ import {
 
 import useMMKVStorage, { storage } from './useMMKVStorage';
 import api from '@/utils/ApiClient';
-import { polyfill as polyfillURL } from 'react-native-polyfill-globals/src/url';
-import { polyfill as polyfillFetch } from 'react-native-polyfill-globals/src/fetch';
-import { polyfill as polyfillEncoding } from 'react-native-polyfill-globals/src/encoding';
-import { polyfill as polyfillReadableStream } from 'react-native-polyfill-globals/src/readable-stream';
 import { Message, Role } from '@/utils/Interfaces';
 
 
@@ -28,12 +36,9 @@ import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuth } from './useAuth';
 
-polyfillURL();
-polyfillFetch();
-polyfillEncoding();
-polyfillReadableStream();
-
-const BASE_URL = 'https://odyssey-dev.app.neptunetech.io';
+// Import API_URL_PROD from ApiClient configuration
+const API_URL_PROD = "https://api-alpha.odysseytech.ai";
+const BASE_URL = API_URL_PROD;
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 1200;
@@ -259,6 +264,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages(prev => [...prev, { role, content: message }]);
   }, []);
 
+  const handleError = useCallback((error: string) => {
+    console.error({
+      title: 'We encountered an error.',
+      description: error,
+      variant: 'destructive',
+      position: 'top-right'
+    });
+  }, []);
+
   // ---------------- Chat Operations ----------------
 
   const sendMessage = useCallback(async (message: string, messageType = 'text', operation: string | null = null, additionalData: string) => {
@@ -390,11 +404,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const _response = await fetch(`${BASE_URL}/chat`, {
         method: 'POST',
         headers: {
-          Authorization: ' ' + user?.token,
+          Authorization: `${user?.token}`,
+          'Accept': 'text/event-stream, application/json',
+          // Don't set Content-Type - let fetch set it with boundary for multipart/form-data
         },
         body: formData,
-        reactNative: { textStreaming: true },
+        // @ts-ignore - React Native specific properties
+        reactNative: { 
+          textStreaming: true 
+        },
         signal: _controller.signal,
+        // Ensure streaming is enabled
+        cache: 'no-cache',
       });
       if (!_response.ok) {
         const errorMessage = await _response.text();
@@ -600,16 +621,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     }
   }, [user, setConversations, setCurrentRoom, resetChat]);
-
-  const handleError = useCallback((error: string) => {
-    console.error({
-      title: 'We encountered an error.',
-      description: error,
-      variant: 'destructive',
-      position: 'top-right'
-    });
-  }, []);
-
 
   const contextValue = useMemo(() => ({
     isChatLoading,

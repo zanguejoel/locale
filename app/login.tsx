@@ -607,7 +607,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 2,
-    borderColor: Colors.grey,
+    borderColor: theme.isDark ? theme.colors.greyLight : theme.colors.grey,
     borderRadius: 4,
     marginRight: 8,
     justifyContent: "center",

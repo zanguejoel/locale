@@ -107,6 +107,7 @@ const ForgotPasswordChange = () => {
               <Text style={styles.inputLabel}>{field.label}</Text>
               <CustomInput
                 icon="lock-closed-outline"
+                autoComplete="off"
                 style={styles.input}
                 value={formData[field.key as keyof typeof formData]}
                 onChangeText={(value) =>

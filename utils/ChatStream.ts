@@ -1,11 +1,13 @@
 import { ApiResponse } from "apisauce";
 
 interface StreamData {
-  type: 'stream' | 'final' | 'error' | 'state';
+  type: 'stream' | 'final' | 'error' | 'state' | 'meta';
   content?: string;
   data?: {
-    response: string;
-    history: [string, string][];
+    response?: string;
+    history?: [string, string][];
+    additional_data?: any[];
+    [key: string]: any;
   };
   error?: string;
 }
@@ -18,119 +20,214 @@ export const processStream = async (
   handleError: (error: string) => void,
   setIntermediate: (value: string) => void,
   setStreamWorking: (v: boolean) => void,
-  setAdditionalData?: (a: []) => void
+  setAdditionalData?: (a: any[]) => void
 ): Promise<StreamData | null> => {
-  setStreamWorking(true)
+  setStreamWorking(true);
   let res: StreamData | null = null;
   let buffer = '';
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
   if (!response) {
-    console.error("Error ----");
-    throw "error"
+    console.error("[ChatStream] Error: No response stream");
+    handleError("No response stream available");
+    setStreamWorking(false);
+    return null;
   }
 
   const decoder = new TextDecoder();
 
-  const reader = response.getReader();
+  try {
+    reader = response.getReader();
 
-  if (!reader) return null;
+    if (!reader) {
+      console.error("[ChatStream] Error: Unable to get stream reader");
+      handleError("Unable to get stream reader");
+      setStreamWorking(false);
+      return null;
+    }
 
+    while (true) {
+      try {
+        const { value, done } = await reader.read();
+        
+        if (done) {
+          console.log("[ChatStream] Stream completed");
+          break;
+        }
 
+        if (value) {
+          // Decode the chunk
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
+          // Process accumulated buffer
+          const { results, remaining } = processJSONChunks(buffer);
+          buffer = remaining;
 
-    const chunk = decoder.decode(value, { stream: true });
-    buffer += chunk;
+          // Handle each parsed result
+          for (const data of results) {
+            try {
+              switch (data.type) {
+                case 'stream':
+                  if (data.content !== undefined) {
+                    setStream((prev) => prev + data.content);
+                  }
+                  break;
 
-    const { results, remaining } = processJSONChunks(buffer);
-    buffer = remaining;
+                case 'state':
+                  if (data.content) {
+                    setIntermediate(data.content);
+                  }
+                  break;
 
-    for (const line of results) {
-      if (line) {
+                case 'final':
+                  res = data;
+                  if (data?.data?.additional_data) {
+                    setAdditionalData?.(data.data.additional_data);
+                  }
+                  break;
 
-        try {
-          const data: StreamData = line;
-          switch (data.type) {
-            case 'stream':
-              if (data.content) {
-                setStream((prev) => prev + data.content);
+                case 'error':
+                  if (data.error) {
+                    console.error(`[ChatStream] Stream error: ${data.error}`);
+                    handleError(data.error);
+                  }
+                  break;
+
+                default:
+                  console.warn('[ChatStream] Unknown stream data type:', data);
               }
-              break;
-            case 'state':
-              if (data.content) {
-
-                setIntermediate(data.content);
-              }
-              break;
-            case 'final':
-              res = data;
-              if (data?.data?.additional_data) {
-                setAdditionalData?.(data?.data?.additional_data)
-              }
-              break;
-            case 'error':
-              if (data.error) {
-                console.error(`\nError occurred: ${data.error}`);
-                handleError(data.error);
-              }
-              break;
+            } catch (e) {
+              console.error(`[ChatStream] Error processing stream data: ${e instanceof Error ? e.message : String(e)}`);
+              console.error(`[ChatStream] Problematic data:`, data);
+            }
           }
-        } catch (e) {
-          console.error(`\nError parsing JSON: ${e instanceof Error ? e.message : String(e)}`);
-          console.error(`Raw line: ${line}`);
+        }
+      } catch (readError) {
+        console.error('[ChatStream] Error reading stream:', readError);
+        // Continue trying to read unless it's a critical error
+        if (readError instanceof TypeError || readError instanceof ReferenceError) {
+          handleError(`Stream reading error: ${readError.message}`);
+          break;
         }
       }
     }
+
+    // Process any remaining buffer
+    if (buffer.trim()) {
+      console.warn('[ChatStream] Unprocessed buffer:', buffer);
+      try {
+        const { results } = processJSONChunks(buffer + '\n');
+        for (const data of results) {
+          if (data.type === 'stream' && data.content) {
+            setStream((prev) => prev + data.content);
+          }
+        }
+      } catch (e) {
+        console.error('[ChatStream] Error processing final buffer:', e);
+      }
+    }
+  } catch (error) {
+    console.error('[ChatStream] Stream processing error:', error);
+    handleError(error instanceof Error ? error.message : String(error));
+  } finally {
+    setStreamWorking(false);
+    
+    // Clean up reader
+    if (reader) {
+      try {
+        await reader.cancel();
+        reader.releaseLock();
+      } catch (e) {
+        console.warn('[ChatStream] Error releasing reader:', e);
+      }
+    }
   }
-  setStreamWorking(false)
+
   return res;
 };
 
 
-export const processJSONChunks = (text: string) => {
-  const results = [];
-  let startIndex = 0;
+export const processJSONChunks = (text: string): { results: StreamData[]; remaining: string } => {
+  const results: StreamData[] = [];
+  let remaining = '';
+  
   try {
-    while (startIndex < text.length) {
-      const objStart = text.indexOf('{', startIndex);
-      if (objStart === -1) {
-        break;
-      }
-
-      // Find the matching closing brace
-      let bracketCount = 1;
-      let objEnd = objStart + 1;
-
-      while (bracketCount > 0 && objEnd < text.length) {
-        if (text[objEnd] === '{') {
-          bracketCount++;
+    // Split by double newline for SSE format or single newline
+    const chunks = text.split(/\n\n|\n/);
+    
+    // Keep the last chunk if it doesn't end with newline (incomplete)
+    if (!text.endsWith('\n')) {
+      remaining = chunks.pop() || '';
+    }
+    
+    for (const chunk of chunks) {
+      const trimmedChunk = chunk.trim();
+      if (!trimmedChunk) continue;
+      
+      // Handle SSE (Server-Sent Events) format
+      if (trimmedChunk.startsWith('data: ')) {
+        try {
+          const jsonStr = trimmedChunk.slice(6).trim();
+          
+          // Skip SSE end marker
+          if (jsonStr === '[DONE]') continue;
+          
+          // Try to parse the JSON
+          const data = parseJSONSafely(jsonStr);
+          if (!data) continue;
+          
+          // Handle different response formats
+          if (data.type) {
+            // Direct StreamData format
+            results.push(data as StreamData);
+          } else {
+            // Transform to StreamData format
+            if (data.reasoning) {
+              results.push({
+                type: 'state',
+                content: data.reasoning,
+              });
+            } else if (data.content !== undefined) {
+              results.push({
+                type: 'stream',
+                content: data.content,
+              });
+            } else if (data.error) {
+              results.push({
+                type: 'error',
+                error: data.error,
+              });
+            } else if (data.done || data.final) {
+              results.push({
+                type: 'final',
+                data: data,
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('[ChatStream] Error parsing SSE data:', e, 'Raw:', trimmedChunk);
         }
-        if (text[objEnd] === '}') {
-          bracketCount--;
-        }
-        objEnd++;
-      }
-
-      if (bracketCount === 0) {
-        const jsonStr = text.slice(objStart, objEnd);
-        const parsed = parseJSONSafely(jsonStr);
-        if (parsed) {
-          results.push(parsed);
-        }
-        startIndex = objEnd;
       } else {
-        break; // Incomplete JSON object
+        // Try to parse as raw JSON (fallback for non-SSE format)
+        const parsed = parseJSONSafely(trimmedChunk);
+        if (parsed && parsed.type) {
+          results.push(parsed as StreamData);
+        } else if (!parsed) {
+          // Not JSON, might be part of incomplete chunk
+          if (remaining) {
+            remaining = remaining + '\n' + trimmedChunk;
+          } else {
+            remaining = trimmedChunk;
+          }
+        }
       }
     }
-
-    // Return any remaining text that might be incomplete
-    const remaining = text.slice(startIndex);
-    return { results, remaining };
-  } catch (error) {
-    throw error;
+  } catch (e) {
+    console.error('[ChatStream] Error processing chunks:', e);
   }
+  
+  return { results, remaining };
 };
 
 // Helper function to safely parse individual JSON objects

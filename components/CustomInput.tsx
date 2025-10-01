@@ -63,7 +63,7 @@ const CustomInput = ({
           <Ionicons
             name={showPassword ? "eye-outline" : "eye-off-outline"}
             size={20}
-            color={isFocused ? theme.colors.primary : theme.colors.grey}
+            color={isFocused ? theme.colors.primary : (theme.isDark ? theme.colors.greyLight : theme.colors.grey)}
           />
         </TouchableOpacity>
       )}

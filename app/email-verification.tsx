@@ -61,12 +61,10 @@ const EmailVerification = () => {
                 )}
 
                 <View style={styles.headerContainer}>
-                    {/* Logo commented out */}
-                    {/* <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} /> */}
-                    <Text style={styles.appTitle}>Odyssey</Text>
+                    <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} />
                     <Text style={styles.title}>Email Verification</Text>
                     <Text style={styles.subtitle}>
-                        A verification code has been sent to your inbox.
+                        A verification code has been sent to {email}.
                     </Text>
                 </View>
 
@@ -126,16 +124,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         marginTop: 6,
     },
     logo: {
-        width: 150,
+        width: 180,
+        resizeMode: 'contain',
         height: 75,
         marginBottom: 20,
-    },
-    appTitle: {
-        fontSize: 42,
-        fontWeight: "bold",
-        marginBottom: 8,
-        letterSpacing: 1,
-        color: theme.colors.primary,
     },
     title: {
         fontSize: 24,
@@ -152,7 +144,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         lineHeight: 22,
     },
     subtitle: {
-        fontSize: 18,
+        fontSize: 16,
         color: theme.colors.text,
         textAlign: 'center',
         lineHeight: 24,

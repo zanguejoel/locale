@@ -8,35 +8,37 @@ import {
   View,
   Animated,
   Easing,
-  Dimensions
+  Dimensions,
+  useColorScheme
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '@/hooks/useTheme';
 
-// Extended predefined messages with icons
+// Predefined messages with theme-aware gradients
 const PredefinedMessages = [
   { 
     title: 'Stocks', 
     text: "Get current stock prices",
-    icon: '📈',
-    gradient: ['#4F80FF', '#2E5BFF']
+    lightGradient: ['#5B86E5', '#36D1DC'] as const,
+    darkGradient: ['#2C2C2E', '#3A3A3C'] as const
   },
   { 
     title: 'News', 
     text: 'Give me a quick news update',
-    icon: '📰',
-    gradient: ['#FF6B6B', '#FF4757']
+    lightGradient: ['#FA709A', '#FEE140'] as const,
+    darkGradient: ['#2C2C2E', '#3A3A3C'] as const
   },
   { 
     title: 'Product Roadmap', 
     text: "Create a product roadmap template.",
-    icon: '🗺️',
-    gradient: ['#26C6DA', '#00ACC1'] 
+    lightGradient: ['#30CBC8', '#667EEA'] as const,
+    darkGradient: ['#2C2C2E', '#3A3A3C'] as const
   },
   { 
     title: 'Create Agenda', 
     text: "Make an agenda for my next meeting.",
-    icon: '📝',
-    gradient: ['#FFBB34', '#FFA000']
+    lightGradient: ['#F093FB', '#F5576C'] as const,
+    darkGradient: ['#2C2C2E', '#3A3A3C'] as const
   },
 ];
 
@@ -45,6 +47,10 @@ type Props = {
 };
 
 const MessageIdeas: React.FC<Props> = ({ onSelectCard }) => {
+  const colorScheme = useColorScheme();
+  const { colors } = useTheme();
+  const isDark = colorScheme === 'dark';
+  
   // Create animated values for each card
   const fadeAnims = useRef(PredefinedMessages.map(() => new Animated.Value(0))).current;
   const scaleAnims = useRef(PredefinedMessages.map(() => new Animated.Value(0.95))).current;
@@ -95,12 +101,11 @@ const MessageIdeas: React.FC<Props> = ({ onSelectCard }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Suggestions</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        snapToInterval={screenWidth * 0.7 + 15} // Snap to card width + margin
+        snapToInterval={screenWidth * 0.72 + 16} // Snap to card width + margin
         decelerationRate="fast"
       >
         {PredefinedMessages.map((item, index) => (
@@ -124,16 +129,15 @@ const MessageIdeas: React.FC<Props> = ({ onSelectCard }) => {
               onPress={() => onSelectCard(`${item.text}`)}
             >
               <LinearGradient
-                colors={item.gradient}
+                colors={isDark ? item.darkGradient : item.lightGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.card}
               >
-                <View style={styles.cardTop}>
-                  <Text style={styles.icon}>{item.icon}</Text>
+                <View style={styles.cardContent}>
                   <Text style={styles.cardTitle}>{item.title}</Text>
+                  <Text style={styles.cardText}>{item.text}</Text>
                 </View>
-                <Text style={styles.cardText}>{item.text}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
@@ -145,59 +149,58 @@ const MessageIdeas: React.FC<Props> = ({ onSelectCard }) => {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 10,
+    marginVertical: 15,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     marginHorizontal: 20,
-    marginBottom: 12,
-    color: Colors.darkText,
+    marginBottom: 16,
+    letterSpacing: 0.3,
   },
   scrollContent: {
     paddingHorizontal: 15,
-    paddingVertical: 5,
+    paddingVertical: 8,
   },
   animatedContainer: {
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-    marginHorizontal: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+    marginHorizontal: 8,
   },
   touchable: {
-    borderRadius: 14,
+    borderRadius: 20,
     overflow: 'hidden',
   },
   card: {
-    width: Dimensions.get('window').width * 0.7,
+    width: Dimensions.get('window').width * 0.72,
     padding: 18,
-    borderRadius: 14,
-    height: 100,
-    justifyContent: 'space-between',
+    borderRadius: 20,
+    justifyContent: 'flex-end',
   },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  icon: {
-    fontSize: 22,
-    marginRight: 8,
+  cardContent: {
+    gap: 6,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     color: 'white',
+    letterSpacing: 0.3,
+    textShadowColor: 'rgba(0, 0, 0, 0.15)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   cardText: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.92)',
     fontWeight: '500',
+    lineHeight: 18,
+    letterSpacing: 0.1,
   },
 });
 

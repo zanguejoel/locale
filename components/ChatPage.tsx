@@ -243,7 +243,7 @@ const ChatPage = () => {
     <View style={styles.pageContainer}>
       <Stack.Screen options={{
         headerTitleAlign: 'center',
-        // headerTitle: () => <Image source={theme.isDark ? require('@/assets/images/') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} />
+        headerTitle: () => <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} />
       }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -386,7 +386,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
 
   },
   logo: {
-    width: 110,
+    width: 180,
+    resizeMode: 'contain',
     height: 30,
   },
   scrollButton: {
