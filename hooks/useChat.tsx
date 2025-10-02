@@ -229,7 +229,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
 
       const optimizedInfo = await FileSystem.getInfoAsync(result.uri, { size: true });
-      if (optimizedInfo.size && optimizedInfo.size > MAX_IMAGE_SIZE) {
+      if (optimizedInfo.exists && 'size' in optimizedInfo && optimizedInfo.size && optimizedInfo.size > MAX_IMAGE_SIZE) {
         const finalResult = await ImageManipulator.manipulateAsync(
           result.uri,
           [],

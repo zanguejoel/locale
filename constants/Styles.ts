@@ -9,7 +9,7 @@ export const defaultStyles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     paddingHorizontal: 10,
-    backgroundColor: Colors.primary
+    backgroundColor: Colors.common.primary
   },
   btnSecondary: {
     height: 50,
@@ -19,7 +19,7 @@ export const defaultStyles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: Colors.primary
+    borderColor: Colors.common.primary
   },
   loadingOverlay: {
     position: 'absolute',
