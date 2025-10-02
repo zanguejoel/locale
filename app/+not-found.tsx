@@ -19,7 +19,7 @@ export default function NotFoundScreen() {
       <View style={styles.container}>
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Ionicons name="alert-circle-outline" size={80} color={Colors.primary} />
+            <Ionicons name="alert-circle-outline" size={80} color={Colors.common.primary} />
           </View>
 
           <Text style={styles.title}>Page Not Found</Text>
@@ -73,19 +73,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: Colors.grey,
+    color: Colors.common.grey,
     marginBottom: 16,
     textAlign: 'center',
   },
   description: {
     fontSize: 16,
-    color: Colors.greyLight,
+    color: Colors.common.greyLight,
     textAlign: 'center',
     marginBottom: 30,
     maxWidth: 300,
   },
   button: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,

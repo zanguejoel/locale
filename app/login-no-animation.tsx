@@ -105,7 +105,7 @@ const Login = () => {
     >
       {isLoading && (
         <View style={defaultStyles.loadingOverlay}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={Colors.common.primary} />
         </View>
       )}
       <SafeAreaView>
@@ -177,7 +177,7 @@ const Login = () => {
               onPress={() => router.replace("/registration")}
               style={[defaultStyles.btnSecondary]}
             >
-              <Text style={[{ color: Colors.primary }]}>
+              <Text style={[{ color: Colors.common.primary }]}>
                 Create an Account
               </Text>
             </TouchableOpacity>
@@ -205,18 +205,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: Colors.primary,
+    color: Colors.common.primary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.grey,
+    color: Colors.common.grey,
   },
   formContainer: {
     paddingHorizontal: 24,
   },
   errorText: {
-    color: Colors.red,
+    color: Colors.common.red,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 12,
@@ -236,26 +236,26 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 2,
-    borderColor: Colors.grey,
+    borderColor: Colors.common.grey,
     borderRadius: 4,
     marginRight: 8,
     justifyContent: "center",
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
+    borderColor: Colors.common.primary,
   },
   checkmark: {
     color: "#fff",
     fontSize: 14,
   },
   rememberMeText: {
-    color: Colors.grey,
+    color: Colors.common.grey,
     fontSize: 14,
   },
   forgotPasswordText: {
-    color: Colors.primary,
+    color: Colors.common.primary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
   dividerText: {
-    color: Colors.greyLight,
+    color: Colors.common.greyLight,
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 20,

@@ -117,7 +117,7 @@ const Page = () => {
 
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator color={Colors.primary} size={'small'} />
+        <ActivityIndicator color={Colors.common.primary} size={'small'} />
         <Text style={styles.titleProcess}>Processing...</Text>
       </View>
     );
@@ -180,8 +180,8 @@ const Page = () => {
           ref={bottomSheetModalRef}
           index={0}
           snapPoints={snapPoints}
-          backgroundStyle={{ backgroundColor: Colors.grey }}
-          handleIndicatorStyle={{ backgroundColor: Colors.greyLight }}
+          backgroundStyle={{ backgroundColor: Colors.common.grey }}
+          handleIndicatorStyle={{ backgroundColor: Colors.common.greyLight }}
         >
           <View style={[styles.modalContainer, { paddingBottom: bottom, flex: 1 }]}>
             <BottomSheetScrollView>
@@ -189,7 +189,7 @@ const Page = () => {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={styles.titleText}>Prompt</Text>
                   <Pressable onPress={handleCloseModalPress} style={styles.closeBtn}>
-                    <Ionicons name="close-outline" size={24} color={Colors.greyLight} />
+                    <Ionicons name="close-outline" size={24} color={Colors.common.greyLight} />
                   </Pressable>
                 </View>
                 <Text style={styles.promptText}>{prompt}</Text>
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   buttonText: {
-    color: Colors.grey,
+    color: Colors.common.grey,
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '500',
