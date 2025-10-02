@@ -1,14 +1,35 @@
 export default {
     name: 'Odyssey',
     slug: 'Odyssey',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/images/icon.png',
+    scheme: 'odyssey',
+    userInterfaceStyle: 'automatic',
+    newArchEnabled: false,
+    splash: {
+      image: './assets/images/splash-icon.png',
+      resizeMode: 'contain',
+      backgroundColor: '#ffffff'
+    },
     ios: {
-        bundleIdentifier: 'com.neptunetech.odyssey',
         supportsTablet: true,
+        bundleIdentifier: 'com.neptunetech.odyssey',
     },
     android: {
         package: 'com.neptunetech.odyssey',
+        adaptiveIcon: {
+          foregroundImage: './assets/images/adaptive-icon.png',
+          backgroundColor: '#ffffff'
+        }
+    },
+    web: {
+      bundler: 'metro',
+      output: 'static',
+      favicon: './assets/images/favicon.png'
     },
     plugins: [
+        'expo-router',
         [
             'expo-build-properties',
             {
@@ -22,4 +43,7 @@ export default {
             }
         ],
     ],
+    experiments: {
+      typedRoutes: true
+    }
 };

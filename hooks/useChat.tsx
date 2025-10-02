@@ -128,8 +128,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check if device supports local LLM
   const deviceSupportsLocalLLM = useMemo(() => isLocalLLMSupported(), []);
   
-  // Always call the hook (Rules of Hooks), but only on supported devices
-  // The hook itself will handle lazy loading
+  // Initialize LLM on supported devices
   const llm = deviceSupportsLocalLLM ? useLLM({
     modelSource: LLAMA3_2_1B,
     tokenizerSource: LLAMA3_2_1B_TOKENIZER
@@ -151,25 +150,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [stream, additionalData]);
 
   useEffect(() => {
-    if(llm && llm.response) {
-      // Filter out special tokens like <|python_tag|>, <|end|>, etc.
-      const filteredResponse = filterSpecialTokens(llm.response);
+    if(llm && 'response' in llm && (llm as any).response) {
+      const filteredResponse = filterSpecialTokens((llm as any).response);
       setStream(filteredResponse);
     }
-  }, [llm?.response]);
+  }, [llm]);
   
-  // Log LLM state changes for debugging
+  // Log LLM state changes for debugging (disabled when llm is null)
   useEffect(() => {
     if (llm && isLocal) {
       console.log('[Local] LLM state update:', {
         isModelReady: (llm as any).isModelReady,
         downloadProgress: (llm as any).downloadProgress,
-        isGenerating: llm.isGenerating,
-        error: llm.error,
+        isGenerating: (llm as any).isGenerating,
+        error: (llm as any).error,
         allProps: Object.keys(llm)
       });
     }
-  }, [llm, isLocal, (llm as any)?.isModelReady, (llm as any)?.downloadProgress, llm?.isGenerating]);
+  }, [llm, isLocal]);
 
  
   const handleSendLocalMessage = async (message: string) => {
@@ -199,10 +197,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Log LLM state for debugging
     console.log('[Local] LLM state:', { 
-      isModelReady: (llm as any).isModelReady,
-      isGenerating: llm.isGenerating,
-      downloadProgress: (llm as any).downloadProgress,
-      response: llm.response?.substring(0, 50),
+      isModelReady: llm ? (llm as any).isModelReady : 'N/A',
+      isGenerating: llm ? (llm as any).isGenerating : 'N/A',
+      downloadProgress: llm ? (llm as any).downloadProgress : 'N/A',
+      response: llm && 'response' in llm ? (llm as any).response?.substring(0, 50) : 'N/A',
     });
     
     // Check if model is ready
@@ -226,7 +224,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       console.log('[Local] Calling llm.generate...');
-      const result = await llm.generate(message);
+      const result = await (llm as any).generate(message);
       console.log('[Local] Generation result:', result);
       return result;
     } catch (error) {
