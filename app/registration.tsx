@@ -270,7 +270,6 @@ const Registration = () => {
               onChangeText={(value) => handleInputChange("firstName", value)}
               error={!!errors.firstName}
               autoCapitalize="words"
-              theme={theme}
             />
             {errors.firstName && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.firstName}</Text>}
 
@@ -281,7 +280,6 @@ const Registration = () => {
               onChangeText={(value) => handleInputChange("lastName", value)}
               error={!!errors.lastName}
               autoCapitalize="words"
-              theme={theme}
             />
             {errors.lastName && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.lastName}</Text>}
 
@@ -293,7 +291,6 @@ const Registration = () => {
               error={!!errors.email}
               autoCapitalize="none"
               keyboardType="email-address"
-              theme={theme}
             />
             {errors.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.email}</Text>}
 
@@ -329,7 +326,6 @@ const Registration = () => {
               onChangeText={(value) => handleInputChange("password", value)}
               error={!!errors.password}
               isPassword
-              theme={theme}
             />
             {errors.password && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.password}</Text>}
 
@@ -340,7 +336,6 @@ const Registration = () => {
               onChangeText={(value) => handleInputChange("confirmPassword", value)}
               error={!!errors.confirmPassword}
               isPassword
-              theme={theme}
             />
             {errors.confirmPassword && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.confirmPassword}</Text>}
 

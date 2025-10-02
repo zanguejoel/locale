@@ -464,7 +464,6 @@ const Login = () => {
               error={!!errors.email}
               autoCapitalize="none"
               keyboardType="email-address"
-              theme={theme}
             />
             {errors.email && <Text style={[styles.errorText]}>{errors.email}</Text>}
 
@@ -477,7 +476,6 @@ const Login = () => {
               }}
               error={!!errors.password}
               isPassword
-              theme={theme}
             />
             {errors.password && <Text style={[styles.errorText]}>{errors.password}</Text>}
 
