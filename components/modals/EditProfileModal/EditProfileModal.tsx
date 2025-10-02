@@ -1,16 +1,25 @@
 import Colors from "@/constants/Colors";
 import { Theme } from "@/constants/Types";
-import { FormData } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
+// Use a flexible profile data type that works for all profile edit scenarios
+interface ProfileData {
+    firstName: string;
+    lastName: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    state?: string;
+}
+
 interface IEditProfileModalProps {
     isModalVisible: boolean;
     setIsModalVisible: (visible: boolean) => void;
-    handleInputChange: (field: keyof FormData, value: string) => void;
-    formData: FormData;
+    handleInputChange: (field: keyof ProfileData, value: string) => void;
+    formData: ProfileData;
     handleSave: () => void;
 }
 

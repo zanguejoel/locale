@@ -220,7 +220,7 @@ export const CustomDrawerContent = (props: any) => {
         const newLimit = limitRef.current + 20;
         const newData = await fetchConversation(query, newLimit);
 
-        if (newData.length < newLimit) {
+        if (newData && newData.length < newLimit) {
             setHasMore(false);
         }
         limitRef.current = newLimit;
@@ -402,7 +402,7 @@ export const CustomDrawerContent = (props: any) => {
         handleConversationSelect
     ]);
 
-    const keyExtractor = useCallback((item: Conversations) => item?.id?.toString(), []);
+    const keyExtractor = useCallback((item: Conversations) => item?.id?.toString() || '', []);
 
     if (isLoadingDisplayChats) {
         return (
