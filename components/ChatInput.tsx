@@ -210,7 +210,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
 
       if (result.canceled) return;
       const assets = result.assets[0];
-      setSelectedImage(assets)
+      setSelectedImage?.(assets)
 
       // onShouldSend(result.uri, 'file');
     } catch (error) {

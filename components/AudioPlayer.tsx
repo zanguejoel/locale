@@ -12,7 +12,7 @@ interface AudioPlayerProps {
     duration: number;
     position: number;
     handlePress: () => void;
-    onLongPress: () => void;
+    onLongPress?: () => void; // Make optional since it might be undefined
     role: Role;
     playAudio: () => void;
     isPlaying: boolean;
