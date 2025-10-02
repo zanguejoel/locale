@@ -43,6 +43,7 @@ interface ChatMessageProps extends Message {
   streamWorking?: boolean
   sendingText?: string
   imageData?: string
+  intermediate?: string // Add intermediate prop for streaming
 }
 
 const IMAGE_PREVIEW_SIZE = 240;
@@ -308,7 +309,8 @@ const ChatMessage = memo(({
     }
 
     // For platforms with ActionSheet but without context menu (older Android versions)
-    if (Platform.OS === 'android' && !ContextMenu.isAvailable) {
+    // Note: Context menu is available on all platforms with zeego
+    if (Platform.OS === 'android' && !ContextMenu) {
       Alert.alert(
         'Message Options',
         '',
@@ -330,7 +332,7 @@ const ChatMessage = memo(({
         await sound.current.unloadAsync();
 
         await sound.current.loadAsync(
-          { uri: content || files[0]?.s3_url },
+          { uri: content || files?.[0]?.s3_url || '' },
           { progressUpdateIntervalMillis: 1 }
         );
         await sound.current.playAsync();
@@ -340,9 +342,9 @@ const ChatMessage = memo(({
             setDuration(status.durationMillis || 0);
             setPosition(status.positionMillis || 0);
             setIsPlaying(status.isPlaying);
-          }
-          if (status.didJustFinish) {
-            setIsPlaying(false);
+            if (status.didJustFinish) {
+              setIsPlaying(false);
+            }
           }
         });
       }
@@ -358,10 +360,10 @@ const ChatMessage = memo(({
 
   const instructionForImageChatDisplay = () => {
 
-    if (isImage(imageData)) {
+    if (imageData && isImage(imageData)) {
       return encodeURI(imageData)
     } else if (content !== '' && files?.length) {
-      return files[0]?.s3_url
+      return files[0]?.s3_url || ''
     }
   }
 
@@ -395,13 +397,13 @@ const ChatMessage = memo(({
     }
 
     // Ensure URL is properly encoded
-    const processedUrl = imageData ? instructionForImageChatDisplay() : `https://app-dev.odyssey.com/api/local-media?file=${encodeURI(files[0].file_path)}`;
+    const processedUrl = imageData ? instructionForImageChatDisplay() : `https://app-dev.odyssey.com/api/local-media?file=${encodeURI(files?.[0]?.file_path || '')}`;
 
     return (
       <ContextMenu.Root>
         <ContextMenu.Trigger>
           <Link
-            href={`/(modal)/image/${encodeURIComponent(processedUrl)}?prompt=${encodeURIComponent(prompt || '')}`}
+            href={`/(modal)/image/${encodeURIComponent(processedUrl || '')}?prompt=${encodeURIComponent(prompt || '')}`}
             asChild
           >
             <Pressable
@@ -437,7 +439,7 @@ const ChatMessage = memo(({
           {contextItems.map((item) => (
             <ContextMenu.Item
               key={item.id}
-              onSelect={() => item.action(processedUrl)}
+              onSelect={() => item.action(processedUrl || '')}
             >
               <ContextMenu.ItemTitle>{item.title}</ContextMenu.ItemTitle>
               <ContextMenu.ItemIcon
@@ -495,7 +497,7 @@ const ChatMessage = memo(({
       <View>
         <Video
           ref={videoRef}
-          source={{ uri: videoUrl }}
+          source={{ uri: videoUrl || '' }}
           style={styles.video}
           useNativeControls
           isLooping
