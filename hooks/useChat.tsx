@@ -37,6 +37,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuth } from './useAuth';
 import { getDefaultModelId } from './useDefaultModel';
 import { isLocalLLMSupported, getLocalLLMUnsupportedMessage } from '@/utils/DeviceCapabilities';
+import { getToken } from '@/utils/SecureTokenManager';
+import { formatAuthHeader } from '@/utils/AuthHelpers';
 
 // Import API_URL_PROD from ApiClient configuration
 const API_URL_PROD = "https://api.odysseytech.ai";
@@ -429,14 +431,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const _controller = new AbortController();
     try {
-      for (let [key, value] of formData.entries()) {
-
+      // Get token from secure storage
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Error', 'Authentication required. Please sign in again.');
+        setIsSending(false);
+        setInputDisabled(false);
+        return;
       }
 
       const _response = await fetch(`${BASE_URL}/chat`, {
         method: 'POST',
         headers: {
-          Authorization: `${user?.token}`,
+          Authorization: formatAuthHeader(token),
           'Accept': 'text/event-stream, application/json',
           // Don't set Content-Type - let fetch set it with boundary for multipart/form-data
         },

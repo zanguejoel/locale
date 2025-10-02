@@ -54,6 +54,7 @@
     "expo-linking": "~7.0.5",
     "expo-media-library": "~17.0.5",
     "expo-router": "~4.0.17",
+    "expo-secure-store": "^15.0.7",
     "expo-sharing": "~13.0.1",
     "expo-splash-screen": "~0.29.21",
     "expo-status-bar": "~2.0.1",
@@ -96,6 +97,7 @@
     "text-encoding": "^0.7.0",
     "text-encoding-polyfill": "^0.6.7",
     "uniqolor": "^1.1.1",
+    "uuid": "^13.0.0",
     "web-streams-polyfill": "^3.2.1",
     "xregexp": "^5.1.2",
     "zeego": "^2.0.4"

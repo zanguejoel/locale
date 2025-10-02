@@ -14,36 +14,12 @@ export interface UserTeam {
   team: Team;
   roles: Role[];
 }
+// Import the color interfaces from Colors.ts
+import { ColorTheme, CommonColors } from './Colors';
+
 export interface Theme {
   isDark?: boolean;
-  colors: {
-    text: string;
-    background: string;
-    tint: string;
-    tabIconDefault: string;
-    tabIconSelected: string;
-    primary: string;
-    backgroundLight: string;
-    lime: string;
-    pink: string;
-    brown: string;
-    sky: string;
-    teal: string;
-    yellow: string;
-    orange: string;
-    red: string;
-    blue: string;
-    green: string;
-    grey: string;
-    greyLight: string;
-    input: string;
-    selected: string;
-    light: string;
-    chatIcons: string
-    chatInputBg: string
-    chaRawHistoryBG: string
-
-  };
+  colors: ColorTheme & CommonColors; // Merge both color interfaces
 }
 
 export interface User {
@@ -63,5 +39,6 @@ export interface User {
   created_at: string;
   updated_at: string;
   user_teams: UserTeam[];
-  token: string;
+  // Token is now stored separately in SecureStore for security
+  // Use utils/SecureTokenManager.ts to access the token
 }

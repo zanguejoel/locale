@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import useMMKVStorage, { storage } from './useMMKVStorage';
 import api from '@/utils/ApiClient';
 import { User } from '@/constants/Types';
+import { saveToken, getToken, deleteToken } from '@/utils/SecureTokenManager';
+import { createSecureSession, getSecureSession } from '@/utils/SecureSession';
+import { formatAuthHeader } from '@/utils/AuthHelpers';
 
 export interface FormData {
   firstName: string;
@@ -39,20 +42,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const isMountedRef = useRef(true);
 
   // Set initial loading state only once on mount
   useEffect(() => {
     setIsInitialLoading(false);
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   // Handle user authentication state changes
   useEffect(() => {
-    if (!user?.user_id) {
-      setIsSignedIn(false);
-    } else {
-      api.setAuthToken(user?.token);
-      setIsSignedIn(true);
-    }
+    const initAuth = async () => {
+      if (!user?.user_id) {
+        setIsSignedIn(false);
+      } else {
+        // Retrieve token from secure storage
+        const token = await getToken();
+        if (token) {
+          api.setAuthToken(token);
+          setIsSignedIn(true);
+        } else {
+          setIsSignedIn(false);
+        }
+      }
+    };
+    initAuth();
   }, [user]);
 
   const signIn = async (email: string, password: string) => {
@@ -69,20 +85,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!response.data?.token) {
         throw { detail: "Error, Try again later." }
       }
-      await api.setAuthToken(response.data?.token);
+      
+      // Store token securely in SecureStore
+      await saveToken(response.data.token);
+      api.setAuthToken(response.data.token);
+      
       const userResponse = await api.get<User | any>('/auth/me');
       if (!(userResponse.ok && userResponse.data)) {
         throw { detail: "Error, Try again later." }
       }
 
-      const newUser = { ...userResponse.data, token: response.data?.token };
+      // Store user data WITHOUT token
+      const newUser = { ...userResponse.data };
 
-      setUser(newUser);
+      if (isMountedRef.current) {
+        setUser(newUser);
+      }
     } catch (error) {
       console.error('Sign in error:', JSON.stringify(error));
       throw error;
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -94,7 +119,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (response.ok) {
-        router.replace(`/success-page?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`)
+        // Create secure session instead of passing password in URL
+        const sessionId = await createSecureSession({
+          email,
+          password,
+          verified: true
+        });
+        router.replace(`/success-page?session=${sessionId}`)
       } else {
         // Handle error properly when response.data is null or doesn't have detail
         const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Email verification failed';
@@ -102,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
     } catch (error) {
-      console.error('Forgot password error:', JSON.stringify(error))
+      console.error('Email verification error:', JSON.stringify(error))
       throw error
     }
   }
@@ -161,9 +192,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           "Content-Type": "application/json",
         }
       });
-      // console.log('APL--------', JSON.stringify(response.data));
+      
       if (response.ok) {
-        router.push(`/email-verification?email=${encodeURIComponent(formData?.email)}&password=${encodeURIComponent(formData.password)}`)
+        // Create secure session instead of passing password in URL
+        const sessionId = await createSecureSession({
+          email: formData.email,
+          password: formData.password,
+          requiresVerification: true
+        });
+        router.push(`/email-verification?session=${sessionId}`)
       } else {
         // Handle error properly when response.data is null or doesn't have detail
         const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Registration failed';
@@ -173,7 +210,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Sign up error: ", error);
       throw error;
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -190,8 +229,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         state: formData.state
       });
       if (response.ok) {
-        const newUser = { ...response.data, token: user?.token };
-        setUser(newUser);
+        // Store user data WITHOUT token (token is in SecureStore)
+        const newUser = { ...response.data };
+        if (isMountedRef.current) {
+          setUser(newUser);
+        }
         return response.data;
       }
 
@@ -199,7 +241,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('updateUser error:', error);
       throw error;
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -207,30 +251,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const changePassword = async (oldPassword: string, newPassword: string, confirmPassword: string) => {
     setIsLoading(true);
     try {
-      const response = await api.patch<{ token: string } | any>(`/auth/change-password?`, {
+      // TODO: Implement proper reCAPTCHA token generation
+      // For now, this will need to be updated when expo-recaptcha is properly configured
+      const response = await api.patch<{ token: string } | any>(`/auth/change-password`, {
         old_password: oldPassword,
         new_password: newPassword,
       }, {
         headers: {
-          "X-Mobile-Recaptcha-Token": "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1",
           "Content-Type": "application/json",
+          // Note: reCAPTCHA token should be generated dynamically
+          // This is a temporary placeholder - backend should handle mobile requests differently
         }
       });
 
       if (response.ok) {
-
         return response.data;
       } else {
         const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Password change failed';
         throw errorMessage;
       }
 
-
     } catch (error) {
       console.error('changePassword error:', error);
       throw error;
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -269,22 +316,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }, {
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `${token}`
+          "Authorization": formatAuthHeader(token)
         }
       });
       if (response.ok) {
-        router.replace(`/success-page?email=${encodeURIComponent(email)}&password=${encodeURIComponent(newPassword)}`)
+        // Create secure session instead of passing password in URL
+        const sessionId = await createSecureSession({
+          email,
+          password: newPassword,
+          passwordReset: true
+        });
+        router.replace(`/success-page?session=${sessionId}`)
       }
 
     } catch (error) {
       console.error('handleForgotPasswordChange error:', error);
       throw error;
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
-  const signOut = () => {
+  const signOut = async () => {
+    // Delete token from secure storage
+    await deleteToken();
     setUser(null);
     setIsSignedIn(false);
   };

@@ -13,6 +13,7 @@ export interface ColorTheme {
   activeChatItem: string;
   pressedChatItem: string;
   chatIconContainer: string;
+  chaRawHistoryBG: string;
 }
 export interface CommonColors {
   primary: string;
@@ -57,6 +58,7 @@ const theme: AppTheme = {
     activeChatItem: '#e5f3f7',
     pressedChatItem: '#e5f3f7',
     chatIconContainer: '#e5f3f7',
+    chaRawHistoryBG: '#f5f5f5',
   },
   dark: {
     text: "#fff",
@@ -73,6 +75,7 @@ const theme: AppTheme = {
     pressedChatItem: '#1a2f36',
     activeChatItem: '#1a2f36',
     chatIconContainer: '#1a2f36',
+    chaRawHistoryBG: '#1a1a1a',
   },
   common: {
     primary: "#51b0cb",
