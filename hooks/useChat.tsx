@@ -304,7 +304,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ---------------- Chat Operations ----------------
 
-  const sendMessage = useCallback(async (message: string, messageType = 'text', operation: string | null = null, additionalData: string) => {
+  const sendMessage = useCallback(async (message: string, messageType = 'text', operation: string | null = null, additionalData: string = '') => {
 
     setChatLoading(true)
     setError('');
@@ -344,7 +344,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               uri: savedFilePath,
               type: 'audio/x-m4a',
               name: 'audio.m4a',
-            });
+            } as any); // React Native FormData accepts object with uri/type/name
           } else if (messageType === 'image') {
             try {
               const optimizedImagePath = await optimizeImage(filePath);
@@ -354,7 +354,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 uri: optimizedImagePath,
                 type: mimeType,
                 name: `image.${extension}`,
-              });
+              } as any); // React Native FormData accepts object with uri/type/name
               formData.append('text', additionalData);
 
             } catch (imageError) {
@@ -364,7 +364,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 uri: savedFilePath,
                 type: 'image/png',
                 name: 'image.png',
-              });
+              } as any); // React Native FormData accepts object with uri/type/name
               formData.append('text', additionalData);
 
             }
@@ -496,6 +496,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (effectiveLimit > 20) {
         setConversations(prev => {
           const combined = response.data;
+          if (!combined) return prev;
           const unique = combined.filter((item, index, self) =>
             index === self.findIndex(t => t.id === item.id)
           );
@@ -656,7 +657,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setConversations(prev => [newConversation, ...prev]);
       setCurrentRoom(newConversation.id || '');
       resetChat();
-      return newConversation.id;
+      return newConversation.id || '';
     } catch (error) {
       console.error('Create new conversation error:', error);
       throw error;
