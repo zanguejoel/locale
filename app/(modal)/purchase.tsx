@@ -37,7 +37,7 @@ const Page = () => {
       <View style={{ flex: 1 }} />
 
       <TouchableOpacity
-        style={[defaultStyles.btn, { backgroundColor: Colors.primary }]}
+        style={[defaultStyles.btn, { backgroundColor: Colors.common.primary }]}
         onPress={purchaseDalle}>
         <Text style={styles.btnText}>Buy now</Text>
       </TouchableOpacity>

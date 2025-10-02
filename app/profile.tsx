@@ -1,5 +1,5 @@
 
-import { FormData, useAuth } from "@/hooks/useAuth";
+import { FormData as AuthFormData, useAuth } from "@/hooks/useAuth";
 import React, { useState } from "react";
 import {
   View,
@@ -16,14 +16,22 @@ import { useTheme } from "@/hooks/useTheme";
 import { Theme } from "@/constants/Types";
 import Colors from "@/constants/Colors";
 
-
+// Define profile-specific form data type
+interface ProfileFormData {
+  firstName: string;
+  lastName: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  state: string;
+}
 
 const Profile = () => {
   const theme = useTheme();
   const styles = getStyles(theme);
   const { user, updateUser } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<ProfileFormData>({
     firstName: user?.first_name || '',
     lastName: user?.last_name || '',
     address: user?.address || '',
@@ -32,7 +40,7 @@ const Profile = () => {
     state: user?.state || ''
   });
 
-  const handleInputChange = (field: keyof FormData, value: string) => {
+  const handleInputChange = (field: keyof ProfileFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -67,7 +75,15 @@ const Profile = () => {
   };
 
   const handleSave = async () => {
-    await updateUser(formData);
+    // Convert ProfileFormData to AuthFormData format expected by updateUser
+    const authFormData: AuthFormData = {
+      ...formData,
+      email: user?.email || '',
+      phone: user?.phone || '',
+      password: '',
+      confirmPassword: '',
+    };
+    await updateUser(authFormData, '', {} as any);
     setIsModalVisible(false);
   };
 
