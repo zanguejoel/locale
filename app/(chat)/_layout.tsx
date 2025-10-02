@@ -72,9 +72,6 @@ const Layout = () => {
           drawerType: 'slide',
           swipeEdgeWidth: 50,
           swipeMinDistance: 10,
-          sceneContainerStyle: {
-            backgroundColor: theme.colors.background,
-          },
         }}
       >
 

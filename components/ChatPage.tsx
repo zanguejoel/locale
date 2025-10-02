@@ -283,7 +283,7 @@ const ChatPage = () => {
           <CustomView style={{ flex: 1 }}>
             <FlashList
               style={{ flex: 1 }}
-              contentContainerStyle={{ flexGrow: 1, paddingTop: 20 }}
+              contentContainerStyle={{ paddingTop: 20 }}
               showsVerticalScrollIndicator={false}
               ref={messageListRef}
               data={messages}
