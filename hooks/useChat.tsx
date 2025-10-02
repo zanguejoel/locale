@@ -131,7 +131,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   useEffect(() => {
-    fetchConversation(null, null, setCurrentRoom);
+    fetchConversation(undefined, undefined, setCurrentRoom);
     Keyboard.dismiss();
   }, []);
 
@@ -412,7 +412,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       formData.append('conversation_id', conversationId);
     } else {
 
-      const res = await api.post('/conversation', { title: 'New Chat' });
+      const res = await api.post<Conversations>('/conversation', { title: 'New Chat' });
       if (!res.ok || !res.data) {
         throw new Error('Failed to create new conversation');
       }
@@ -420,7 +420,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const conv = res.data?.id;
       if (conv) {
         formData.append('conversation_id', conv);
-        setConversations(prev => [...prev, res.data]);
+        setConversations(prev => [...prev, res.data as Conversations]);
         setCurrentConversationId(conv);
       } else {
         setIsSending(false);
@@ -482,7 +482,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchConversation = useCallback(async (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => {
     const effectiveLimit = limitValue || 20;
     try {
-      await api.setAuthToken(user?.token || '');
+      const token = await getToken();
+      await api.setAuthToken(token || '');
 
       const response = await api.get<Conversations[]>(
         `/conversation/search?limit=${effectiveLimit}${q ? `&q=${q}` : ""}`
@@ -588,7 +589,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteConversation = useCallback(async (conversationId: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      await api.setAuthToken(user?.token || '');
+      const token = await getToken();
+      await api.setAuthToken(token || '');
       const response = await api.delete(`/conversation/${conversationId}`);
       if (!response.ok) {
         console.error(JSON.stringify(response.problem));
@@ -622,7 +624,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const renameConversation = useCallback(async (conversationId: string, newTitle: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      await api.setAuthToken(user?.token || '');
+      const token = await getToken();
+      await api.setAuthToken(token || '');
       const response = await api.put(`/conversation/${conversationId}`, { title: newTitle });
       if (!response.ok) {
         console.error(JSON.stringify(response.problem));
@@ -643,14 +646,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const createNewConversation = useCallback(async (): Promise<string> => {
     try {
       setIsLoading(true);
-      await api.setAuthToken(user?.token || '');
-      const response = await api.post('/conversation', { title: 'New Chat' });
+      const token = await getToken();
+      await api.setAuthToken(token || '');
+      const response = await api.post<Conversations>('/conversation', { title: 'New Chat' });
       if (!response.ok || !response.data) {
         throw new Error('Failed to create new conversation');
       }
       const newConversation = response.data;
       setConversations(prev => [newConversation, ...prev]);
-      setCurrentRoom(newConversation.id);
+      setCurrentRoom(newConversation.id || '');
       resetChat();
       return newConversation.id;
     } catch (error) {
