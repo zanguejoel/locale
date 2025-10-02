@@ -79,7 +79,7 @@ interface ChatContextType {
   stream: string;
   sendMessage: (message: string, messageType?: string, operation?: string | null, additionalData?: string) => Promise<void>;
   fetchMessages: (conversationId: string) => Promise<void>;
-  fetchConversation: (q?: string) => Promise<void>;
+  fetchConversation: (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => Promise<void>;
   createConversation: (participantIds: string[]) => Promise<string>;
   markAsRead: (conversationId: string) => Promise<void>;
   setCurrentRoom: (conversationId: string) => void;
