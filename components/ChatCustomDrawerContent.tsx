@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ContextMenu from 'zeego/context-menu';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useChat } from '@/hooks/useChat';
+import { useChat, Conversations } from '@/hooks/useChat';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Swipeable } from 'react-native-gesture-handler';
 import { FlashList } from '@shopify/flash-list';
@@ -60,9 +60,9 @@ export const CustomDrawerContent = (props: any) => {
     const [hasMore, setHasMore] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isLoadingDisplayChats, setLoadingDisplayChats] = useState(true);
-    const [openSwipeableId, setOpenSwipeableId] = useState(null);
+    const [openSwipeableId, setOpenSwipeableId] = useState<string | null>(null);
 
-    const swipeableRef = useRef(null);
+    const swipeableRef = useRef<Swipeable | null>(null);
     const navigation = useNavigation();
     const limitRef = useRef(20);
 
@@ -227,7 +227,7 @@ export const CustomDrawerContent = (props: any) => {
         setIsFetchingMore(false);
     }, [isFetchingMore, hasMore, fetchConversation, query]);
 
-    const handleScroll = ({ nativeEvent }) => {
+    const handleScroll = ({ nativeEvent }: any) => {
         const paddingToBottom = 20;
         const isCloseToBottom =
             nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >=
@@ -286,10 +286,10 @@ export const CustomDrawerContent = (props: any) => {
     }, []);
 
     const renderRightActions = useCallback(
-        (chatId) => (
-            <View style={styles.swipeActionsContainer}>
+        (chatId: string) => (
+            <View style={styles.swipeActionContainer}>
                 <Pressable
-                    style={styles.swipeDeleteButton}
+                    style={styles.deleteAction}
                     onPress={() => {
                         onDeleteChat(chatId);
                         closeOpenSwipeable();
@@ -308,7 +308,7 @@ export const CustomDrawerContent = (props: any) => {
         router.push(`/(chat)/${chatId}`);
     }, [router, setIsLocal]);
 
-    const renderItem = useCallback(({ item }) => {
+    const renderItem = useCallback(({ item }: { item: Conversations }) => {
         const chatId = item?.id || '';
         const chatTitle = item?.title || 'Untitled Chat';
 
@@ -402,11 +402,11 @@ export const CustomDrawerContent = (props: any) => {
         handleConversationSelect
     ]);
 
-    const keyExtractor = useCallback((item) => item?.id?.toString(), []);
+    const keyExtractor = useCallback((item: Conversations) => item?.id?.toString(), []);
 
     if (isLoadingDisplayChats) {
         return (
-            <View style={styles.loaderContainer}>
+            <View style={styles.drawerContainer}>
                 <ActivityIndicator size="small" />
             </View>
         );
@@ -418,7 +418,7 @@ export const CustomDrawerContent = (props: any) => {
             style={styles.drawerContainer}>
             {showLoading && (
                 <View style={styles.loadingOverlay}>
-                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <ActivityIndicator size="large" color={Colors.common.primary} />
                 </View>
             )}
 
@@ -454,7 +454,7 @@ export const CustomDrawerContent = (props: any) => {
                 <>
                     {filteredConversations.length === 0 ? (
                         <View style={styles.emptyStateContainer}>
-                            <Ionicons name="chatbubble-outline" size={50} color={Colors.greyLight} />
+                            <Ionicons name="chatbubble-outline" size={50} color={Colors.common.greyLight} />
                             <Text style={styles.emptyStateText}>No conversations found</Text>
                             <Text style={styles.emptyStateSubText}>
                                 {query ? 'Try a different search term' : 'Start a new chat to begin'}
@@ -564,7 +564,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     emptyStateSubText: {
         fontSize: 14,
-        color: Colors.greyLight,
+        color: Colors.common.greyLight,
         marginTop: 8,
         textAlign: 'center',
     },
@@ -622,7 +622,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     previewTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: Colors.grey,
+        color: Colors.common.grey,
     },
     footerContainer: {
         padding: 16,
