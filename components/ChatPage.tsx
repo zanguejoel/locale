@@ -49,9 +49,9 @@ const ChatPage = () => {
   const { messages, isLocal, sendMessage, handleSendLocalMessage, setCurrentRoom, isSending, stream, fetchMessages, intermediate } = chat;
 
 
-  const id = params?.id
+  const id = (params as { id?: string })?.id
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<ImagePickerAsset>(null);
+  const [selectedImage, setSelectedImage] = useState<ImagePickerAsset | null>(null);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
@@ -227,7 +227,7 @@ const ChatPage = () => {
   const renderSelectedFile = () => {
     return (
       <View style={styles.selectedFileContainer}>
-        <AntDesign onPress={() => setSelectedImage('')} name="closecircleo" style={styles.closeIcon} size={14} color={theme.colors.red} />
+        <AntDesign onPress={() => setSelectedImage(null)} name="closecircleo" style={styles.closeIcon} size={14} color={theme.colors.red} />
         <Image
           source={{ uri: selectedImage?.uri, cache: 'force-cache' }}
           style={styles.previewImage}
@@ -318,7 +318,7 @@ const ChatPage = () => {
             setSelectedImage={setSelectedImage}
             selectedImage={selectedImage}
             fetchMessages={fetchMessages}
-            onShouldSend={(message, type, operation, additionalData) => {
+            onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string) => {
               isManualScrollRef.current = false;
               setAutoScrollEnabled(true);
               scrollToBottomWithDelay(300);
@@ -409,7 +409,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   textScrollDown: {
     fontSize: 12,
-    color: Colors.grey,
+    color: Colors.common.grey,
     fontWeight: '500',
     marginRight: 4,
   },
