@@ -26,10 +26,10 @@ const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 const MIN_HEIGHT = 40;
 
 export type Props = {
-  onShouldSend: (message: string, type?: string) => void;
+  onShouldSend: (message: string, type?: string, operation?: string | null, additionalData?: string) => void;
   fetchMessages?: () => void
-  selectedImage?: ImagePicker.ImagePickerAsset
-  setSelectedImage?: (a: ImagePicker.ImagePickerAsset) => void,
+  selectedImage?: ImagePicker.ImagePickerAsset | null
+  setSelectedImage?: (a: ImagePicker.ImagePickerAsset | DocumentPicker.DocumentPickerAsset | null) => void,
   isLoading?: boolean
 };
 
@@ -63,7 +63,28 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
       });
 
       const newRecording = new Audio.Recording();
-      await newRecording.prepareToRecordAsync(Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY);
+      await newRecording.prepareToRecordAsync({
+        android: {
+          extension: '.m4a',
+          outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+          audioEncoder: Audio.AndroidAudioEncoder.AAC,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+          audioQuality: Audio.IOSAudioQuality.HIGH,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        web: {
+          mimeType: 'audio/webm',
+          bitsPerSecond: 128000,
+        },
+      });
       await newRecording.startAsync();
 
       setRecording(newRecording);
@@ -133,7 +154,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
     } else {
       onShouldSend(message);
     }
-    setSelectedImage?.('')
+    setSelectedImage?.(null)
     setMessage('');
     setInputHeight(MIN_HEIGHT);
 
