@@ -28,15 +28,15 @@ const Waveform: React.FC<WaveformProps> = ({ progress = 0, onSeek }) => {
     const playedBarsCount = Math.round(waveData.length * progress);
     const [containerWidth, setContainerWidth] = useState<number>(0);
     const [containerLeft, setContainerLeft] = useState<number>(0);
-    const containerRef = useRef<typeof Pressable>(null);
+    const containerRef = useRef<View>(null);
 
     const handleLayout = (event: LayoutChangeEvent) => {
         const { width } = event.nativeEvent.layout;
         setContainerWidth(width);
         if (containerRef.current) {
             UIManager.measure(
-                findNodeHandle(containerRef.current),
-                (x, y, width, height, pageX) => {
+                findNodeHandle(containerRef.current) as any,
+                (x: any, y: any, width: any, height: any, pageX: any) => {
                     setContainerLeft(pageX);
                 }
             );

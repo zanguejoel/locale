@@ -316,9 +316,9 @@ const ChatPage = () => {
         {selectedImage && renderSelectedFile()}
         <BlurView intensity={80} tint="light" style={[styles.inputBlurContainer]}>
           <MessageInput
-            setSelectedImage={setSelectedImage}
+            setSelectedImage={setSelectedImage as any} // Type mismatch between ImagePickerAsset and DocumentPickerAsset
             selectedImage={selectedImage}
-            fetchMessages={fetchMessages}
+            fetchMessages={fetchMessages as any} // Signature mismatch - accepts optional param
             onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string) => {
               isManualScrollRef.current = false;
               setAutoScrollEnabled(true);
