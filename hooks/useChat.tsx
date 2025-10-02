@@ -104,7 +104,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   
   const { user } = useAuth();
-  const [conversations, setConversations] = useState([])
+  const [conversations, setConversations] = useState<Conversations[]>([])
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -112,12 +112,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [stream, setStream] = useState('');
   const [intermediate, setIntermediate] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState<any[]>([]);
   const [inputDisabled, setInputDisabled] = useState(false);
   const [pastedActive, setPastedActive] = useState(false);
   const [streamWorking, setStreamWorking] = useState(false);
   const [isChatLoading, setChatLoading] = useState(false)
-  const [additionalData, setAdditionalData] = useState([]);
+  const [additionalData, setAdditionalData] = useState<any[]>([]);
   const [isLocal, setIsLocal] = useState(false);
   
   // Check if device supports local LLM
