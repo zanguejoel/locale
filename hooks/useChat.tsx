@@ -36,9 +36,11 @@ import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuth } from './useAuth';
 import { getDefaultModelId } from './useDefaultModel';
+import { getDefaultLocalModelId } from './useDefaultLocalModel';
 import { isLocalLLMSupported, getLocalLLMUnsupportedMessage } from '@/utils/DeviceCapabilities';
 import { getToken } from '@/utils/SecureTokenManager';
 import { formatAuthHeader } from '@/utils/AuthHelpers';
+import { getLocalModelById } from '@/constants/LocalModels';
 
 // Import API_URL_PROD from ApiClient configuration
 const API_URL_PROD = "https://api.odysseytech.ai";
@@ -96,6 +98,9 @@ interface ChatContextType {
   isLocal: boolean;
   setIsLocal: (a: boolean) => void;
   isLocalLLMSupported: boolean;
+  localModelDownloadProgress: number;
+  isLocalModelReady: boolean;
+  clearLocalModel: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -123,7 +128,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check if device supports local LLM
   const deviceSupportsLocalLLM = useMemo(() => isLocalLLMSupported(), []);
   
-  // Conditionally initialize LLM only on supported devices
+  // Always call the hook (Rules of Hooks), but only on supported devices
+  // The hook itself will handle lazy loading
   const llm = deviceSupportsLocalLLM ? useLLM({
     modelSource: LLAMA3_2_1B,
     tokenizerSource: LLAMA3_2_1B_TOKENIZER
@@ -151,11 +157,27 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setStream(filteredResponse);
     }
   }, [llm?.response]);
+  
+  // Log LLM state changes for debugging
+  useEffect(() => {
+    if (llm && isLocal) {
+      console.log('[Local] LLM state update:', {
+        isModelReady: (llm as any).isModelReady,
+        downloadProgress: (llm as any).downloadProgress,
+        isGenerating: llm.isGenerating,
+        error: llm.error,
+        allProps: Object.keys(llm)
+      });
+    }
+  }, [llm, isLocal, (llm as any)?.isModelReady, (llm as any)?.downloadProgress, llm?.isGenerating]);
 
  
   const handleSendLocalMessage = async (message: string) => {
+    console.log('[Local] Starting local message send:', message);
+    
     // Check if device supports local LLM
-    if (!deviceSupportsLocalLLM || !llm) {
+    if (!deviceSupportsLocalLLM) {
+      console.error('[Local] Device does not support local LLM');
       Alert.alert(
         'Local LLM Not Supported',
         getLocalLLMUnsupportedMessage(),
@@ -164,23 +186,67 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     
-    console.log("Sending message");
+    // Check if LLM hasn't been initialized yet (shouldn't happen but safety check)
+    if (!llm) {
+      console.error('[Local] LLM not initialized');
+      Alert.alert(
+        'Model Initializing',
+        'The local model is being initialized. Please wait a moment and try again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    // Log LLM state for debugging
+    console.log('[Local] LLM state:', { 
+      isModelReady: (llm as any).isModelReady,
+      isGenerating: llm.isGenerating,
+      downloadProgress: (llm as any).downloadProgress,
+      response: llm.response?.substring(0, 50),
+    });
+    
+    // Check if model is ready
+    if (!(llm as any).isModelReady) {
+      const progress = (llm as any).downloadProgress || 0;
+      console.error('[Local] Model not ready. Download progress:', progress);
+      
+      Alert.alert(
+        'Model Not Ready',
+        progress > 0 && progress < 1
+          ? `The local model is downloading: ${Math.round(progress * 100)}% complete. Please wait for the download to finish.`
+          : 'The local model is not ready. It may be downloading (1.2GB). Please wait and try again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
     
     // Add user message to chat
     appendToMessageHistory(message, Role.User);
     appendToMessageHistory('...', Role.Bot);
     
     try {
+      console.log('[Local] Calling llm.generate...');
       const result = await llm.generate(message);
-      console.log("Result", result);
+      console.log('[Local] Generation result:', result);
       return result;
     } catch (error) {
-      console.error('Local LLM generation error:', error);
-      Alert.alert(
-        'Error',
-        'Failed to generate response with local LLM. Please try again or switch to cloud models.',
-        [{ text: 'OK' }]
-      );
+      console.error('[Local] LLM generation error:', error);
+      
+      // Check if error is due to model still loading
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('still loading') || errorMessage.includes('not loaded')) {
+        Alert.alert(
+          'Model Loading',
+          'The local model is still downloading (1.2GB). This may take several minutes. Please wait and try again, or use cloud models instead.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to generate response with local LLM. Please try again or switch to cloud models.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 
@@ -305,7 +371,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ---------------- Chat Operations ----------------
 
   const sendMessage = useCallback(async (message: string, messageType = 'text', operation: string | null = null, additionalData: string = '') => {
-
+    console.log('[Cloud] Starting cloud message send:', { message, messageType, operation });
+    
     setChatLoading(true)
     setError('');
     setStream('');
@@ -433,13 +500,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Get token from secure storage
       const token = await getToken();
+      console.log('[Cloud] Token exists:', !!token);
+      
       if (!token) {
+        console.error('[Cloud] No token found');
         Alert.alert('Error', 'Authentication required. Please sign in again.');
         setIsSending(false);
         setInputDisabled(false);
+        setChatLoading(false);
         return;
       }
+      
+      // Log token info (first/last 10 chars for debugging without exposing full token)
+      console.log('[Cloud] Token preview:', token.substring(0, 10) + '...' + token.substring(token.length - 10));
+      console.log('[Cloud] Token length:', token.length);
 
+      console.log('[Cloud] Sending fetch request to:', `${BASE_URL}/chat`);
       const _response = await fetch(`${BASE_URL}/chat`, {
         method: 'POST',
         headers: {
@@ -456,10 +532,34 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Ensure streaming is enabled
         cache: 'no-cache',
       });
+      console.log('[Cloud] Fetch response status:', _response.status, 'ok:', _response.ok);
+      console.log('[Cloud] Response headers:', Object.fromEntries(_response.headers.entries()));
+      console.log('[Cloud] Response body exists:', !!_response.body);
+      
       if (!_response.ok) {
         const errorMessage = await _response.text();
-        throw new Error(`Error: ${_response.status} - ${errorMessage}`);
+        console.error('[Cloud] Error response:', errorMessage);
+        
+        // Handle authentication errors specifically
+        if (_response.status === 401) {
+          Alert.alert(
+            'Authentication Error',
+            'Your session has expired. Please sign in again.',
+            [{ text: 'OK' }]
+          );
+          // Optionally: navigate to login screen
+          // router.replace('/login');
+        } else {
+          Alert.alert('Error', `Server error: ${_response.status}`);
+        }
+        
+        setIsSending(false);
+        setInputDisabled(false);
+        setChatLoading(false);
+        return;
       }
+      
+      console.log('[Cloud] Starting processStream...');
       await processStream(
         _response.body,
         setStream,
@@ -468,6 +568,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStreamWorking,
         setAdditionalData
       );
+      console.log('[Cloud] processStream completed');
       setInputDisabled(false);
       setPastedActive(false);
     } catch (e) {
@@ -667,6 +768,32 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, setConversations, setCurrentRoom, resetChat]);
 
+  // Get local model state
+  const localModelDownloadProgress = useMemo(() => {
+    if (!llm) return 0;
+    return (llm as any).downloadProgress || 0;
+  }, [llm, (llm as any)?.downloadProgress]);
+  
+  const isLocalModelReady = useMemo(() => {
+    if (!llm) return false;
+    return (llm as any).isModelReady || false;
+  }, [llm, (llm as any)?.isModelReady]);
+  
+  const clearLocalModel = useCallback(() => {
+    // Get current local model info
+    const currentLocalModel = getLocalModelById(getDefaultLocalModelId());
+    const modelSize = currentLocalModel?.size || '~80MB';
+    const modelName = currentLocalModel?.displayName || 'local model';
+    
+    // This would need to be implemented in react-native-executorch
+    // For now, just show a message
+    Alert.alert(
+      'Clear Downloaded Models',
+      `To clear the ${modelName} (${modelSize}), you need to clear the app data or reinstall the app. This will free up the storage space used by downloaded models.`,
+      [{ text: 'OK' }]
+    );
+  }, []);
+
   const contextValue = useMemo(() => ({
     isChatLoading,
     setChatLoading,
@@ -693,7 +820,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleSendLocalMessage,
     isLocal,
     setIsLocal,
-    isLocalLLMSupported: deviceSupportsLocalLLM
+    isLocalLLMSupported: deviceSupportsLocalLLM,
+    localModelDownloadProgress,
+    isLocalModelReady,
+    clearLocalModel
   }), [
     isChatLoading,
     setChatLoading,
@@ -720,7 +850,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleSendLocalMessage,
     isLocal,
     setIsLocal,
-    deviceSupportsLocalLLM
+    deviceSupportsLocalLLM,
+    localModelDownloadProgress,
+    isLocalModelReady,
+    clearLocalModel
   ]);
 
   return (

@@ -16,6 +16,13 @@ export const useDefaultLocalModel = (): LocalModel => {
           return storedModel;
         }
       }
+      
+      // Initialize storage with default if not set
+      if (!storedModelId) {
+        storage.set('default_local_model_id', DEFAULT_LOCAL_MODEL_ID);
+        console.log('[DefaultLocalModel] Initialized default local model:', DEFAULT_LOCAL_MODEL_ID);
+      }
+      
       // Fall back to recommended or default model
       return getLocalModelById(DEFAULT_LOCAL_MODEL_ID) || getRecommendedLocalModel();
     } catch (error) {

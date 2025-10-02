@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Pressable,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
@@ -30,6 +31,7 @@ const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   const theme = useTheme();
   const styles = getStyles(theme);
   const [tempSelectedId, setTempSelectedId] = useState(selectedModelId);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleConfirm = () => {
     onSelectModel(tempSelectedId);
@@ -44,7 +46,19 @@ const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
     opensource: 'Open Source Models',
   };
 
-  const groupedModels = models.reduce((acc, model) => {
+  // Filter models based on search query
+  const filteredModels = useMemo(() => {
+    if (!searchQuery.trim()) return models;
+    const query = searchQuery.toLowerCase();
+    return models.filter(
+      model =>
+        model.displayName.toLowerCase().includes(query) ||
+        model.description.toLowerCase().includes(query) ||
+        model.category.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+
+  const groupedModels = filteredModels.reduce((acc, model) => {
     if (!acc[model.category]) {
       acc[model.category] = [];
     }
@@ -140,21 +154,58 @@ const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Select Default Model</Text>
+            <Text style={styles.title}>Select AI Model</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
+          
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color={theme.colors.greyLight} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search models..."
+              placeholderTextColor={theme.colors.greyLight}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color={theme.colors.greyLight} />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {/* Info Card */}
+          <View style={styles.infoCard}>
+            <Ionicons name="information-circle" size={18} color={theme.colors.primary} />
+            <Text style={styles.infoCardText}>
+              {filteredModels.length} model{filteredModels.length !== 1 ? 's' : ''} available
+            </Text>
+          </View>
 
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            {Object.entries(groupedModels).map(([category, categoryModels]) => (
-              <View key={category} style={styles.categorySection}>
-                <Text style={styles.categoryTitle}>
-                  {categoryLabels[category as keyof typeof categoryLabels]}
+            {filteredModels.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="search-outline" size={48} color={theme.colors.greyLight} />
+                <Text style={styles.emptyStateTitle}>No models found</Text>
+                <Text style={styles.emptyStateText}>
+                  Try adjusting your search terms
                 </Text>
-                {categoryModels.map(renderModelItem)}
               </View>
-            ))}
+            ) : (
+              Object.entries(groupedModels).map(([category, categoryModels]) => (
+                <View key={category} style={styles.categorySection}>
+                  <Text style={styles.categoryTitle}>
+                    {categoryLabels[category as keyof typeof categoryLabels]}
+                  </Text>
+                  {categoryModels.map(renderModelItem)}
+                </View>
+              ))
+            )}
           </ScrollView>
 
           <View style={styles.footer}>
@@ -209,7 +260,36 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     padding: 4,
   },
   scrollView: {
-    maxHeight: 500,
+    maxHeight: 450,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.backgroundLight,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginHorizontal: 20,
+    marginTop: 16,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: theme.colors.text,
+    padding: 0,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginTop: 12,
+    gap: 8,
+  },
+  infoCardText: {
+    fontSize: 13,
+    color: theme.colors.greyLight,
   },
   categorySection: {
     paddingHorizontal: 20,
@@ -344,6 +424,23 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  emptyState: {
+    padding: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: theme.colors.greyLight,
+    textAlign: 'center',
   },
 });
 

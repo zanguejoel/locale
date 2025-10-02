@@ -27,6 +27,8 @@ import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import ModelToggle from './ModelToggle';
+import { getLocalModelById } from '@/constants/LocalModels';
+import { getDefaultLocalModelId } from '@/hooks/useDefaultLocalModel';
 
 
 export const CustomDrawerContent = (props: any) => {
@@ -195,6 +197,14 @@ export const CustomDrawerContent = (props: any) => {
                 setIsLocal(newIsLocal);
                 
                 if (newIsLocal) {
+                    // Show info about local model download
+                    const selectedModel = getLocalModelById(getDefaultLocalModelId());
+                    Alert.alert(
+                        'Switching to Local Mode',
+                        `Using ${selectedModel?.displayName || 'local model'} (${selectedModel?.size || '~80MB'}). The model will download on first use and run completely offline.`,
+                        [{ text: 'Got it' }]
+                    );
+                    
                     // For local mode, just reset the chat (no server-side conversation needed)
                     resetChat();
                     router.push('/(chat)/new');

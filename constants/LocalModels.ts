@@ -92,7 +92,7 @@ export const LOCAL_MODELS: LocalModel[] = [
   }
 ];
 
-export const DEFAULT_LOCAL_MODEL_ID = 'llama-3.2-1b';
+export const DEFAULT_LOCAL_MODEL_ID = 'tiny-mamba'; // Lightest model at ~80MB
 
 /**
  * Get supported local models based on device capabilities

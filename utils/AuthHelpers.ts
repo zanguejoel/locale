@@ -3,7 +3,7 @@
  */
 
 /**
- * Format authorization header with Bearer prefix
+ * Format authorization header with prefix
  * @param token JWT or auth token
  * @returns Formatted authorization header value
  */
@@ -12,16 +12,16 @@ export const formatAuthHeader = (token: string): string => {
     return '';
   }
   
-  // Remove "Bearer " if it's already present to avoid duplication
+  // Remove "" if it's already present to avoid duplication
   const cleanToken = token.replace(/^Bearer\s+/i, '');
   
-  return `Bearer ${cleanToken}`;
+  return `${cleanToken}`;
 };
 
 /**
  * Extract token from authorization header
  * @param authHeader Authorization header value
- * @returns Token without Bearer prefix
+ * @returns Token without prefix
  */
 export const extractTokenFromHeader = (authHeader: string): string | null => {
   if (!authHeader) {

@@ -31,11 +31,16 @@ const rawPage = [{
   icon: 'phone-portrait-outline'
 }, {
   id: 4,
+  key: 'clear-model',
+  title: 'Clear Downloaded Models',
+  icon: 'trash-outline'
+}, {
+  id: 5,
   key: 'change-password',
   title: 'Change password',
   icon: 'settings-outline'
 }, {
-  id: 5,
+  id: 6,
   key: 'sign_out',
   title: 'Sign Out',
   icon: 'log-out-outline'
@@ -53,7 +58,13 @@ const Page = () => {
   const styles = getStyles(theme);
   const router = useRouter();
   const { signOut } = useAuth();
-  const { createNewConversation, isLocalLLMSupported: deviceSupportsLocal } = useChat();
+  const { 
+    createNewConversation, 
+    isLocalLLMSupported: deviceSupportsLocal,
+    clearLocalModel,
+    isLocalModelReady,
+    localModelDownloadProgress
+  } = useChat();
   const [isModelSelectorVisible, setIsModelSelectorVisible] = useState(false);
   const [isLocalModelSelectorVisible, setIsLocalModelSelectorVisible] = useState(false);
   const [defaultModelId, setDefaultModelId] = useMMKVStorage('default_model_id', DEFAULT_MODEL_ID);
@@ -74,6 +85,7 @@ const Page = () => {
 
   const selectedModel = getModelById(defaultModelId);
   const selectedLocalModel = getLocalModelById(defaultLocalModelId);
+  const modelSize = selectedLocalModel?.size || '~80MB';
 
   const handleInstruction = (type: string) => {
     switch (type) {
@@ -83,6 +95,8 @@ const Page = () => {
         return setIsModelSelectorVisible(true)
       case 'local-model':
         return setIsLocalModelSelectorVisible(true)
+      case 'clear-model':
+        return clearLocalModel()
       case 'change-password':
         return router.push('/change-password')
       case 'sign_out':
@@ -115,6 +129,15 @@ const Page = () => {
                 {deviceSupportsLocal ? selectedLocalModel.displayName : 'Not supported'}
               </Text>
             )}
+            {item.key === 'clear-model' && deviceSupportsLocal && (
+              <Text style={styles.menuItemSubtext}>
+                {isLocalModelReady 
+                  ? `Model downloaded (${modelSize})` 
+                  : localModelDownloadProgress > 0 
+                    ? `Downloading ${Math.round(localModelDownloadProgress * 100)}%` 
+                    : 'No model downloaded'}
+              </Text>
+            )}
           </View>
         </View>
         <Ionicons name="chevron-forward" size={20} color={theme.colors.greyLight} />
@@ -124,8 +147,8 @@ const Page = () => {
   
   // Filter menu items based on device support
   const visibleMenuItems = rawPage.filter(item => {
-    // Hide local-model option if device doesn't support it
-    if (item.key === 'local-model' && !deviceSupportsLocal) {
+    // Hide local-model and clear-model options if device doesn't support it
+    if ((item.key === 'local-model' || item.key === 'clear-model') && !deviceSupportsLocal) {
       return false;
     }
     return true;

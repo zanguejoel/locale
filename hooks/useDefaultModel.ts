@@ -11,6 +11,13 @@ export const useDefaultModel = (): Model => {
     try {
       const storedModelId = storage.getString('default_model_id');
       const modelId = storedModelId || DEFAULT_MODEL_ID;
+      
+      // Initialize storage with default if not set
+      if (!storedModelId) {
+        storage.set('default_model_id', DEFAULT_MODEL_ID);
+        console.log('[DefaultModel] Initialized default cloud model:', DEFAULT_MODEL_ID);
+      }
+      
       return getModelById(modelId) || getModelById(DEFAULT_MODEL_ID)!;
     } catch (error) {
       console.error('Error reading default model from storage:', error);

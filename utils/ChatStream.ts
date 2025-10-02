@@ -22,10 +22,12 @@ export const processStream = async (
   setStreamWorking: (v: boolean) => void,
   setAdditionalData?: (a: any[]) => void
 ): Promise<StreamData | null> => {
+  console.log("[ChatStream] processStream called, response exists:", !!response);
   setStreamWorking(true);
   let res: StreamData | null = null;
   let buffer = '';
   let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  let chunkCount = 0;
 
   if (!response) {
     console.error("[ChatStream] Error: No response stream");
@@ -37,7 +39,9 @@ export const processStream = async (
   const decoder = new TextDecoder();
 
   try {
+    console.log("[ChatStream] Getting reader...");
     reader = response.getReader();
+    console.log("[ChatStream] Reader obtained successfully");
 
     if (!reader) {
       console.error("[ChatStream] Error: Unable to get stream reader");
@@ -49,20 +53,23 @@ export const processStream = async (
     while (true) {
       try {
         const { value, done } = await reader.read();
+        chunkCount++;
         
         if (done) {
-          console.log("[ChatStream] Stream completed");
+          console.log("[ChatStream] Stream completed after", chunkCount, "chunks");
           break;
         }
 
         if (value) {
           // Decode the chunk
           const chunk = decoder.decode(value, { stream: true });
+          console.log(`[ChatStream] Chunk ${chunkCount}:`, chunk.substring(0, 100));
           buffer += chunk;
 
           // Process accumulated buffer
           const { results, remaining } = processJSONChunks(buffer);
           buffer = remaining;
+          console.log(`[ChatStream] Parsed ${results.length} results from chunk`);
 
           // Handle each parsed result
           for (const data of results) {

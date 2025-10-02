@@ -16,6 +16,9 @@ import { useRoute } from '@react-navigation/native';
 import { ImagePickerAsset } from 'expo-image-picker';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
+import { LocalModelDownloadProgress } from './LocalModelDownloadProgress';
+import { useDefaultModel } from '@/hooks/useDefaultModel';
+import { useDefaultLocalModel } from '@/hooks/useDefaultLocalModel';
 
 const ChatPage = () => {
 
@@ -23,6 +26,17 @@ const ChatPage = () => {
 
   const theme = useTheme();
   const styles = getStyles(theme);
+  
+  // Get selected models (using hooks to ensure reactivity)
+  const selectedCloudModel = useDefaultModel();
+  const selectedLocalModel = useDefaultLocalModel();
+  
+  // Log model initialization on mount
+  useEffect(() => {
+    console.log('[ChatPage] Models loaded on launch:');
+    console.log('  Cloud Model:', selectedCloudModel?.displayName, '(ID:', selectedCloudModel?.id + ')');
+    console.log('  Local Model:', selectedLocalModel?.displayName, '(ID:', selectedLocalModel?.id + ')');
+  }, []);
 
   // States
   const [height, setHeight] = useState(0);
@@ -46,7 +60,19 @@ const ChatPage = () => {
 
   // Hooks
   const chat = useChat();
-  const { messages, isLocal, sendMessage, handleSendLocalMessage, setCurrentRoom, isSending, stream, fetchMessages, intermediate } = chat;
+  const { 
+    messages, 
+    isLocal, 
+    sendMessage, 
+    handleSendLocalMessage, 
+    setCurrentRoom, 
+    isSending, 
+    stream, 
+    fetchMessages, 
+    intermediate,
+    localModelDownloadProgress,
+    isLocalModelReady
+  } = chat;
 
 
   const id = (params as { id?: string })?.id
@@ -243,7 +269,21 @@ const ChatPage = () => {
     <View style={styles.pageContainer}>
       <Stack.Screen options={{
         headerTitleAlign: 'center',
-        headerTitle: () => <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} />
+        headerTitle: () => (
+          <View style={styles.headerContainer}>
+            <Image 
+              source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} 
+              style={styles.logo} 
+            />
+            {(selectedCloudModel || selectedLocalModel) && (
+              <Text style={styles.headerModelText}>
+                {isLocal 
+                  ? selectedLocalModel?.displayName || 'Local Model'
+                  : selectedCloudModel?.displayName || 'Cloud Model'}
+              </Text>
+            )}
+          </View>
+        )
       }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -277,7 +317,13 @@ const ChatPage = () => {
              {/*  <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.image} /> */}
              <Text style={styles.logoText}>Odyssey</Text>
               <Text style={styles.welcomeText}>How can I assist you today?</Text>
-              <Text style={{ color: theme.isDark ? 'white': 'black' }}>{isLocal? '(Local Model)' : ''}</Text>
+              {(selectedCloudModel || selectedLocalModel) && (
+                <Text style={[styles.modelNameText, { color: theme.colors.grey }]}>
+                  {isLocal 
+                    ? `Using: ${selectedLocalModel?.displayName || 'Local Model'}` 
+                    : `Using: ${selectedCloudModel?.displayName || 'Cloud Model'}`}
+                </Text>
+              )}
             </Animated.View>
           )}
           <CustomView style={{ flex: 1 }}>
@@ -314,6 +360,12 @@ const ChatPage = () => {
         </View>
         {messages.length === 0 && <MessageIdeas onSelectCard={isLocal ? handleSendLocalMessage : sendMessage} />}
         {selectedImage && renderSelectedFile()}
+        {isLocal && (
+          <LocalModelDownloadProgress 
+            progress={localModelDownloadProgress} 
+            isReady={isLocalModelReady} 
+          />
+        )}
         <BlurView intensity={80} tint="light" style={[styles.inputBlurContainer]}>
           <MessageInput
             setSelectedImage={setSelectedImage as any} // Type mismatch between ImagePickerAsset and DocumentPickerAsset
@@ -372,6 +424,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.text,
     textAlign: 'center',
   },
+  modelNameText: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '400',
+    textAlign: 'center',
+  },
   page: {
     flex: 1,
   },
@@ -391,6 +449,15 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     width: 180,
     resizeMode: 'contain',
     height: 30,
+  },
+  headerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerModelText: {
+    fontSize: 11,
+    color: theme.colors.grey,
+    marginTop: 2,
   },
   scrollButton: {
     position: 'absolute',
