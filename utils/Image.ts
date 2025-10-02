@@ -33,7 +33,8 @@ export const downloadAndSaveVideo = async (videoUrl?: string) => {
     }
 
     const fileName = videoUrl.split('/').pop();
-    const fileUri = FileSystem.cacheDirectory + fileName;
+    const cacheDir = FileSystem.cacheDirectory || FileSystem.documentDirectory || '';
+    const fileUri = cacheDir + (fileName || 'video.mp4');
 
     const { uri } = await FileSystem.downloadAsync(videoUrl, fileUri);
 

@@ -519,7 +519,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const fetchMessages = useCallback(async (conversationId: string) => {
+  const fetchMessages = useCallback(async (conversationId?: string) => {
+    if (!conversationId) return;
     try {
       setIsLoading(true);
       const response = await api.get<Message[]>(`/conversation/${conversationId}/logs`, {
