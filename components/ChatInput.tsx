@@ -27,7 +27,7 @@ const MIN_HEIGHT = 40;
 
 export type Props = {
   onShouldSend: (message: string, type?: string, operation?: string | null, additionalData?: string) => void;
-  fetchMessages?: () => void
+  fetchMessages?: (conversationId?: string) => void | Promise<void>
   selectedImage?: ImagePicker.ImagePickerAsset | null
   setSelectedImage?: (a: ImagePicker.ImagePickerAsset | DocumentPicker.DocumentPickerAsset | null) => void,
   isLoading?: boolean

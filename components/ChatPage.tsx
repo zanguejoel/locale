@@ -218,7 +218,7 @@ const ChatPage = () => {
   const CustomView = Platform.OS === 'ios' ? PanGestureHandler : View
 
   const KeyboardVisibleStyle = {
-    position: 'absolute',
+    position: 'absolute' as const,
     bottom: 0,
     left: 0,
     right: 0
@@ -281,7 +281,7 @@ const ChatPage = () => {
             </Animated.View>
           )}
           <CustomView style={{ flex: 1 }}>
-            <FlatList
+            <FlashList
               style={{ flex: 1 }}
               contentContainerStyle={{ flexGrow: 1, paddingTop: 20 }}
               showsVerticalScrollIndicator={false}
@@ -290,6 +290,7 @@ const ChatPage = () => {
               renderItem={renderItem}
               keyboardDismissMode="on-drag"
               onScroll={handleScroll}
+              estimatedItemSize={100}
               scrollEventThrottle={16}
               extraData={[isSending, stream]}
               onContentSizeChange={handleContentSizeChange}
