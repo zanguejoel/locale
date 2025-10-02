@@ -86,7 +86,7 @@ d22ca3c - fix(security): remove hardcoded tokens, secure password flows, migrate
 
 1. **Start Here:**
    ```bash
-   cd /Users/zanguejoel/Documents/work/jaime-mobile-app
+   cd /path/to/jaime-mobile-app
    cat docs/CONTINUATION_PLAN.md
    ```
 

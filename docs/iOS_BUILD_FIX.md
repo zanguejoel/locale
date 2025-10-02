@@ -14,7 +14,7 @@ Instead of running `pod install` directly, use Expo's development build:
 
 ```bash
 # Clean everything
-cd /Users/zanguejoel/Documents/work/jaime-mobile-app
+cd /path/to/jaime-mobile-app
 rm -rf ios/Pods ios/Podfile.lock
 rm -rf node_modules
 
@@ -106,7 +106,7 @@ export const deleteToken = async (): Promise<void> => {
 ### **Step 1: Try Development Build First**
 
 ```bash
-cd /Users/zanguejoel/Documents/work/jaime-mobile-app
+cd /path/to/jaime-mobile-app
 
 # Make sure expo-cli is updated
 pnpm add -g expo-cli
@@ -215,7 +215,7 @@ npx expo run:ios
 export LANG=en_US.UTF-8
 
 # 2. Clean and rebuild
-cd /Users/zanguejoel/Documents/work/jaime-mobile-app
+cd /path/to/jaime-mobile-app
 rm -rf ios/Pods ios/Podfile.lock
 
 # 3. Use Expo's build system

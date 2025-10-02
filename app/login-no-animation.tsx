@@ -79,7 +79,7 @@ const Login = () => {
           await AsyncStorage.removeItem("savedEmail");
         }
       } catch (err: any) {
-        Alert.alert("Error", err?.detail || "Login failed");
+        Alert.alert("Error", err || "Login failed");
       }
     }
   };

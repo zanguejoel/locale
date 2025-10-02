@@ -252,7 +252,7 @@ The codebase is now:
 
 ```bash
 # Quick access
-cd /Users/zanguejoel/Documents/work/jaime-mobile-app/docs
+cd /path/to/jaime-mobile-app/docs
 
 # Victory document
 cat VICTORY.md

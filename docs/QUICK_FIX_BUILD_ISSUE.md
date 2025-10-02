@@ -156,7 +156,7 @@ Your accomplishments are **REAL and COMPLETE**:
 
 ```bash
 # Quick test right now:
-cd /Users/zanguejoel/Documents/work/jaime-mobile-app
+cd /path/to/jaime-mobile-app
 
 # Option 1: Expo Go (easiest)
 npx expo start

@@ -337,7 +337,7 @@ Remaining: ███░░░░░░░░░░░░░░░░░  54 erro
 ### Quick Start (30 min warm-up)
 ```bash
 # Review progress
-cd /Users/zanguejoel/Documents/work/jaime-mobile-app
+cd /path/to/jaime-mobile-app
 cat docs/FINAL_SUMMARY.md
 
 # Check remaining errors
@@ -406,7 +406,7 @@ docs/
 ### Key Commands
 ```bash
 # Continue working
-cd /Users/zanguejoel/Documents/work/jaime-mobile-app
+cd /path/to/jaime-mobile-app
 
 # Check errors
 npx tsc --noEmit

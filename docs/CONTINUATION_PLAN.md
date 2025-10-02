@@ -168,7 +168,7 @@ const renderItem = ({ item }: { item: ConversationType }) => { ... }
 ### Quick Start
 ```bash
 # Navigate to project
-cd /Users/zanguejoel/Documents/work/jaime-mobile-app
+cd /path/to/jaime-mobile-app
 
 # Check current status
 git log --oneline -7

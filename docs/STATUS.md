@@ -181,7 +181,7 @@ Everything is unblocked and ready:
 
 ### Quick Start
 ```bash
-cd /Users/zanguejoel/Documents/work/jaime-mobile-app
+cd /path/to/jaime-mobile-app
 cat docs/STATUS.md
 cat MISSION_COMPLETE.md
 ```
