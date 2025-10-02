@@ -434,12 +434,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.common.primary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.grey,
+    color: Colors.common.grey,
     opacity: 0.8,
   },
   formContainer: {
@@ -485,10 +485,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   inputError: {
-    borderColor: Colors.red,
+    borderColor: Colors.common.red,
   },
   errorText: {
-    color: Colors.red,
+    color: Colors.common.red,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 12,
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   },
   signUpButton: {
     height: 50,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.common.primary,
     borderRadius: 12,
   },
   btnPrimaryText: {
@@ -513,11 +513,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   loginText: {
-    color: Colors.grey,
+    color: Colors.common.grey,
     fontSize: 14,
   },
   loginLink: {
-    color: Colors.primary,
+    color: Colors.common.primary,
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
@@ -544,13 +544,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: Colors.common.primary,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.grey,
+    borderColor: Colors.common.grey,
     borderRadius: 12,
     paddingHorizontal: 10,
     marginBottom: 16,
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
   },
   countryDialCode: {
     fontSize: 16,
-    color: Colors.grey,
+    color: Colors.common.grey,
   },
   separator: {
     height: 1,
