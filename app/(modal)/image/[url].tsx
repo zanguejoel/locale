@@ -144,7 +144,7 @@ const Page = () => {
             uri={url}
             minScale={0.5}
             maxScale={5}
-            minPanPointers={1}
+            maxPanPointers={2}
             doubleTapScale={2}
             isSingleTapEnabled
             isDoubleTapEnabled
