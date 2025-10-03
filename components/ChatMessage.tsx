@@ -2,7 +2,8 @@ import { memo, useState } from 'react';
 import Colors from '@/constants/Colors';
 import useMarkdownDisplay from '@/hooks/useMarkdownDisplay';
 import { copyImageToClipboard, downloadAndSaveImage, downloadAndSaveVideo, shareImage } from '@/utils/Image';
-import { Message, Role } from '@/utils/Interfaces';
+import { Message, Role, MessageStatus } from '@/utils/Interfaces';
+import { formatMessageTimestamp } from '@/utils/dateHelpers';
 import { Link } from 'expo-router';
 import {
   View,
@@ -19,6 +20,7 @@ import {
   Share,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ContextMenu from 'zeego/context-menu';
 import { useCallback, useEffect, useRef } from 'react';
 import { Audio, Video } from 'expo-av';
@@ -31,6 +33,7 @@ import AnimatedText from './AnimatedText';
 import AudioPlayer from './AudioPlayer';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
+import { shadows } from '@/constants/Shadows';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -170,7 +173,9 @@ const ChatMessage = memo(({
   isSending,
   streamWorking,
   imageData,
-  intermediate
+  intermediate,
+  timestamp,
+  status
 }: ChatMessageProps) => {
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -638,6 +643,28 @@ const ChatMessage = memo(({
         </>)
     };
   }
+  // Status indicator component
+  const StatusIcon = () => {
+    if (role === Role.Bot || !status) return null;
+    
+    const getStatusIcon = () => {
+      switch (status) {
+        case MessageStatus.Sending:
+          return <View style={styles.statusDotEmpty} />;
+        case MessageStatus.Sent:
+          return <Ionicons name="checkmark" size={12} color={theme.colors.textSecondary} />;
+        case MessageStatus.Delivered:
+          return <Ionicons name="checkmark-done" size={12} color={theme.colors.primary} />;
+        case MessageStatus.Failed:
+          return <Ionicons name="alert-circle" size={12} color={theme.colors.destructive} />;
+        default:
+          return null;
+      }
+    };
+    
+    return getStatusIcon();
+  };
+
   return (
     <Animated.View
       style={[
@@ -669,8 +696,20 @@ const ChatMessage = memo(({
         </>
 
       ) : (
-        <View style={styles.messageContent} testID="message-content">
-          {renderContent()}
+        <View style={styles.messageWrapper}>
+          <View style={styles.messageContent} testID="message-content">
+            {renderContent()}
+          </View>
+          {(timestamp || status) && (
+            <View style={[styles.metaContainer, role === Role.User ? styles.metaUser : styles.metaBot]}>
+              {timestamp && (
+                <Text style={styles.timestamp}>
+                  {formatMessageTimestamp(timestamp)}
+                </Text>
+              )}
+              <StatusIcon />
+            </View>
+          )}
         </View>
       )}
     </Animated.View>
@@ -680,9 +719,8 @@ const ChatMessage = memo(({
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
-    marginVertical: 8,
+    marginVertical: 6,
     paddingHorizontal: 16,
-    maxWidth: '97%',
   },
   audioPlayer: {
     flexDirection: 'row',
@@ -695,16 +733,17 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   botContainer: {
     alignSelf: 'flex-start',
+    maxWidth: '100%', // Full width for bot messages
   },
   userContainer: {
     alignSelf: 'flex-end',
     flexDirection: 'row-reverse',
+    maxWidth: '85%', // Constrain user messages for better readability
   },
   avatarContainer: {
     marginRight: 8,
   },
   messageContent: {
-    //flex: 1,
     maxWidth: '100%',
   },
   videoContainer: {
@@ -731,46 +770,40 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     paddingVertical: 8,
   },
   contentContainer: {
-    borderRadius: BORDER_RADIUS,
-    paddingHorizontal: 12,
-    // minWidth: 60,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     maxWidth: '100%',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    ...shadows.sm, // Use consistent shadow system
   },
   streamingContent: {
-
+    opacity: 0.95,
   },
   markdownContainer: {
     width: '100%',
     alignSelf: 'flex-start',
   },
   botContent: {
-    // backgroundColor: `${theme.colors.greyLight}20`,
-    borderBottomLeftRadius: 4,
+    backgroundColor: theme.colors.card,
+    borderBottomLeftRadius: 6, // Tail effect
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   userContent: {
-    backgroundColor: `${theme.colors.primary}20`,
-    borderBottomRightRadius: 4,
+    backgroundColor: theme.colors.primary,
+    borderBottomRightRadius: 6, // Tail effect
+    ...shadows.md, // User messages have more elevation
   },
   text: {
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   botText: {
-    color: Colors.common.grey,
+    color: theme.colors.text,
   },
   userText: {
-    color: Colors.light.text,
+    color: '#FFFFFF', // White text on primary blue background
+    fontWeight: '500',
   },
   loadingVideo: {
     position: 'absolute',
@@ -908,6 +941,34 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     fontWeight: '500',
     marginLeft: 4,
     fontSize: 14,
+  },
+  messageWrapper: {
+    maxWidth: '100%',
+  },
+  metaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
+  metaUser: {
+    alignSelf: 'flex-end',
+  },
+  metaBot: {
+    alignSelf: 'flex-start',
+  },
+  timestamp: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    opacity: 0.7,
+  },
+  statusDotEmpty: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: theme.colors.textSecondary,
   },
 });
 

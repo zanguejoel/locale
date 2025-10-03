@@ -11,6 +11,13 @@ export interface File {
   s3_url: string
   data_type?: string
 }
+export enum MessageStatus {
+  Sending = 'sending',
+  Sent = 'sent',
+  Delivered = 'delivered',
+  Failed = 'failed',
+}
+
 export interface Message {
   role: Role;
   content: string;
@@ -19,7 +26,10 @@ export interface Message {
   category?: string;
   files?: File[];
   message_type?: string;
-
+  timestamp?: Date | string;
+  status?: MessageStatus;
+  id?: string;
+  imageData?: string;
 }
 
 export interface Chat {

@@ -40,6 +40,7 @@ export const useDefaultLocalModel = (): LocalModel => {
           if (storedModelId) {
             const newModel = getLocalModelById(storedModelId);
             if (newModel) {
+              console.log('[DefaultLocalModel] Model changed to:', newModel.displayName);
               setModel(newModel);
             }
           }

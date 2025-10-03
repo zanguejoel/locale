@@ -63,6 +63,7 @@ export const CustomDrawerContent = (props: any) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isLoadingDisplayChats, setLoadingDisplayChats] = useState(true);
     const [openSwipeableId, setOpenSwipeableId] = useState<string | null>(null);
+    const [pinnedChats, setPinnedChats] = useState<Set<string>>(new Set());
 
     const swipeableRef = useRef<Swipeable | null>(null);
     const navigation = useNavigation();
@@ -177,6 +178,23 @@ export const CustomDrawerContent = (props: any) => {
         );
     };
 
+    const togglePinChat = (chatId: string) => {
+        setPinnedChats(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(chatId)) {
+                newSet.delete(chatId);
+            } else {
+                // Limit to 5 pinned chats
+                if (newSet.size >= 5) {
+                    Alert.alert('Limit Reached', 'You can only pin up to 5 conversations');
+                    return prev;
+                }
+                newSet.add(chatId);
+            }
+            return newSet;
+        });
+    };
+
     const handleModelSwitch = async (modelType: 'local' | 'Odyssey') => {
         const newIsLocal = modelType === 'local';
         
@@ -201,7 +219,7 @@ export const CustomDrawerContent = (props: any) => {
                     const selectedModel = getLocalModelById(getDefaultLocalModelId());
                     Alert.alert(
                         'Switching to Local Mode',
-                        `Using ${selectedModel?.displayName || 'local model'} (${selectedModel?.size || '~135MB'}).\n\nThe model will download on first use and run completely offline. Download time depends on your connection speed.`,
+                        `Using ${selectedModel?.displayName || 'Llama 3.2 1B'} (${selectedModel?.size || '~1.2GB'}).\n\nThe model will download on first use and run completely offline. Download time depends on your connection speed.`,
                         [{ text: 'Got it' }]
                     );
                     
@@ -271,20 +289,33 @@ export const CustomDrawerContent = (props: any) => {
             return [];
         }
 
-        if (!query) {
-            return conversations;
+        let filtered = conversations;
+        
+        if (query) {
+            const lowercaseQuery = query.toLowerCase();
+            filtered = conversations.filter(conversation => {
+                if (!conversation) return false;
+                const title = conversation.title || 'Untitled Chat';
+                return title.toLowerCase().includes(lowercaseQuery);
+            });
         }
 
-        const lowercaseQuery = query.toLowerCase();
-        return conversations.filter(conversation => {
-
-            if (!conversation) return false;
-
-
-            const title = conversation.title || 'Untitled Chat';
-            return title.toLowerCase().includes(lowercaseQuery);
+        // Sort: pinned chats first, then by date
+        return filtered.sort((a, b) => {
+            const aId = a.id || '';
+            const bId = b.id || '';
+            const aPinned = pinnedChats.has(aId);
+            const bPinned = pinnedChats.has(bId);
+            
+            if (aPinned && !bPinned) return -1;
+            if (!aPinned && bPinned) return 1;
+            
+            // If both pinned or both not pinned, sort by date
+            const aDate = a.time_updated || a.time_created || new Date(0);
+            const bDate = b.time_updated || b.time_created || new Date(0);
+            return new Date(bDate).getTime() - new Date(aDate).getTime();
         });
-    }, [conversations, query]);
+    }, [conversations, query, pinnedChats]);
 
 
     const closeOpenSwipeable = useCallback(() => {
@@ -351,9 +382,14 @@ export const CustomDrawerContent = (props: any) => {
                                     <Ionicons name="chatbubble" size={18} color={theme.colors.primary} />
                                 </View>
                                 <View style={styles.chatDetails}>
-                                    <Text style={styles.chatTitle} numberOfLines={1}>
-                                        {chatTitle}
-                                    </Text>
+                                    <View style={styles.chatTitleRow}>
+                                        <Text style={styles.chatTitle} numberOfLines={1}>
+                                            {chatTitle}
+                                        </Text>
+                                        {pinnedChats.has(chatId) && (
+                                            <Ionicons name="pin" size={14} color={theme.colors.primary} style={styles.pinIcon} />
+                                        )}
+                                    </View>
                                     <Text style={styles.chatTimestamp} numberOfLines={1}>
                                         {new Date().toLocaleDateString()}
                                     </Text>
@@ -378,6 +414,18 @@ export const CustomDrawerContent = (props: any) => {
                                 </View>
                             )}
                         </ContextMenu.Preview>
+
+                        <ContextMenu.Item key={'pin'} onSelect={() => togglePinChat(chatId)}>
+                            <ContextMenu.ItemTitle>
+                                {pinnedChats.has(chatId) ? 'Unpin' : 'Pin'}
+                            </ContextMenu.ItemTitle>
+                            <ContextMenu.ItemIcon
+                                ios={{
+                                    name: pinnedChats.has(chatId) ? 'pin.slash' : 'pin',
+                                    pointSize: 18,
+                                }}
+                            />
+                        </ContextMenu.Item>
 
                         <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chatId, chatTitle)}>
                             <ContextMenu.ItemTitle>Rename</ContextMenu.ItemTitle>
@@ -409,7 +457,9 @@ export const CustomDrawerContent = (props: any) => {
         onRenameChat,
         openSwipeableId,
         renderRightActions,
-        handleConversationSelect
+        handleConversationSelect,
+        pinnedChats,
+        togglePinChat
     ]);
 
     const keyExtractor = useCallback((item: Conversations) => item?.id?.toString() || '', []);
@@ -460,6 +510,20 @@ export const CustomDrawerContent = (props: any) => {
                 </View>
                 <Text style={styles.historyTitle}>Chat History</Text>
             </View>
+            
+            {/* New Chat Button */}
+            <TouchableOpacity 
+                style={styles.newChatButton}
+                onPress={() => {
+                    router.push('/(chat)/new');
+                    resetChat();
+                }}
+                activeOpacity={0.7}
+            >
+                <Ionicons name="add-circle" size={24} color={theme.colors.primary} />
+                <Text style={styles.newChatButtonText}>New Chat</Text>
+            </TouchableOpacity>
+
             {!isShowData ? <></> :
                 <>
                     {filteredConversations.length === 0 ? (
@@ -537,6 +601,24 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         marginTop: 8,
         color: theme.colors.text,
     },
+    newChatButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.card,
+        marginHorizontal: 16,
+        marginVertical: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        gap: 10,
+    },
+    newChatButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: theme.colors.primary,
+    },
     searchSection: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -607,10 +689,19 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     chatDetails: {
         flex: 1,
     },
+    chatTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    pinIcon: {
+        marginLeft: 4,
+    },
     chatTitle: {
         fontSize: 15,
         fontWeight: '500',
         color: theme.colors.text,
+        flex: 1,
     },
     chatTimestamp: {
         fontSize: 12,

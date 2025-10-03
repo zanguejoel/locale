@@ -18,8 +18,8 @@ export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProp
   const selectedLocalModel = useDefaultLocalModel();
   
   // Get model info
-  const modelName = selectedLocalModel?.displayName || 'Local Model';
-  const modelSize = selectedLocalModel?.size || '~135MB';
+  const modelName = selectedLocalModel?.displayName || 'Llama 3.2 1B';
+  const modelSize = selectedLocalModel?.size || '~1.2GB';
   
   // Debug logging
   console.log('[LocalModelProgress] Render:', { 

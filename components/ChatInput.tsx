@@ -11,12 +11,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { isLoaded } from 'expo-font';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 
@@ -31,9 +32,10 @@ export type Props = {
   selectedImage?: ImagePicker.ImagePickerAsset | null
   setSelectedImage?: (a: ImagePicker.ImagePickerAsset | DocumentPicker.DocumentPickerAsset | null) => void,
   isLoading?: boolean
+  onRecordingStateChange?: (isRecording: boolean, onCancel: () => void) => void;
 };
 
-const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading }: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading, onRecordingStateChange }: Props) => {
   const [message, setMessage] = useState('');
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -44,13 +46,24 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+
+  // Notify parent about recording state changes
+  useEffect(() => {
+    if (onRecordingStateChange) {
+      onRecordingStateChange(isRecording, cancelRecording);
+    }
+  }, [isRecording]);
   const startRecording = async () => {
+    // Haptic feedback on recording start
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     try {
       const { status } = await Audio.getPermissionsAsync();
       if (status !== 'granted') {
         const { status: newStatus } = await Audio.requestPermissionsAsync();
         if (newStatus !== 'granted') {
           alert('Microphone permission not granted');
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           return;
         }
       }
@@ -91,12 +104,16 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
       setIsRecording(true);
     } catch (err) {
       console.error('Recording error:', err);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
   const stopRecording = async () => {
     if (!recording) return;
 
+    // Haptic feedback on recording stop
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     setIsRecording(false);
     try {
       await recording.stopAndUnloadAsync();
@@ -104,12 +121,33 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
 
       if (!uri) {
         console.error('Failed to retrieve the recording URI.');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         return;
       }
 
       onShouldSend(uri, 'audio');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
       console.error('Error stopping the recording:', err);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setRecording(null);
+    }
+  };
+
+  const cancelRecording = async () => {
+    if (!recording) return;
+
+    // Haptic feedback on cancel
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    setIsRecording(false);
+    try {
+      await recording.stopAndUnloadAsync();
+      // Don't send the recording, just discard it
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    } catch (err) {
+      console.error('Error canceling the recording:', err);
     } finally {
       setRecording(null);
     }
@@ -147,6 +185,9 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
   };
 
   const onSend = () => {
+    // Haptic feedback on send
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
     Keyboard.dismiss();
     if (selectedImage) {
       onShouldSend(selectedImage?.uri, 'image', null, message);
@@ -252,9 +293,17 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             multiline={true}
           />
           {message.length > 0 ? (
-            <TouchableOpacity disabled={isLoading} onPress={onSend}>
-              <Ionicons name="arrow-up-circle" size={30} color={isLoading ? theme.colors.chatIcons : theme.colors.chatIcons} />
-            </TouchableOpacity>
+            <ATouchableOpacity 
+              disabled={isLoading} 
+              onPress={onSend}
+              style={{ transform: [{ scale: 1 }] }}
+            >
+              <Ionicons 
+                name="arrow-up-circle" 
+                size={30} 
+                color={isLoading ? theme.colors.grey : theme.colors.primary} 
+              />
+            </ATouchableOpacity>
           ) : (
             <TouchableOpacity disabled={isLoading} onPress={isRecording ? stopRecording : startRecording}>
               <Ionicons name="mic-outline" size={30} color={isRecording ? theme.colors.red : (isLoading ? theme.colors.chatIcons : theme.colors.chatIcons)} />
@@ -285,7 +334,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   messageInput: {
     flex: 1,
-    zIndex: 10000,
     maxHeight: 75,
     marginHorizontal: 10,
     borderWidth: StyleSheet.hairlineWidth,

@@ -1,5 +1,6 @@
 import Colors from '@/constants/Colors';
 import { StyleSheet } from 'react-native';
+import { typography, textStyles } from '@/constants/Typography';
 
 export const defaultStyles = StyleSheet.create({
   btn: {
@@ -9,7 +10,8 @@ export const defaultStyles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     paddingHorizontal: 10,
-    backgroundColor: Colors.common.primary
+    backgroundColor: Colors.common.primary,
+    ...textStyles.button, // Apply typography
   },
   btnSecondary: {
     height: 50,
@@ -19,7 +21,8 @@ export const defaultStyles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: Colors.common.primary
+    borderColor: Colors.common.primary,
+    ...textStyles.button, // Apply typography
   },
   loadingOverlay: {
     position: 'absolute',

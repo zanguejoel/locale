@@ -32,6 +32,9 @@ importers:
       '@react-native-async-storage/async-storage':
         specifier: 1.23.1
         version: 1.23.1(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.25)(react@18.3.1))
+      '@react-native-community/netinfo':
+        specifier: 11.4.1
+        version: 11.4.1(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.25)(react@18.3.1))
       '@react-native-community/slider':
         specifier: ^4.5.6
         version: 4.5.7
@@ -1803,6 +1806,11 @@ packages:
     resolution: {integrity: sha512-DyKptlG78XPFo7tDod+we5a3R+U9qjyhaVFbOPvH4pFNu5Dehewtol/srl44K6Cszq0aEMlAJZ3juk0W4WnOJA==}
     engines: {node: '>=18'}
     hasBin: true
+
+  '@react-native-community/netinfo@11.4.1':
+    resolution: {integrity: sha512-B0BYAkghz3Q2V09BF88RA601XursIEA111tnc2JOaN7axJWmNefmfjZqw/KdSxKZp7CZUuPpjBmz/WCR9uaHYg==}
+    peerDependencies:
+      react-native: '>=0.59'
 
   '@react-native-community/slider@4.5.7':
     resolution: {integrity: sha512-WMDDZjNF2Bd8M8TrSqKf5xhM9ikdfCHtSPur64Ow3bB/OVrKufUQZ59NmYdNZNeGPvcHHTsafuYTY8zfZfbchQ==}
@@ -8564,6 +8572,10 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
+
+  '@react-native-community/netinfo@11.4.1(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.25)(react@18.3.1))':
+    dependencies:
+      react-native: 0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.25)(react@18.3.1)
 
   '@react-native-community/slider@4.5.7': {}
 

@@ -33,7 +33,7 @@ export const LOCAL_MODELS: LocalModel[] = [
     minIOSVersion: 17,
     minAndroidVersion: 33,
     requiresHighEnd: false,
-    recommended: true
+    recommended: false
   },
   {
     id: 'smollm2-360m',
@@ -76,12 +76,12 @@ export const LOCAL_MODELS: LocalModel[] = [
     name: 'Llama-3.2-1B',
     displayName: 'Llama 3.2 1B',
     modelSource: LLAMA3_2_1B,
-    description: 'Fast and capable model for everyday tasks',
+    description: 'Best balance of performance and quality',
     size: '~1.2GB',
     minIOSVersion: 17,
     minAndroidVersion: 33,
     requiresHighEnd: false,
-    recommended: false
+    recommended: true
   },
   {
     id: 'qwen2.5-1.5b',
@@ -109,7 +109,7 @@ export const LOCAL_MODELS: LocalModel[] = [
   }
 ];
 
-export const DEFAULT_LOCAL_MODEL_ID = 'smollm2-135m'; // Lightest model at ~135MB
+export const DEFAULT_LOCAL_MODEL_ID = 'llama-3.2-1b'; // Best performing model for most devices
 
 /**
  * Get supported local models based on device capabilities
@@ -142,9 +142,34 @@ export const getLocalModelById = (id: string): LocalModel | undefined => {
 
 /**
  * Get the recommended local model for the device
+ * Prioritizes performance while considering device capabilities
  */
 export const getRecommendedLocalModel = (): LocalModel => {
   const supportedModels = getSupportedLocalModels();
+  
+  // First, try to find the marked recommended model (Llama 3.2 1B)
   const recommended = supportedModels.find(m => m.recommended);
-  return recommended || supportedModels[0] || LOCAL_MODELS[0];
+  if (recommended) {
+    return recommended;
+  }
+  
+  // If Llama not supported, prioritize by performance/size
+  // Order of preference: Qwen 2.5 1.5B > Qwen 0.5B > Hammer2 > SmolLM2 360M > SmolLM2 135M
+  const preferenceOrder = [
+    'qwen2.5-1.5b',
+    'qwen2.5-0.5b', 
+    'hammer2-0.5b',
+    'smollm2-360m',
+    'smollm2-135m'
+  ];
+  
+  for (const modelId of preferenceOrder) {
+    const model = supportedModels.find(m => m.id === modelId);
+    if (model) {
+      return model;
+    }
+  }
+  
+  // Fallback to first available or first in list
+  return supportedModels[0] || LOCAL_MODELS[0];
 };

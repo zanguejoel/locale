@@ -13,6 +13,7 @@ import ModelSelectorModal from '@/components/modals/ModelSelectorModal/ModelSele
 import LocalModelSelectorModal from '@/components/modals/LocalModelSelectorModal/LocalModelSelectorModal';
 import { DEFAULT_LOCAL_MODEL_ID, getLocalModelById } from '@/constants/LocalModels';
 import { isLocalLLMSupported } from '@/utils/DeviceCapabilities';
+import { GradientBackground } from '@/components/GradientBackground';
 
 const rawPage = [{
   id: 1,
@@ -85,7 +86,7 @@ const Page = () => {
 
   const selectedModel = getModelById(defaultModelId);
   const selectedLocalModel = getLocalModelById(defaultLocalModelId);
-  const modelSize = selectedLocalModel?.size || '~135MB';
+  const modelSize = selectedLocalModel?.size || '~1.2GB';
 
   const handleInstruction = (type: string) => {
     switch (type) {
@@ -155,8 +156,9 @@ const Page = () => {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+    <GradientBackground variant="background">
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView style={styles.container}>
         <View style={styles.contentContainer}>
           <View style={styles.menuContainer}>
             {visibleMenuItems.map((item, index) => renderRaw(item, index, visibleMenuItems))}
@@ -181,18 +183,19 @@ const Page = () => {
         selectedModelId={defaultLocalModelId}
         onSelectModel={handleLocalModelSelect}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 };
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent', // Let gradient show through
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent', // Let gradient show through
     paddingHorizontal: 20,
   },
   contentContainer: {

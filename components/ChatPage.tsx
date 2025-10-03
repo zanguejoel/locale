@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard } from 'react-native';
+import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard, Clipboard, Alert } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useChat } from '@/hooks/useChat';
@@ -19,6 +19,16 @@ import { Theme } from '@/constants/Types';
 import { LocalModelDownloadProgress } from './LocalModelDownloadProgress';
 import { useDefaultModel } from '@/hooks/useDefaultModel';
 import { useDefaultLocalModel } from '@/hooks/useDefaultLocalModel';
+import { GradientBackground } from './GradientBackground';
+import TypingIndicator from './TypingIndicator';
+import DateSeparator from './DateSeparator';
+import SmartSuggestions from './SmartSuggestions';
+import OfflineBanner from './OfflineBanner';
+import SwipeableMessage from './SwipeableMessage';
+import VoiceRecordingUI from './VoiceRecordingUI';
+import { getDateSeparator, isSameDay } from '@/utils/dateHelpers';
+import { RefreshControl } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 const ChatPage = () => {
 
@@ -43,6 +53,9 @@ const ChatPage = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [lastContentHeight, setLastContentHeight] = useState(0);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [cancelRecording, setCancelRecording] = useState<() => void>(() => () => {});
 
 
   // Animation values
@@ -223,6 +236,45 @@ const ChatPage = () => {
       scrollToBottom()
     }
   }, [messages, isSending]);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (id) {
+      await fetchMessages(id);
+    }
+    setRefreshing(false);
+  };
+
+  // Swipe action handlers
+  const handleCopyMessage = (content: string) => {
+    Clipboard.setString(content);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Could show a toast here
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    Alert.alert(
+      'Delete Message',
+      'Are you sure you want to delete this message?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: Implement delete message logic in useChat hook
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRetryMessage = (content: string) => {
+    // Resend the message
+    isLocal ? handleSendLocalMessage(content) : sendMessage(content);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   const renderItem = ({ item, index }: { item: Message; index: number }) => {
     const isLastBotMessage =
       item.role === Role.Bot &&
@@ -230,14 +282,37 @@ const ChatPage = () => {
 
     const isLoading = isLastBotMessage && isSending && !stream;
     const isStreaming = isLastBotMessage && isSending && !!stream;
+    
+    // Show date separator if first message or different day from previous
+    const showDateSeparator = 
+      index === 0 || 
+      !isSameDay(item.timestamp, messages[index - 1]?.timestamp);
+
+    // Check if message can be retried (user message that failed or needs retry)
+    const canRetry = item.role === Role.User && !isLoading;
 
     return (
-      <ChatMessage
-        {...item}
-        intermediate={intermediate}
-        loading={isLoading}
-        streamingContent={isStreaming}
-      />
+      <>
+        {showDateSeparator && item.timestamp && (
+          <DateSeparator label={getDateSeparator(item.timestamp)} />
+        )}
+        <SwipeableMessage
+          messageId={item.id || `${index}`}
+          role={item.role}
+          content={item.content}
+          onCopy={() => handleCopyMessage(item.content)}
+          onDelete={() => handleDeleteMessage(item.id || `${index}`)}
+          onRetry={() => handleRetryMessage(item.content)}
+          canRetry={canRetry}
+        >
+          <ChatMessage
+            {...item}
+            intermediate={intermediate}
+            loading={isLoading}
+            streamingContent={isStreaming}
+          />
+        </SwipeableMessage>
+      </>
     );
   };
 
@@ -266,7 +341,8 @@ const ChatPage = () => {
   }
 
   return (
-    <View style={styles.pageContainer}>
+    <GradientBackground variant="background" style={styles.pageContainer}>
+      <OfflineBanner isLocal={isLocal} />
       <Stack.Screen options={{
         headerTitleAlign: 'center',
         headerTitle: () => (
@@ -283,7 +359,16 @@ const ChatPage = () => {
               </Text>
             )}
           </View>
-        )
+        ),
+        headerRight: () => (
+          <View style={styles.modelBadge}>
+            <Ionicons 
+              name={isLocal ? 'phone-portrait' : 'cloud'} 
+              size={16} 
+              color={theme.colors.primary} 
+            />
+          </View>
+        ),
       }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -340,7 +425,35 @@ const ChatPage = () => {
               scrollEventThrottle={16}
               extraData={[isSending, stream]}
               onContentSizeChange={handleContentSizeChange}
-
+              ListFooterComponent={() => {
+                const lastMessage = messages[messages.length - 1];
+                const showSuggestions = !isSending && lastMessage?.role === Role.Bot && messages.length > 1;
+                
+                return (
+                  <>
+                    {isSending && !stream && messages.length > 0 && (
+                      <TypingIndicator 
+                        modelName={isLocal ? selectedLocalModel?.displayName : selectedCloudModel?.displayName} 
+                      />
+                    )}
+                    {/* Temporarily commented out - interfering with voice UI */}
+                    {/* {showSuggestions && (
+                      <SmartSuggestions 
+                        onSelectSuggestion={(suggestion) => {
+                          isLocal ? handleSendLocalMessage(suggestion) : sendMessage(suggestion);
+                        }}
+                      />
+                    )} */}
+                  </>
+                );
+              }}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={theme.colors.primary}
+                />
+              }
             />
           </CustomView>
           {showScrollButton && messages.length > 0 && (
@@ -366,6 +479,10 @@ const ChatPage = () => {
             isReady={isLocalModelReady} 
           />
         )}
+        <VoiceRecordingUI 
+          isRecording={isRecording}
+          onCancel={cancelRecording}
+        />
         <BlurView intensity={80} tint="light" style={[styles.inputBlurContainer]}>
           <MessageInput
             setSelectedImage={setSelectedImage as any} // Type mismatch between ImagePickerAsset and DocumentPickerAsset
@@ -378,18 +495,22 @@ const ChatPage = () => {
               return isLocal ? handleSendLocalMessage(message) : sendMessage(message, type, operation, additionalData);
             }}
             isLoading={isSending}
+            onRecordingStateChange={(recording, onCancel) => {
+              setIsRecording(recording);
+              setCancelRecording(() => onCancel);
+            }}
           />
         </BlurView>
       </KeyboardAvoidingView>
 
-    </View>
+    </GradientBackground>
   );
 }
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   pageContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    // backgroundColor removed - gradient handles it
   },
   // Logo and welcome
   logoContainer: {
@@ -435,7 +556,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent', // Let gradient show through
   },
   inputBlurContainer: {
     width: '100%',
@@ -458,6 +579,15 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     fontSize: 11,
     color: theme.colors.grey,
     marginTop: 2,
+  },
+  modelBadge: {
+    backgroundColor: theme.colors.background200,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollButton: {
     position: 'absolute',

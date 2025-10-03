@@ -28,7 +28,7 @@ import { Message, Role } from '@/utils/Interfaces';
 
 
 import { processStream, filterSpecialTokens } from '@/utils/ChatStream';
-import { Keyboard, Alert, Platform } from 'react-native';
+import { Keyboard, Alert, Platform, InteractionManager } from 'react-native';
 import RNFS from 'react-native-fs';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -59,6 +59,7 @@ export interface Conversations {
   content_summary?: string;
   time_created?: Date;
   time_updated?: Date;
+  pinned?: boolean;
 }
 
 export interface ChatRoom {
@@ -123,6 +124,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [additionalData, setAdditionalData] = useState<any[]>([]);
   const [isLocal, setIsLocal] = useState(false);
   
+  // Local model state - declare early to use in effects below
+  const [localModelDownloadProgress, setLocalModelDownloadProgress] = useState(0);
+  const [isLocalModelReady, setIsLocalModelReady] = useState(false);
+  const [hasTestedModelReady, setHasTestedModelReady] = useState(false);
+  const [hasTestedOnSwitch, setHasTestedOnSwitch] = useState(false);
+  
   // Check if device supports local LLM
   const deviceSupportsLocalLLM = useMemo(() => isLocalLLMSupported(), []);
   
@@ -136,13 +143,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     preventLoad: !deviceSupportsLocalLLM
   });
   
-  // Log when model changes
+  // Log and notify when model changes
   useEffect(() => {
     console.log('[Local] Selected model changed:', {
       id: selectedLocalModel.id,
       name: selectedLocalModel.displayName,
       size: selectedLocalModel.size
     });
+    
+    // Reset test flags when model changes
+    setHasTestedModelReady(false);
+    setLocalModelDownloadProgress(0);
+    setIsLocalModelReady(false);
+    
+    console.log('[Local] Model changed - state reset for new model');
   }, [selectedLocalModel.id]);
 
 
@@ -161,11 +175,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [stream, additionalData]);
 
   useEffect(() => {
-    if(llm && 'response' in llm && (llm as any).response) {
+    // Only update stream from LLM response when in LOCAL mode
+    // This prevents interfering with cloud streaming
+    if(llm && isLocal && 'response' in llm && (llm as any).response) {
       const filteredResponse = filterSpecialTokens((llm as any).response);
       setStream(filteredResponse);
     }
-  }, [llm]);
+  }, [llm, isLocal, (llm as any)?.response]);
   
   // Log LLM state changes for debugging (disabled when llm is null)
   useEffect(() => {
@@ -183,23 +199,29 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
  
   // Test model readiness by sending a simple test message
   const testModelReadiness = useCallback(async () => {
-    console.log('[Local] Testing model readiness...');
-    
-    if (!llm || !deviceSupportsLocalLLM) {
-      console.log('[Local] Cannot test - LLM not available');
-      return;
-    }
-    
-    try {
-      const testMessages = [{ role: 'user', content: 'Hi' }] as any[];
-      console.log('[Local] Sending test message to verify model is ready...');
+    // Use InteractionManager to avoid blocking UI
+    InteractionManager.runAfterInteractions(async () => {
+      console.log('[Local] Testing model readiness...');
       
-      await (llm as any).generate(testMessages);
+      if (!llm || !deviceSupportsLocalLLM) {
+        console.log('[Local] Cannot test - LLM not available');
+        return;
+      }
       
-      console.log('[Local] ✅ Model test successful - model is ready!');
-    } catch (error) {
-      console.log('[Local] ⚠️ Model test failed (expected if still loading):', error);
-    }
+      try {
+        const testMessages = [{ role: 'user', content: 'Hi' }] as any[];
+        console.log('[Local] Sending test message to verify model is ready...');
+        
+        // Small delay to ensure UI stays responsive
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        await (llm as any).generate(testMessages);
+        
+        console.log('[Local] ✅ Model test successful - model is ready!');
+      } catch (error) {
+        console.log('[Local] ⚠️ Model test failed (expected if still loading):', error);
+      }
+    });
   }, [llm, deviceSupportsLocalLLM]);
 
   const handleSendLocalMessage = async (message: string) => {
@@ -253,6 +275,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Format message for react-native-executorch API
       // It expects an array of message objects: [{ role: 'user', content: 'text' }]
       const formattedMessages = [{ role: 'user', content: message }];
+      
+      // Use InteractionManager to avoid blocking UI during generation
+      await InteractionManager.runAfterInteractions(async () => {
+        // Small delay to ensure UI stays responsive
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
       
       const result = await (llm as any).generate(formattedMessages);
       console.log('[Local] Generation result:', result);
@@ -802,13 +830,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, setConversations, setCurrentRoom, resetChat]);
 
-  // Get local model state
-  // Track model state with useState for proper reactivity
-  const [localModelDownloadProgress, setLocalModelDownloadProgress] = useState(0);
-  const [isLocalModelReady, setIsLocalModelReady] = useState(false);
-  
-  // Track if we've sent a test message for download completion
-  const [hasTestedModelReady, setHasTestedModelReady] = useState(false);
+  // Get local model state (declarations moved to top of component)
   
   // Update model state when llm changes
   useEffect(() => {
@@ -861,15 +883,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Update immediately
     updateModelState();
     
-    // Set up interval to poll for changes (react-native-executorch doesn't emit events)
-    const interval = setInterval(updateModelState, 500); // Check every 500ms
+    // Use longer interval during initial loading to reduce UI strain
+    // Shorter interval once download starts for smoother progress
+    const getPollingInterval = () => {
+      const progress = (llm as any).downloadProgress || 0;
+      if (progress === 0) return 2000; // 2 seconds when idle
+      if (progress < 1) return 1000; // 1 second during download
+      return 500; // 500ms when near completion
+    };
     
-    return () => clearInterval(interval);
+    // Set up interval to poll for changes (react-native-executorch doesn't emit events)
+    let interval = setInterval(updateModelState, getPollingInterval());
+    
+    // Dynamically adjust interval based on progress
+    const adjustInterval = setInterval(() => {
+      clearInterval(interval);
+      interval = setInterval(updateModelState, getPollingInterval());
+    }, 5000); // Check every 5 seconds if we should adjust polling rate
+    
+    return () => {
+      clearInterval(interval);
+      clearInterval(adjustInterval);
+    };
   }, [llm, isLocal, hasTestedModelReady, testModelReadiness]);
   
   // Test model when switching to local mode (only once per switch)
-  const [hasTestedOnSwitch, setHasTestedOnSwitch] = useState(false);
-  
   useEffect(() => {
     if (isLocal && deviceSupportsLocalLLM && llm && !hasTestedOnSwitch) {
       console.log('[Local] Switched to local mode, testing model readiness in 2 seconds...');
@@ -891,8 +929,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearLocalModel = useCallback(() => {
     // Get current local model info
     const currentLocalModel = getLocalModelById(getDefaultLocalModelId());
-    const modelSize = currentLocalModel?.size || '~135MB';
-    const modelName = currentLocalModel?.displayName || 'local model';
+    const modelSize = currentLocalModel?.size || '~1.2GB';
+    const modelName = currentLocalModel?.displayName || 'Llama 3.2 1B';
     
     // This would need to be implemented in react-native-executorch
     // For now, just show a message
