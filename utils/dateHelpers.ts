@@ -124,4 +124,29 @@ export function isSameDay(date1: Date | string | undefined, date2: Date | string
   );
 }
 
+/**
+ * Format distance to now (e.g., "2 hours ago", "3 days ago")
+ */
+export function formatDistanceToNow(date: Date | string | undefined): string {
+  if (!date) return '';
+  
+  const targetDate = typeof date === 'string' ? new Date(date) : date;
+  const now = new Date();
+  const diffMs = now.getTime() - targetDate.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+  if (diffDays < 30) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
+  
+  const diffYears = Math.floor(diffMonths / 12);
+  return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
+}
+
 

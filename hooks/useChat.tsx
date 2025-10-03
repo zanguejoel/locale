@@ -39,6 +39,7 @@ import { isLocalLLMSupported, getLocalLLMUnsupportedMessage } from '@/utils/Devi
 import { getToken } from '@/utils/SecureTokenManager';
 import { formatAuthHeader } from '@/utils/AuthHelpers';
 import { getLocalModelById } from '@/constants/LocalModels';
+import { DownloadedModelsTracker } from '@/utils/DownloadedModelsTracker';
 
 // Import API_URL_PROD from ApiClient configuration
 const API_URL_PROD = "https://api.odysseytech.ai";
@@ -284,6 +285,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const result = await (llm as any).generate(formattedMessages);
       console.log('[Local] Generation result:', result);
+      
+      // Update last used timestamp for this model
+      DownloadedModelsTracker.updateLastUsed(selectedLocalModel.id);
+      
       return result;
     } catch (error) {
       console.error('[Local] LLM generation error:', error);
@@ -845,65 +850,68 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let previousIsReady = false;
     
     const updateModelState = () => {
-      const progress = (llm as any).downloadProgress || 0;
-      const isReady = (llm as any).isReady || false; // ✅ Fixed: Use isReady not isModelReady
-      
-      // Only update state if values have changed (prevents unnecessary rerenders)
-      if (Math.abs(progress - previousProgress) > 0.01) { // Only update if changed by more than 1%
-        setLocalModelDownloadProgress(progress);
-        console.log('[Local] Progress changed:', progress);
-        previousProgress = progress;
-      }
+      // Use requestAnimationFrame for smoother updates
+      requestAnimationFrame(() => {
+        const progress = (llm as any).downloadProgress || 0;
+        
+        // Only update state if values have changed significantly (prevents unnecessary rerenders)
+        if (Math.abs(progress - previousProgress) > 0.05) { // Only update if changed by more than 5%
+          setLocalModelDownloadProgress(progress);
+          console.log('[Local] Progress changed:', progress.toFixed(2));
+          previousProgress = progress;
+        }
+        
+        // Test if model is ready when download reaches 100%
+        if (progress >= 1 && previousProgress < 1 && !hasTestedModelReady && isLocal) {
+          console.log('[Local] Download reached 100%, testing model readiness...');
+          setHasTestedModelReady(true);
+          
+          // Send a test message to verify model is ready
+          setTimeout(() => {
+            testModelReadiness();
+          }, 1000);
+        }
+      });
+    };
+    
+    const updateReadyState = () => {
+      const isReady = (llm as any).isReady || false;
       
       if (isReady !== previousIsReady) {
-        setIsLocalModelReady(isReady);
-        console.log('[Local] Ready state changed:', isReady);
+        requestAnimationFrame(() => {
+          setIsLocalModelReady(isReady);
+          console.log('[Local] Ready state changed:', isReady);
+        });
         previousIsReady = isReady;
         
         // Stop polling once model is ready to save resources
         if (isReady) {
           console.log('[Local] Model is ready, stopping polling');
-          clearInterval(interval);
+          
+          // Mark model as downloaded in tracker
+          DownloadedModelsTracker.markAsDownloaded(
+            selectedLocalModel.id,
+            selectedLocalModel.size
+          );
+          console.log('[Local] Model marked as downloaded:', selectedLocalModel.id);
         }
-      }
-      
-      // Test if model is ready when download reaches 100%
-      // Only trigger once by checking the flag BEFORE setting it
-      if (progress >= 1 && previousProgress < 1 && !hasTestedModelReady && isLocal) {
-        console.log('[Local] Download reached 100%, testing model readiness...');
-        setHasTestedModelReady(true);
-        
-        // Send a test message to verify model is ready
-        setTimeout(() => {
-          testModelReadiness();
-        }, 1000); // Wait 1 second to let model finalize
       }
     };
     
     // Update immediately
     updateModelState();
+    updateReadyState();
     
-    // Use longer interval during initial loading to reduce UI strain
-    // Shorter interval once download starts for smoother progress
-    const getPollingInterval = () => {
-      const progress = (llm as any).downloadProgress || 0;
-      if (progress === 0) return 2000; // 2 seconds when idle
-      if (progress < 1) return 1000; // 1 second during download
-      return 500; // 500ms when near completion
-    };
+    // Optimized polling - reduced frequency to prevent UI freezing
+    // Progress updates every 3 seconds (was 1 second)
+    const progressInterval = setInterval(updateModelState, 3000);
     
-    // Set up interval to poll for changes (react-native-executorch doesn't emit events)
-    let interval = setInterval(updateModelState, getPollingInterval());
-    
-    // Dynamically adjust interval based on progress
-    const adjustInterval = setInterval(() => {
-      clearInterval(interval);
-      interval = setInterval(updateModelState, getPollingInterval());
-    }, 5000); // Check every 5 seconds if we should adjust polling rate
+    // Ready state checked every 2 seconds (separate from progress)
+    const readyInterval = setInterval(updateReadyState, 2000);
     
     return () => {
-      clearInterval(interval);
-      clearInterval(adjustInterval);
+      clearInterval(progressInterval);
+      clearInterval(readyInterval);
     };
   }, [llm, isLocal, hasTestedModelReady, testModelReadiness]);
   
@@ -932,11 +940,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const modelSize = currentLocalModel?.size || '~1.2GB';
     const modelName = currentLocalModel?.displayName || 'Llama 3.2 1B';
     
+    // Clear the downloaded models tracker
+    DownloadedModelsTracker.clearAll();
+    
     // This would need to be implemented in react-native-executorch
     // For now, just show a message
     Alert.alert(
       'Clear Downloaded Models',
-      `To clear the ${modelName} (${modelSize}), you need to clear the app data or reinstall the app. This will free up the storage space used by downloaded models.`,
+      `To clear the ${modelName} (${modelSize}), you need to clear the app data or reinstall the app. This will free up the storage space used by downloaded models.\n\nModel tracking has been reset.`,
       [{ text: 'OK' }]
     );
   }, []);

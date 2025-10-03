@@ -26,9 +26,11 @@ import SmartSuggestions from './SmartSuggestions';
 import OfflineBanner from './OfflineBanner';
 import SwipeableMessage from './SwipeableMessage';
 import VoiceRecordingUI from './VoiceRecordingUI';
+import HeaderModelSelector from './HeaderModelSelector';
 import { getDateSeparator, isSameDay } from '@/utils/dateHelpers';
 import { RefreshControl } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { storage } from '@/hooks/useMMKVStorage';
 
 const ChatPage = () => {
 
@@ -84,7 +86,10 @@ const ChatPage = () => {
     fetchMessages, 
     intermediate,
     localModelDownloadProgress,
-    isLocalModelReady
+    isLocalModelReady,
+    setIsLocal,
+    isLocalLLMSupported,
+    resetChat
   } = chat;
 
 
@@ -244,6 +249,23 @@ const ChatPage = () => {
     setRefreshing(false);
   };
 
+  // Handle model selection from header
+  const handleModelSelect = (modelId: string) => {
+    try {
+      // Update model preference in storage for current mode
+      if (isLocal) {
+        storage.set('default_local_model_id', modelId);
+      } else {
+        storage.set('default_model_id', modelId);
+      }
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Error switching model:', error);
+      Alert.alert('Error', 'Failed to switch model');
+    }
+  };
+
   // Swipe action handlers
   const handleCopyMessage = (content: string) => {
     Clipboard.setString(content);
@@ -351,21 +373,16 @@ const ChatPage = () => {
               source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} 
               style={styles.logo} 
             />
-            {(selectedCloudModel || selectedLocalModel) && (
-              <Text style={styles.headerModelText}>
-                {isLocal 
-                  ? selectedLocalModel?.displayName || 'Local Model'
-                  : selectedCloudModel?.displayName || 'Cloud Model'}
-              </Text>
-            )}
+           
           </View>
         ),
         headerRight: () => (
-          <View style={styles.modelBadge}>
-            <Ionicons 
-              name={isLocal ? 'phone-portrait' : 'cloud'} 
-              size={16} 
-              color={theme.colors.primary} 
+          <View style={{ marginRight: 8 }}>
+            <HeaderModelSelector
+              isLocal={isLocal}
+              currentModelId={isLocal ? selectedLocalModel?.id : selectedCloudModel?.id}
+              onSelectModel={handleModelSelect}
+              isLocalSupported={isLocalLLMSupported}
             />
           </View>
         ),
@@ -431,11 +448,11 @@ const ChatPage = () => {
                 
                 return (
                   <>
-                    {isSending && !stream && messages.length > 0 && (
+                   {/*  {isSending && !stream && messages.length > 0 && (
                       <TypingIndicator 
                         modelName={isLocal ? selectedLocalModel?.displayName : selectedCloudModel?.displayName} 
                       />
-                    )}
+                    )} */}
                     {/* Temporarily commented out - interfering with voice UI */}
                     {/* {showSuggestions && (
                       <SmartSuggestions 
@@ -579,15 +596,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     fontSize: 11,
     color: theme.colors.grey,
     marginTop: 2,
-  },
-  modelBadge: {
-    backgroundColor: theme.colors.background200,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginRight: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   scrollButton: {
     position: 'absolute',

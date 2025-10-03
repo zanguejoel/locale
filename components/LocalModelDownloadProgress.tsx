@@ -9,7 +9,7 @@ interface LocalModelDownloadProgressProps {
   isReady: boolean;
 }
 
-export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProps> = ({ 
+export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProps> = React.memo(({ 
   progress, 
   isReady 
 }) => {
@@ -20,14 +20,6 @@ export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProp
   // Get model info
   const modelName = selectedLocalModel?.displayName || 'Llama 3.2 1B';
   const modelSize = selectedLocalModel?.size || '~1.2GB';
-  
-  // Debug logging
-  console.log('[LocalModelProgress] Render:', { 
-    progress, 
-    isReady, 
-    modelName, 
-    modelSize 
-  });
 
   // Don't show if model is ready
   if (isReady) {
@@ -91,7 +83,11 @@ export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProp
       </View>
     </View>
   );
-};
+}, (prevProps, nextProps) => {
+  // Only re-render if progress changed by more than 5% or isReady changed
+  const progressDiff = Math.abs(prevProps.progress - nextProps.progress);
+  return progressDiff < 0.05 && prevProps.isReady === nextProps.isReady;
+});
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {

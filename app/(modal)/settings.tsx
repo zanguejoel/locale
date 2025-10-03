@@ -27,21 +27,16 @@ const rawPage = [{
   icon: 'chatbubbles-outline'
 }, {
   id: 3,
-  key: 'local-model',
-  title: 'Local AI Model',
-  icon: 'phone-portrait-outline'
+  key: 'model-manager',
+  title: 'Manage Downloaded Models',
+  icon: 'folder-open-outline'
 }, {
   id: 4,
-  key: 'clear-model',
-  title: 'Clear Downloaded Models',
-  icon: 'trash-outline'
-}, {
-  id: 5,
   key: 'change-password',
   title: 'Change password',
   icon: 'settings-outline'
 }, {
-  id: 6,
+  id: 5,
   key: 'sign_out',
   title: 'Sign Out',
   icon: 'log-out-outline'
@@ -94,10 +89,8 @@ const Page = () => {
         return router.push('/profile')
       case 'default-model':
         return setIsModelSelectorVisible(true)
-      case 'local-model':
-        return setIsLocalModelSelectorVisible(true)
-      case 'clear-model':
-        return clearLocalModel()
+      case 'model-manager':
+        return router.push('/model-manager')
       case 'change-password':
         return router.push('/change-password')
       case 'sign_out':
@@ -125,18 +118,9 @@ const Page = () => {
             {item.key === 'default-model' && selectedModel && (
               <Text style={styles.menuItemSubtext}>{selectedModel.displayName}</Text>
             )}
-            {item.key === 'local-model' && selectedLocalModel && (
+            {item.key === 'model-manager' && deviceSupportsLocal && (
               <Text style={styles.menuItemSubtext}>
-                {deviceSupportsLocal ? selectedLocalModel.displayName : 'Not supported'}
-              </Text>
-            )}
-            {item.key === 'clear-model' && deviceSupportsLocal && (
-              <Text style={styles.menuItemSubtext}>
-                {isLocalModelReady 
-                  ? `Model downloaded (${modelSize})` 
-                  : localModelDownloadProgress > 0 
-                    ? `Downloading ${Math.round(localModelDownloadProgress * 100)}%` 
-                    : 'No model downloaded'}
+                View and manage local models
               </Text>
             )}
           </View>
@@ -148,8 +132,8 @@ const Page = () => {
   
   // Filter menu items based on device support
   const visibleMenuItems = rawPage.filter(item => {
-    // Hide local-model and clear-model options if device doesn't support it
-    if ((item.key === 'local-model' || item.key === 'clear-model') && !deviceSupportsLocal) {
+    // Hide model-manager option if device doesn't support local models
+    if (item.key === 'model-manager' && !deviceSupportsLocal) {
       return false;
     }
     return true;
