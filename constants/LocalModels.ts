@@ -1,12 +1,19 @@
 import { Platform } from 'react-native';
+import {
+  LLAMA3_2_1B,
+  LLAMA3_2_3B,
+  QWEN2_5_0_5B,
+  QWEN2_5_1_5B,
+  SMOLLM2_1_135M,
+  SMOLLM2_1_360M,
+  HAMMER2_1_0_5B,
+} from 'react-native-executorch';
 
 export interface LocalModel {
   id: string;
   name: string;
   displayName: string;
-  model: string;
-  onnx_path: string;
-  options?: { externalData: boolean };
+  modelSource: any; // react-native-executorch model constant
   description: string;
   size: string;
   minIOSVersion?: number;
@@ -17,82 +24,92 @@ export interface LocalModel {
 
 export const LOCAL_MODELS: LocalModel[] = [
   {
-    id: 'llama-3.2-1b',
-    name: 'Llama-3.2-1B',
-    displayName: 'Llama 3.2 1B',
-    model: 'meta-llama/Llama-3.2-1B',
-    onnx_path: 'llama-3.2-1b.pte',
-    description: 'Fast and efficient model for everyday tasks',
-    size: '~1.2GB',
-    minIOSVersion: 14,
-    minAndroidVersion: 29,
+    id: 'smollm2-135m',
+    name: 'SmolLM2-135M',
+    displayName: 'SmolLM2 135M',
+    modelSource: SMOLLM2_1_135M,
+    description: 'Ultra-lightweight model for basic conversations',
+    size: '~135MB',
+    minIOSVersion: 17,
+    minAndroidVersion: 33,
     requiresHighEnd: false,
     recommended: true
   },
   {
-    id: 'phi-3-mini',
-    name: 'Phi-3-mini',
-    displayName: 'Phi-3 Mini',
-    model: 'microsoft/Phi-3-mini-4k-instruct-onnx-web',
-    onnx_path: 'onnx/model_q4.onnx',
-    options: { externalData: true },
-    description: 'Microsoft\'s powerful small model',
-    size: '~2.3GB',
-    minIOSVersion: 15,
-    minAndroidVersion: 30,
-    requiresHighEnd: true
+    id: 'smollm2-360m',
+    name: 'SmolLM2-360M',
+    displayName: 'SmolLM2 360M',
+    modelSource: SMOLLM2_1_360M,
+    description: 'Small, efficient model for everyday tasks',
+    size: '~360MB',
+    minIOSVersion: 17,
+    minAndroidVersion: 33,
+    requiresHighEnd: false,
+    recommended: false
   },
   {
-    id: 'llama-160m',
-    name: 'Llama-160M',
-    displayName: 'Llama 160M',
-    model: 'Felladrin/onnx-Llama-160M-Chat-v1',
-    onnx_path: 'onnx/decoder_model_merged.onnx',
-    description: 'Ultra-lightweight model for basic conversations',
-    size: '~640MB',
-    minIOSVersion: 14,
-    minAndroidVersion: 29,
-    requiresHighEnd: false
+    id: 'hammer2-0.5b',
+    name: 'Hammer2-0.5B',
+    displayName: 'Hammer2 0.5B',
+    modelSource: HAMMER2_1_0_5B,
+    description: 'Fast model for general use',
+    size: '~500MB',
+    minIOSVersion: 17,
+    minAndroidVersion: 33,
+    requiresHighEnd: false,
+    recommended: false
   },
   {
-    id: 'minueza-32m',
-    name: 'Minueza-32M',
-    displayName: 'Minueza 32M',
-    model: 'Felladrin/onnx-Minueza-32M-UltraChat',
-    onnx_path: 'onnx/decoder_model_merged.onnx',
-    description: 'Tiny model for very simple queries',
-    size: '~128MB',
-    minIOSVersion: 14,
-    minAndroidVersion: 29,
-    requiresHighEnd: false
+    id: 'qwen2.5-0.5b',
+    name: 'Qwen2.5-0.5B',
+    displayName: 'Qwen 2.5 0.5B',
+    modelSource: QWEN2_5_0_5B,
+    description: 'Balanced model for various tasks',
+    size: '~500MB',
+    minIOSVersion: 17,
+    minAndroidVersion: 33,
+    requiresHighEnd: false,
+    recommended: false
   },
   {
-    id: 'distilgpt2',
-    name: 'distilgpt2',
-    displayName: 'DistilGPT-2',
-    model: 'Xenova/distilgpt2_onnx-quantized',
-    onnx_path: 'decoder_model.onnx',
-    description: 'Distilled GPT-2 for text generation',
-    size: '~340MB',
-    minIOSVersion: 14,
-    minAndroidVersion: 29,
-    requiresHighEnd: false
+    id: 'llama-3.2-1b',
+    name: 'Llama-3.2-1B',
+    displayName: 'Llama 3.2 1B',
+    modelSource: LLAMA3_2_1B,
+    description: 'Fast and capable model for everyday tasks',
+    size: '~1.2GB',
+    minIOSVersion: 17,
+    minAndroidVersion: 33,
+    requiresHighEnd: false,
+    recommended: false
   },
   {
-    id: 'tiny-mamba',
-    name: 'tiny-mamba',
-    displayName: 'Tiny Mamba',
-    model: 'Xenova/tiny-mamba-onnx',
-    onnx_path: 'onnx/model.onnx',
-    description: 'Experimental efficient architecture',
-    size: '~80MB',
-    minIOSVersion: 14,
-    minAndroidVersion: 29,
-    requiresHighEnd: false
+    id: 'qwen2.5-1.5b',
+    name: 'Qwen2.5-1.5B',
+    displayName: 'Qwen 2.5 1.5B',
+    modelSource: QWEN2_5_1_5B,
+    description: 'More capable model for complex tasks',
+    size: '~1.5GB',
+    minIOSVersion: 17,
+    minAndroidVersion: 33,
+    requiresHighEnd: true,
+    recommended: false
+  },
+  {
+    id: 'llama-3.2-3b',
+    name: 'Llama-3.2-3B',
+    displayName: 'Llama 3.2 3B',
+    modelSource: LLAMA3_2_3B,
+    description: 'Most capable model, requires more resources',
+    size: '~3GB',
+    minIOSVersion: 17,
+    minAndroidVersion: 33,
+    requiresHighEnd: true,
+    recommended: false
   }
 ];
 
-export const DEFAULT_LOCAL_MODEL_ID = 'tiny-mamba'; // Lightest model at ~80MB
+export const DEFAULT_LOCAL_MODEL_ID = 'smollm2-135m'; // Lightest model at ~135MB
 
 /**
  * Get supported local models based on device capabilities
@@ -131,11 +148,3 @@ export const getRecommendedLocalModel = (): LocalModel => {
   const recommended = supportedModels.find(m => m.recommended);
   return recommended || supportedModels[0] || LOCAL_MODELS[0];
 };
-
-// Legacy export for backward compatibility
-export const presets = LOCAL_MODELS.map(model => ({
-  name: model.name,
-  model: model.model,
-  onnx_path: model.onnx_path,
-  options: model.options
-}));

@@ -2,36 +2,35 @@ import { Platform, Dimensions } from 'react-native';
 
 /**
  * Check if the device supports local LLM execution
- * ExecuTorch requires:
- * - iOS: iOS 14+ (we assume newer devices have sufficient capabilities)
- * - Android: Android 10+ (API level 29+)
+ * react-native-executorch requires:
+ * - iOS: iOS 17.0+ (as per official documentation)
+ * - Android: Android 13+ (API level 33+)
  * 
- * This is a conservative check that focuses on OS version rather than 
- * specific hardware specs to avoid compatibility issues.
+ * These are the minimum versions required by the react-native-executorch library.
+ * Reference: https://docs.swmansion.com/react-native-executorch/docs
  */
 export const isLocalLLMSupported = (): boolean => {
   if (Platform.OS === 'ios') {
     // iOS device support
-    // ExecuTorch works on iOS 14+ devices
-    // We use a conservative approach: iOS 14+ is generally capable
+    // react-native-executorch requires iOS 17.0+
     
     const iosVersion = typeof Platform.Version === 'string' 
       ? parseInt(Platform.Version, 10) 
       : Platform.Version;
     
-    // Require iOS 14 or newer
-    // iPhone 12 and newer (2020+) shipped with iOS 14
-    return iosVersion >= 14;
+    // Require iOS 17 or newer
+    // iPhone XS and newer with iOS 17+ update
+    return iosVersion >= 17;
   }
   
   if (Platform.OS === 'android') {
     // Android device support
-    // Require Android 10+ (API level 29) for better compatibility
+    // react-native-executorch requires Android 13+ (API level 33)
     
     const androidVersion = Platform.Version as number;
     
-    // Require Android 10 or newer
-    if (androidVersion < 29) { // Android 10 is API level 29
+    // Require Android 13 or newer (API level 33)
+    if (androidVersion < 33) {
       return false;
     }
     
@@ -57,14 +56,14 @@ export const isLocalLLMSupported = (): boolean => {
  */
 export const getLocalLLMUnsupportedMessage = (): string => {
   if (Platform.OS === 'ios') {
-    return 'Local LLM requires iPhone 12 or newer with iOS 14+.';
+    return 'Local LLM requires iOS 17.0 or newer. Please update your device to use this feature.';
   }
   
   if (Platform.OS === 'android') {
-    return 'Local LLM requires Android 10+ with at least 4GB RAM.';
+    return 'Local LLM requires Android 13 or newer. Please update your device to use this feature.';
   }
   
-  return 'Local LLM is only supported on iOS and Android devices.';
+  return 'Local LLM is only supported on iOS 17+ and Android 13+ devices.';
 };
 
 /**

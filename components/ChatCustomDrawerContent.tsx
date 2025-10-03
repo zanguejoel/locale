@@ -201,7 +201,7 @@ export const CustomDrawerContent = (props: any) => {
                     const selectedModel = getLocalModelById(getDefaultLocalModelId());
                     Alert.alert(
                         'Switching to Local Mode',
-                        `Using ${selectedModel?.displayName || 'local model'} (${selectedModel?.size || '~80MB'}). The model will download on first use and run completely offline.`,
+                        `Using ${selectedModel?.displayName || 'local model'} (${selectedModel?.size || '~135MB'}).\n\nThe model will download on first use and run completely offline. Download time depends on your connection speed.`,
                         [{ text: 'Got it' }]
                     );
                     

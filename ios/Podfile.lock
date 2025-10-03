@@ -102,7 +102,7 @@ PODS:
   - MMKV (2.2.4):
     - MMKVCore (~> 2.2.4)
   - MMKVCore (2.2.4)
-  - opencv-rne (0.1.0)
+  - opencv-rne (4.11.0)
   - PurchasesHybridCommon (14.3.0):
     - RevenueCat (= 5.32.0)
   - RCT-Folly (2024.10.14.00):
@@ -1385,11 +1385,11 @@ PODS:
     - Yoga
   - react-native-context-menu-view (1.20.0):
     - React
-  - react-native-executorch (0.3.4):
+  - react-native-executorch (0.5.8):
     - DoubleConversion
     - glog
     - hermes-engine
-    - opencv-rne (~> 0.1.0)
+    - opencv-rne (~> 4.11.0)
     - RCT-Folly (= 2024.10.14.00)
     - RCTRequired
     - RCTTypeSafety
@@ -2470,7 +2470,7 @@ SPEC CHECKSUMS:
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
   MMKV: 1a8e7dbce7f9cad02c52e1b1091d07bd843aefaf
   MMKVCore: f2dd4c9befea04277a55e84e7812f930537993df
-  opencv-rne: 63e933ae2373fc91351f9a348dc46c3f523c2d3f
+  opencv-rne: 2305807573b6e29c8c87e3416ab096d09047a7a0
   PurchasesHybridCommon: 7f0944cc5411bdcd1ea5d69affa6a6f9aaf87b13
   RCT-Folly: ea9d9256ba7f9322ef911169a9f696e5857b9e17
   RCTDeprecation: ebe712bb05077934b16c6bf25228bdec34b64f83
@@ -2502,7 +2502,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 33546a3ebefbccb8770c33a1f8a5554fa96a54de
   React-microtasksnativemodule: 5c3d795318c22ab8df55100e50b151384a4a60b3
   react-native-context-menu-view: 418877dcac6add4abba8fc2ee92c39f05b763f3a
-  react-native-executorch: 8390fe6db0a9a53a6584e6bc9f34e8068324ec29
+  react-native-executorch: 83b33635657382cfead6483ec8437a7a11c98d40
   react-native-image-picker: 29261670d6bd4913d5c1c3881c728b3e01cb5789
   react-native-ios-context-menu: cae6dd5ee6c8be597ee5ede6d8b7df0b9fdc0079
   react-native-ios-utilities: e440eaca6be6145b77b3d73b903a62d7e33c25d6
@@ -2556,6 +2556,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: feb4910aba9742cfedc059e2b2902e22ffe9954a
 
-PODFILE CHECKSUM: 120ad1889f47c10fbe404692eb2c951b6ed5fb83
+PODFILE CHECKSUM: 999e1a674c5fdd98fbc7c4d470a962cb52390ca9
 
 COCOAPODS: 1.16.2

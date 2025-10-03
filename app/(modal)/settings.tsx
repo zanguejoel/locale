@@ -85,7 +85,7 @@ const Page = () => {
 
   const selectedModel = getModelById(defaultModelId);
   const selectedLocalModel = getLocalModelById(defaultLocalModelId);
-  const modelSize = selectedLocalModel?.size || '~80MB';
+  const modelSize = selectedLocalModel?.size || '~135MB';
 
   const handleInstruction = (type: string) => {
     switch (type) {

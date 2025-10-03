@@ -19,8 +19,6 @@ import React, {
   useMemo,
 } from 'react';
 import {
-  LLAMA3_2_1B,
-  LLAMA3_2_1B_TOKENIZER,
   useLLM,
 } from 'react-native-executorch';
 
@@ -36,7 +34,7 @@ import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuth } from './useAuth';
 import { getDefaultModelId } from './useDefaultModel';
-import { getDefaultLocalModelId } from './useDefaultLocalModel';
+import { getDefaultLocalModelId, useDefaultLocalModel } from './useDefaultLocalModel';
 import { isLocalLLMSupported, getLocalLLMUnsupportedMessage } from '@/utils/DeviceCapabilities';
 import { getToken } from '@/utils/SecureTokenManager';
 import { formatAuthHeader } from '@/utils/AuthHelpers';
@@ -128,11 +126,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check if device supports local LLM
   const deviceSupportsLocalLLM = useMemo(() => isLocalLLMSupported(), []);
   
-  // Initialize LLM on supported devices
-  const llm = deviceSupportsLocalLLM ? useLLM({
-    modelSource: LLAMA3_2_1B,
-    tokenizerSource: LLAMA3_2_1B_TOKENIZER
-  }) : null;
+  // Get the selected default local model from settings
+  const selectedLocalModel = useDefaultLocalModel();
+  
+  // Initialize LLM with new API (v0.5.8+)
+  // Always call the hook (React rules), but use preventLoad to avoid downloading on unsupported devices
+  const llm = useLLM({
+    model: selectedLocalModel.modelSource,
+    preventLoad: !deviceSupportsLocalLLM
+  });
+  
+  // Log when model changes
+  useEffect(() => {
+    console.log('[Local] Selected model changed:', {
+      id: selectedLocalModel.id,
+      name: selectedLocalModel.displayName,
+      size: selectedLocalModel.size
+    });
+  }, [selectedLocalModel.id]);
 
 
   useEffect(() => {
@@ -160,7 +171,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (llm && isLocal) {
       console.log('[Local] LLM state update:', {
-        isModelReady: (llm as any).isModelReady,
+        isReady: (llm as any).isReady,
         downloadProgress: (llm as any).downloadProgress,
         isGenerating: (llm as any).isGenerating,
         error: (llm as any).error,
@@ -170,6 +181,27 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [llm, isLocal]);
 
  
+  // Test model readiness by sending a simple test message
+  const testModelReadiness = useCallback(async () => {
+    console.log('[Local] Testing model readiness...');
+    
+    if (!llm || !deviceSupportsLocalLLM) {
+      console.log('[Local] Cannot test - LLM not available');
+      return;
+    }
+    
+    try {
+      const testMessages = [{ role: 'user', content: 'Hi' }] as any[];
+      console.log('[Local] Sending test message to verify model is ready...');
+      
+      await (llm as any).generate(testMessages);
+      
+      console.log('[Local] ✅ Model test successful - model is ready!');
+    } catch (error) {
+      console.log('[Local] ⚠️ Model test failed (expected if still loading):', error);
+    }
+  }, [llm, deviceSupportsLocalLLM]);
+
   const handleSendLocalMessage = async (message: string) => {
     console.log('[Local] Starting local message send:', message);
     
@@ -197,26 +229,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Log LLM state for debugging
     console.log('[Local] LLM state:', { 
-      isModelReady: llm ? (llm as any).isModelReady : 'N/A',
+      isReady: llm ? (llm as any).isReady : 'N/A',
       isGenerating: llm ? (llm as any).isGenerating : 'N/A',
       downloadProgress: llm ? (llm as any).downloadProgress : 'N/A',
       response: llm && 'response' in llm ? (llm as any).response?.substring(0, 50) : 'N/A',
+      modelName: selectedLocalModel.displayName,
+      modelSize: selectedLocalModel.size
     });
     
-    // Check if model is ready
-    if (!(llm as any).isModelReady) {
-      const progress = (llm as any).downloadProgress || 0;
-      console.error('[Local] Model not ready. Download progress:', progress);
-      
-      Alert.alert(
-        'Model Not Ready',
-        progress > 0 && progress < 1
-          ? `The local model is downloading: ${Math.round(progress * 100)}% complete. Please wait for the download to finish.`
-          : 'The local model is not ready. It may be downloading (1.2GB). Please wait and try again.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
+    // Note: We removed the model ready check here - let the generate() call handle it
+    // This allows the library to trigger download if needed
+    
+    // Set sending state
+    setIsSending(true);
     
     // Add user message to chat
     appendToMessageHistory(message, Role.User);
@@ -224,27 +249,38 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       console.log('[Local] Calling llm.generate...');
-      const result = await (llm as any).generate(message);
+      
+      // Format message for react-native-executorch API
+      // It expects an array of message objects: [{ role: 'user', content: 'text' }]
+      const formattedMessages = [{ role: 'user', content: message }];
+      
+      const result = await (llm as any).generate(formattedMessages);
       console.log('[Local] Generation result:', result);
       return result;
     } catch (error) {
       console.error('[Local] LLM generation error:', error);
       
+      const modelName = selectedLocalModel.displayName;
+      const modelSize = selectedLocalModel.size;
+      
       // Check if error is due to model still loading
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('still loading') || errorMessage.includes('not loaded')) {
         Alert.alert(
-          'Model Loading',
-          'The local model is still downloading (1.2GB). This may take several minutes. Please wait and try again, or use cloud models instead.',
+          'Model Still Loading',
+          `${modelName} (${modelSize}) is still downloading. This may take several minutes depending on your connection.\n\nYou can switch to cloud models for immediate responses.`,
           [{ text: 'OK' }]
         );
       } else {
         Alert.alert(
-          'Error',
-          'Failed to generate response with local LLM. Please try again or switch to cloud models.',
+          'Generation Error',
+          `Failed to generate response with ${modelName}.\n\nPlease try again or switch to cloud models.`,
           [{ text: 'OK' }]
         );
       }
+    } finally {
+      // Always reset sending state
+      setIsSending(false);
     }
   };
 
@@ -767,20 +803,95 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, setConversations, setCurrentRoom, resetChat]);
 
   // Get local model state
-  const localModelDownloadProgress = useMemo(() => {
-    if (!llm) return 0;
-    return (llm as any).downloadProgress || 0;
-  }, [llm, (llm as any)?.downloadProgress]);
+  // Track model state with useState for proper reactivity
+  const [localModelDownloadProgress, setLocalModelDownloadProgress] = useState(0);
+  const [isLocalModelReady, setIsLocalModelReady] = useState(false);
   
-  const isLocalModelReady = useMemo(() => {
-    if (!llm) return false;
-    return (llm as any).isModelReady || false;
-  }, [llm, (llm as any)?.isModelReady]);
+  // Track if we've sent a test message for download completion
+  const [hasTestedModelReady, setHasTestedModelReady] = useState(false);
+  
+  // Update model state when llm changes
+  useEffect(() => {
+    if (!llm) {
+      setLocalModelDownloadProgress(0);
+      setIsLocalModelReady(false);
+      setHasTestedModelReady(false);
+      return;
+    }
+    
+    let previousProgress = 0;
+    let previousIsReady = false;
+    
+    const updateModelState = () => {
+      const progress = (llm as any).downloadProgress || 0;
+      const isReady = (llm as any).isReady || false; // ✅ Fixed: Use isReady not isModelReady
+      
+      // Only update state if values have changed (prevents unnecessary rerenders)
+      if (Math.abs(progress - previousProgress) > 0.01) { // Only update if changed by more than 1%
+        setLocalModelDownloadProgress(progress);
+        console.log('[Local] Progress changed:', progress);
+        previousProgress = progress;
+      }
+      
+      if (isReady !== previousIsReady) {
+        setIsLocalModelReady(isReady);
+        console.log('[Local] Ready state changed:', isReady);
+        previousIsReady = isReady;
+        
+        // Stop polling once model is ready to save resources
+        if (isReady) {
+          console.log('[Local] Model is ready, stopping polling');
+          clearInterval(interval);
+        }
+      }
+      
+      // Test if model is ready when download reaches 100%
+      // Only trigger once by checking the flag BEFORE setting it
+      if (progress >= 1 && previousProgress < 1 && !hasTestedModelReady && isLocal) {
+        console.log('[Local] Download reached 100%, testing model readiness...');
+        setHasTestedModelReady(true);
+        
+        // Send a test message to verify model is ready
+        setTimeout(() => {
+          testModelReadiness();
+        }, 1000); // Wait 1 second to let model finalize
+      }
+    };
+    
+    // Update immediately
+    updateModelState();
+    
+    // Set up interval to poll for changes (react-native-executorch doesn't emit events)
+    const interval = setInterval(updateModelState, 500); // Check every 500ms
+    
+    return () => clearInterval(interval);
+  }, [llm, isLocal, hasTestedModelReady, testModelReadiness]);
+  
+  // Test model when switching to local mode (only once per switch)
+  const [hasTestedOnSwitch, setHasTestedOnSwitch] = useState(false);
+  
+  useEffect(() => {
+    if (isLocal && deviceSupportsLocalLLM && llm && !hasTestedOnSwitch) {
+      console.log('[Local] Switched to local mode, testing model readiness in 2 seconds...');
+      setHasTestedOnSwitch(true);
+      setHasTestedModelReady(false); // Reset download completion test flag
+      
+      // Wait a bit for model to start loading
+      const timer = setTimeout(() => {
+        testModelReadiness();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    } else if (!isLocal) {
+      // Reset flag when switching away from local mode
+      setHasTestedOnSwitch(false);
+    }
+  }, [isLocal, deviceSupportsLocalLLM, llm, hasTestedOnSwitch, testModelReadiness]);
   
   const clearLocalModel = useCallback(() => {
     // Get current local model info
     const currentLocalModel = getLocalModelById(getDefaultLocalModelId());
-    const modelSize = currentLocalModel?.size || '~80MB';
+    const modelSize = currentLocalModel?.size || '~135MB';
     const modelName = currentLocalModel?.displayName || 'local model';
     
     // This would need to be implemented in react-native-executorch

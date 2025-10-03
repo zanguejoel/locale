@@ -17,11 +17,17 @@ export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProp
   const styles = getStyles(theme);
   const selectedLocalModel = useDefaultLocalModel();
   
-  // Get model size from selected model
-  const modelSize = selectedLocalModel?.size || '~80MB';
+  // Get model info
+  const modelName = selectedLocalModel?.displayName || 'Local Model';
+  const modelSize = selectedLocalModel?.size || '~135MB';
   
   // Debug logging
-  console.log('[LocalModelProgress] Render:', { progress, isReady, modelSize });
+  console.log('[LocalModelProgress] Render:', { 
+    progress, 
+    isReady, 
+    modelName, 
+    modelSize 
+  });
 
   // Don't show if model is ready
   if (isReady) {
@@ -29,16 +35,33 @@ export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProp
     return null;
   }
 
-  // Show if downloading (progress > 0)
-  if (progress > 0 && progress < 1) {
+  // If progress is 100% but not ready yet, show "Finalizing" instead of "Preparing"
+  if (progress >= 1) {
     return (
       <View style={styles.container}>
         <View style={styles.content}>
           <ActivityIndicator size="small" color={theme.colors.primary} />
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Downloading {selectedLocalModel?.displayName || 'Local Model'}</Text>
+            <Text style={styles.title}>Finalizing {modelName}</Text>
             <Text style={styles.subtitle}>
-              {Math.round(progress * 100)}% complete ({modelSize})
+              Almost ready • {modelSize}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // Show if downloading (progress > 0 and < 100%)
+  if (progress > 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <View style={styles.textContainer}>
+            <Text style={styles.title}>Downloading {modelName}</Text>
+            <Text style={styles.subtitle}>
+              {Math.round(progress * 100)}% complete • {modelSize}
             </Text>
           </View>
         </View>
@@ -60,9 +83,9 @@ export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProp
       <View style={styles.content}>
         <ActivityIndicator size="small" color={theme.colors.primary} />
         <View style={styles.textContainer}>
-          <Text style={styles.title}>Preparing {selectedLocalModel?.displayName || 'Local Model'}</Text>
+          <Text style={styles.title}>Preparing {modelName}</Text>
           <Text style={styles.subtitle}>
-            This may take a few moments ({modelSize} download)
+            Starting download • {modelSize}
           </Text>
         </View>
       </View>

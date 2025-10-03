@@ -6,7 +6,7 @@ export default {
     icon: './assets/images/icon.png',
     scheme: 'odyssey',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: false,
+    newArchEnabled: true,
     splash: {
       image: './assets/images/splash-icon.png',
       resizeMode: 'contain',
@@ -33,12 +33,17 @@ export default {
         [
             'expo-build-properties',
             {
+                ios: {
+                    deploymentTarget: '17.0',
+                    newArchEnabled: true,
+                },
                 android: {
                     compileSdkVersion: 35,
                     targetSdkVersion: 34,
-                    minSdkVersion: 24,
+                    minSdkVersion: 33,
                     buildToolsVersion: '35.0.0',
                     kotlinVersion: '1.9.25',
+                    newArchEnabled: true,
                 },
             }
         ],
