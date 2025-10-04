@@ -29,7 +29,7 @@ const Layout = () => {
   const theme = useTheme();
   const styles = getStyles(theme);
   const router = useRouter();
-  const { createNewConversation, resetChat, isChatLoading } = useChat();
+  const { createNewConversation, resetChat } = useChat();
 
   const handleNewChat = async () => {
     try {
@@ -105,8 +105,6 @@ const Layout = () => {
           }} />
 
       </Drawer.Navigator>
-      {isChatLoading && <View style={styles.disabledArea} />
-      }
     </View>
 
   );
@@ -130,14 +128,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   headerTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  disabledArea: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100000000
   },
   headerLogo: {
     width: 24,
