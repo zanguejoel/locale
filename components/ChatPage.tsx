@@ -121,16 +121,29 @@ const ChatPage = () => {
   }, [id, fetchMessages]);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
-      setKeyboardVisible(true);
-      scrollToBottom();
+      if (isMounted) {
+        setKeyboardVisible(true);
+        // Call scroll directly with delay
+        if (messageListRef.current) {
+          try {
+            messageListRef.current.scrollToEnd({ animated: true });
+          } catch (error) {
+            console.error('Failed to scroll on keyboard show:', error);
+          }
+        }
+      }
     });
     const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardVisible(false);
-      // scrollToBottom();
+      if (isMounted) {
+        setKeyboardVisible(false);
+      }
     });
 
     return () => {
+      isMounted = false;
       showSubscription.remove();
       hideSubscription.remove();
     };
@@ -441,10 +454,10 @@ const ChatPage = () => {
              <Text style={styles.logoText}>Odyssey</Text>
               <Text style={styles.welcomeText}>How can I assist you today?</Text>
               {(selectedCloudModel || selectedLocalModel) && (
-                <Text style={[styles.modelNameText, { color: theme.colors.grey }]}>
+                <Text style={[styles.modelNameText, { color: theme.isDark ? theme.colors.greyLight : theme.colors.grey }]}>
                   {isLocal 
-                    ? `Using: ${selectedLocalModel?.displayName || 'Local Model'}` 
-                    : `Using: ${selectedCloudModel?.displayName || 'Cloud Model'}`}
+                    ? `${selectedLocalModel?.displayName || 'Local Model'}` 
+                    : `${selectedCloudModel?.displayName || 'Cloud Model'}`}
                 </Text>
               )}
             </Animated.View>

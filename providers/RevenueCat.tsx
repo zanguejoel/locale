@@ -34,26 +34,41 @@ export const RevenueCatProvider = ({ children }: any) => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    // Track if component is mounted to prevent state updates after unmount
+    let isMounted = true;
+    
     const init = async () => {
       if (Platform.OS === 'android') {
         await Purchases.configure({ apiKey: APIKeys.google });
       } else {
         await Purchases.configure({ apiKey: APIKeys.apple });
       }
+      
+      if (!isMounted) return;
       setIsReady(true);
 
       // Use more logging during debug if want!
       Purchases.setLogLevel(LOG_LEVEL.DEBUG);
 
       // Listen for customer updates
+      // Note: RevenueCat's addCustomerInfoUpdateListener doesn't return a cleanup function
+      // The listener is automatically managed by the SDK
       Purchases.addCustomerInfoUpdateListener(async (info) => {
-        updateCustomerInformation(info);
+        if (isMounted) {
+          updateCustomerInformation(info);
+        }
       });
 
       // Load all offerings and the user object with entitlements
       await loadOfferings();
     };
     init();
+    
+    // Cleanup on unmount
+    return () => {
+      isMounted = false;
+      console.log('[RevenueCat] Component unmounting');
+    };
   }, []);
 
   // Load all offerings a user can (currently) purchase

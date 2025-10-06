@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useState, useMemo } from 'react';
 import Colors from '@/constants/Colors';
 import useMarkdownDisplay from '@/hooks/useMarkdownDisplay';
 import { copyImageToClipboard, downloadAndSaveImage, downloadAndSaveVideo, shareImage } from '@/utils/Image';
@@ -79,15 +79,17 @@ const LoadingDots = memo(() => {
   const theme = useTheme();
   const styles = getStyles(theme);
 
-  const dotAnimations = [
-    useRef(new Animated.Value(0)).current,
-    useRef(new Animated.Value(0)).current,
-    useRef(new Animated.Value(0)).current
-  ];
+  // Create animated values only once using useMemo
+  const dotAnimations = useMemo(() => [
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0)
+  ], []);
+  
+  const animationsRef = useRef<Animated.CompositeAnimation[]>([]);
   const animationsRunning = useRef(false);
 
   useEffect(() => {
-
     if (animationsRunning.current) {
       return;
     }
@@ -113,22 +115,26 @@ const LoadingDots = memo(() => {
     };
 
     // Create and start animations with different delays for a cascading effect
-    const animations = [
+    animationsRef.current = [
       createDotAnimation(dotAnimations[0], 0),
       createDotAnimation(dotAnimations[1], CHAT_MESSAGE.ANIMATION.LOADING_DOT_DELAY),
       createDotAnimation(dotAnimations[2], CHAT_MESSAGE.ANIMATION.LOADING_DOT_DELAY * 2)
     ];
 
     animationsRunning.current = true;
-    animations.forEach(anim => anim.start());
+    animationsRef.current.forEach(anim => anim.start());
 
     // Cleanup function to stop animations when component unmounts
     return () => {
-      animations.forEach(anim => anim.stop());
-      dotAnimations.forEach(dot => dot.setValue(0));
+      animationsRef.current.forEach(anim => anim.stop());
+      dotAnimations.forEach(dot => {
+        dot.stopAnimation();
+        dot.setValue(0);
+      });
+      animationsRef.current = [];
       animationsRunning.current = false;
     };
-  }, []);
+  }, [dotAnimations]);
 
   const getTranslateY = (dot: Animated.Value) => {
     return dot.interpolate({
@@ -182,7 +188,7 @@ const ChatMessage = memo(({
   const theme = useTheme();
   const styles = getStyles(theme);
 
-  const sound = useRef(new Audio.Sound());
+  const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
   const [contentLoaded, setContentLoaded] = useState(false);
@@ -198,13 +204,23 @@ const ChatMessage = memo(({
 
   const videoRef = useRef<Video>(null);
   
-  // Cleanup audio when component unmounts
+  // Initialize and cleanup audio
   useEffect(() => {
+    // Initialize sound object only once
+    const initSound = async () => {
+      if (!soundRef.current) {
+        soundRef.current = new Audio.Sound();
+      }
+    };
+    initSound();
+    
+    // Cleanup on unmount
     return () => {
-      if (sound.current) {
-        sound.current.unloadAsync().catch(err => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(err => {
           handleErrorSilent(err, 'Audio Cleanup');
         });
+        soundRef.current = null;
       }
     };
   }, []);
@@ -331,20 +347,23 @@ const ChatMessage = memo(({
   }, [onLongPress, handleCopyText, handleShareText]);
 
   const playAudio = async () => {
+    if (!soundRef.current) return;
+    
     try {
       if (isPlaying) {
-        await sound.current.pauseAsync();
+        await soundRef.current.pauseAsync();
         setIsPlaying(false);
       } else {
-        await sound.current.unloadAsync();
+        // Unload any previous audio
+        await soundRef.current.unloadAsync();
 
-        await sound.current.loadAsync(
+        await soundRef.current.loadAsync(
           { uri: content || files?.[0]?.s3_url || '' },
           { progressUpdateIntervalMillis: 1 }
         );
-        await sound.current.playAsync();
+        await soundRef.current.playAsync();
         setIsPlaying(true);
-        sound.current.setOnPlaybackStatusUpdate((status) => {
+        soundRef.current.setOnPlaybackStatusUpdate((status) => {
           if (status.isLoaded) {
             setDuration(status.durationMillis || 0);
             setPosition(status.positionMillis || 0);
@@ -552,10 +571,10 @@ const ChatMessage = memo(({
 
   const renderAudio = () => {
     const handleSeek = (newProgress: number) => {
-      if (sound.current && duration > 0) {
+      if (soundRef.current && duration > 0) {
         const newPosition = newProgress * duration;
 
-        sound.current.setPositionAsync(newPosition);
+        soundRef.current.setPositionAsync(newPosition);
       }
     };
 

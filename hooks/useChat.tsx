@@ -161,10 +161,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [selectedLocalModel.id]);
 
 
+  // Wait for user to be loaded before fetching conversations
   useEffect(() => {
-    fetchConversation(undefined, undefined, setCurrentRoom);
-    Keyboard.dismiss();
-  }, []);
+    if (user?.user_id) {
+      fetchConversation(undefined, undefined, setCurrentRoom);
+      Keyboard.dismiss();
+    }
+  }, [user]);
 
 
   useEffect(() => {
@@ -877,19 +880,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   // Update model state when llm changes
   useEffect(() => {
-    if (!llm) {
+    if (!llm || !isLocal) {
       setLocalModelDownloadProgress(0);
       setIsLocalModelReady(false);
-      setHasTestedModelReady(false);
       return;
     }
     
     let previousProgress = 0;
     let previousIsReady = false;
+    let isMounted = true;
+    let testScheduled = false;
     
     const updateModelState = () => {
+      if (!isMounted || !llm) return;
+      
       // Use requestAnimationFrame for smoother updates
       requestAnimationFrame(() => {
+        if (!isMounted) return;
+        
         const progress = (llm as any).downloadProgress || 0;
         
         // Only update state if values have changed significantly (prevents unnecessary rerenders)
@@ -900,23 +908,30 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         // Test if model is ready when download reaches 100%
-        if (progress >= 1 && previousProgress < 1 && !hasTestedModelReady && isLocal) {
+        if (progress >= 1 && previousProgress < 1 && !testScheduled && !hasTestedModelReady) {
           console.log('[Local] Download reached 100%, testing model readiness...');
+          testScheduled = true;
           setHasTestedModelReady(true);
           
           // Send a test message to verify model is ready
           setTimeout(() => {
-            testModelReadiness();
+            if (isMounted) {
+              testModelReadiness();
+            }
           }, 1000);
         }
       });
     };
     
     const updateReadyState = () => {
+      if (!isMounted || !llm) return;
+      
       const isReady = (llm as any).isReady || false;
       
       if (isReady !== previousIsReady) {
         requestAnimationFrame(() => {
+          if (!isMounted) return;
+          
           setIsLocalModelReady(isReady);
           console.log('[Local] Ready state changed:', isReady);
         });
@@ -948,10 +963,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const readyInterval = setInterval(updateReadyState, 2000);
     
     return () => {
+      isMounted = false;
       clearInterval(progressInterval);
       clearInterval(readyInterval);
     };
-  }, [llm, isLocal, hasTestedModelReady, testModelReadiness]);
+  }, [llm, isLocal]);
   
   // Test model when switching to local mode (only once per switch)
   useEffect(() => {

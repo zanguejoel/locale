@@ -101,6 +101,7 @@ class ApiClient {
   private cache: LRUCache<string, CachedData<unknown>>;
   private retryCount: Map<string, number>;
   private api: ApisauceInstance;
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(baseURL: string = API_URL_PROD) {
     this.cache = new LRUCache(CONFIG.CACHE_SIZE);
@@ -156,7 +157,12 @@ class ApiClient {
   }
 
   private setupCacheCleanup(): void {
-    setInterval(() => {
+    // Clear any existing interval first
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+    }
+    
+    this.cleanupInterval = setInterval(() => {
       for (const [key, value] of this.cache.entries()) {
         if (Date.now() - value.timestamp > value.duration) {
           this.cache.delete(key);
@@ -303,6 +309,20 @@ class ApiClient {
 
   public async delete<T>(url: string, config: AxiosRequestConfig = {}): Promise<ApiResponse<T>> {
     return this.api.delete(url, config);
+  }
+
+  /**
+   * Cleanup method to stop intervals and clear cache
+   * Call this when the app is being destroyed or backgrounded for extended periods
+   */
+  public destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    this.cache.clear();
+    this.retryCount.clear();
+    console.log('[ApiClient] Cleanup complete - intervals cleared and cache purged');
   }
 }
 
