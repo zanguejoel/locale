@@ -22,21 +22,26 @@ const rawPage = [{
   icon: 'person-outline'
 }, {
   id: 2,
+  key: 'plans-pricing',
+  title: 'Plans & Pricing',
+  icon: 'card-outline'
+}, {
+  id: 3,
   key: 'default-model',
   title: 'Default AI Model',
   icon: 'chatbubbles-outline'
 }, {
-  id: 3,
+  id: 4,
   key: 'model-manager',
   title: 'Manage Downloaded Models',
   icon: 'folder-open-outline'
 }, {
-  id: 4,
+  id: 5,
   key: 'change-password',
   title: 'Change password',
   icon: 'settings-outline'
 }, {
-  id: 5,
+  id: 6,
   key: 'sign_out',
   title: 'Sign Out',
   icon: 'log-out-outline'
@@ -87,6 +92,8 @@ const Page = () => {
     switch (type) {
       case 'profile':
         return router.push('/profile')
+      case 'plans-pricing':
+        return router.push('/plans-pricing')
       case 'default-model':
         return setIsModelSelectorVisible(true)
       case 'model-manager':
@@ -121,6 +128,11 @@ const Page = () => {
             {item.key === 'model-manager' && deviceSupportsLocal && (
               <Text style={styles.menuItemSubtext}>
                 View and manage local models
+              </Text>
+            )}
+            {item.key === 'plans-pricing' && (
+              <Text style={styles.menuItemSubtext}>
+                Manage subscriptions on web
               </Text>
             )}
           </View>

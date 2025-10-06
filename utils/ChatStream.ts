@@ -87,9 +87,18 @@ export const processStream = async (
                   }
                   break;
 
+                case 'meta':
+                  // Handle metadata during streaming (e.g., generated images)
+                  if (data?.data?.additional_data) {
+                    console.log('[ChatStream] Received meta with additional_data:', data.data.additional_data);
+                    setAdditionalData?.(data.data.additional_data);
+                  }
+                  break;
+
                 case 'final':
                   res = data;
                   if (data?.data?.additional_data) {
+                    console.log('[ChatStream] Received final with additional_data:', data.data.additional_data);
                     setAdditionalData?.(data.data.additional_data);
                   }
                   break;
@@ -102,7 +111,7 @@ export const processStream = async (
                   break;
 
                 default:
-                  console.warn('[ChatStream] Unknown stream data type:', data);
+                  console.warn('[ChatStream] Unknown stream data type:', data.type, data);
               }
             } catch (e) {
               console.error(`[ChatStream] Error processing stream data: ${e instanceof Error ? e.message : String(e)}`);

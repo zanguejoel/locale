@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard, Clipboard, Alert } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -269,9 +269,12 @@ const ChatPage = () => {
   };
 
   // Reverse messages for inverted list (newest at index 0)
-  const reversedMessages = [...messages].reverse();
+  // Memoized to prevent array creation on every render
+  const reversedMessages = useMemo(() => {
+    return [...messages].reverse();
+  }, [messages]);
 
-  const renderItem = ({ item, index }: { item: Message; index: number }) => {
+  const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => {
     // In inverted list with reversed array, index 0 is the newest message
     const isLastBotMessage =
       item.role === Role.Bot &&
@@ -311,7 +314,7 @@ const ChatPage = () => {
         )}
       </>
     );
-  };
+  }, [reversedMessages, isSending, stream, intermediate, handleCopyMessage, handleDeleteMessage, handleRetryMessage]);
 
   const CustomView = Platform.OS === 'ios' ? PanGestureHandler : View
 
@@ -412,7 +415,7 @@ const ChatPage = () => {
               keyExtractor={(item, index) => item.id || `msg-${index}`}
               keyboardDismissMode="on-drag"
               onScroll={handleScroll}
-              estimatedItemSize={120}
+              estimatedItemSize={200}
               scrollEventThrottle={16}
               extraData={[isSending, stream]}
               inverted

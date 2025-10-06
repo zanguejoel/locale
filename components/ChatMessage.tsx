@@ -20,6 +20,7 @@ import {
   Share,
   Alert,
 } from 'react-native';
+import LazyImage from './LazyImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ContextMenu from 'zeego/context-menu';
 import { useCallback, useEffect, useRef } from 'react';
@@ -197,6 +198,11 @@ const ChatMessage = memo(({
   const maxImageRetryAttempts = CHAT_MESSAGE.MAX_IMAGE_RETRY_ATTEMPTS
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
+  
+  // Additional data image states
+  const [additionalImageLoading, setAdditionalImageLoading] = useState<Record<number, boolean>>({});
+  const [additionalImageError, setAdditionalImageError] = useState<Record<number, boolean>>({});
+  const [videoDownloadProgress, setVideoDownloadProgress] = useState<Record<number, number>>({});
 
   const MarkdownDisplay = useMarkdownDisplay();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -385,12 +391,13 @@ const ChatMessage = memo(({
   };
 
   const instructionForImageChatDisplay = () => {
-
+    // Priority: imageData > files s3_url > files file_path
     if (imageData && isImage(imageData)) {
-      return encodeURI(imageData)
-    } else if (content !== '' && files?.length) {
-      return files[0]?.s3_url || ''
-    }
+      return imageData; // Already a URL, don't encode here
+    } else if (files?.length && files[0]?.s3_url) {
+      return files[0].s3_url; // Use S3 URL directly
+    } 
+    return '';
   }
 
   const instructionForTextInImageChat = () => {
@@ -408,87 +415,66 @@ const ChatMessage = memo(({
       return null;
     }
 
-    console.log('[ChatMessage] Rendering additional_data:', additional_data);
+    console.log('[ChatMessage] Rendering additional_data:', JSON.stringify(additional_data, null, 2));
 
+    
+    const videos = additional_data.filter(item => item.data_type === 'video');
+    
+   
     return (
       <View style={styles.additionalDataContainer}>
-        {additional_data.map((item, index) => {
-          if (item.data_type === 'img') {
-            return (
-              <ContextMenu.Root key={`additional-img-${index}`}>
-                <ContextMenu.Trigger>
-                  <Link href={`/(modal)/image/${encodeURIComponent(item.data)}`} asChild>
-                    <Pressable>
-                      <Image
-                        source={{ uri: item.data }}
-                        style={styles.generatedImage}
-                        resizeMode="cover"
-                        onError={(e) => console.error('Generated image load error:', e.nativeEvent.error)}
-                      />
-                      <View style={styles.generationBadge}>
-                        <Ionicons name="sparkles" size={12} color="#FFFFFF" />
-                        <Text style={styles.generationBadgeText}>Generated</Text>
-                      </View>
-                    </Pressable>
-                  </Link>
-                </ContextMenu.Trigger>
-                <ContextMenu.Content>
-                  {contextItems.map((contextItem) => (
-                    <ContextMenu.Item
-                      key={contextItem.id}
-                      onSelect={() => contextItem.action(item.data)}
-                    >
-                      <ContextMenu.ItemTitle>{contextItem.title}</ContextMenu.ItemTitle>
-                      <ContextMenu.ItemIcon
-                        ios={{
-                          name: contextItem.systemIcon,
-                          pointSize: 18,
-                        }}
-                      />
-                    </ContextMenu.Item>
-                  ))}
-                </ContextMenu.Content>
-              </ContextMenu.Root>
-            );
-          }
+        {/* Image Grid - Responsive Layout */}
+       
+        {/* Videos - Full Width */}
+        {videos.map((item, videoIndex) => {
+          const progress = videoDownloadProgress[videoIndex] || 0;
+          const isDownloading = progress > 0 && progress < 1;
 
-          if (item.data_type === 'video') {
-            return (
-              <View key={`additional-video-${index}`} style={styles.generatedVideoContainer}>
-                <Video
-                  ref={videoRef}
-                  source={{ uri: item.data }}
-                  style={styles.generatedVideo}
-                  useNativeControls
-                  isLooping={false}
-                  onError={(e) => console.error('Generated video load error:', e)}
-                />
-                <TouchableOpacity 
-                  style={styles.videoFullscreenButton}
-                  onPress={handleFullScreenVideo}
-                >
-                  <Ionicons name="expand" size={20} color="#FFFFFF" />
-                </TouchableOpacity>
-                <View style={styles.generationBadge}>
-                  <Ionicons name="sparkles" size={12} color="#FFFFFF" />
-                  <Text style={styles.generationBadgeText}>Generated</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.downloadVideoButton}
-                  onPress={() => downloadAndSaveVideo(item.data)}
-                  disabled={isLoadingDownloadVideo}
-                >
-                  {isLoadingDownloadVideo ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Ionicons name="download" size={20} color="#FFFFFF" />
-                  )}
-                </TouchableOpacity>
+          return (
+            <View key={`additional-video-${videoIndex}`} style={styles.generatedVideoContainer}>
+              <Video
+                ref={videoRef}
+                source={{ uri: item.data }}
+                style={styles.generatedVideo}
+                useNativeControls
+                isLooping={false}
+                onError={(e) => console.error('Generated video load error:', e)}
+              />
+              <TouchableOpacity 
+                style={styles.videoFullscreenButton}
+                onPress={handleFullScreenVideo}
+              >
+                <Ionicons name="expand" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <View style={styles.generationBadge}>
+                <Ionicons name="sparkles" size={12} color="#FFFFFF" />
+                <Text style={styles.generationBadgeText}>Generated</Text>
               </View>
-            );
-          }
-
-          return null;
+              <TouchableOpacity
+                style={styles.downloadVideoButton}
+                onPress={() => {
+                  // Simple download without progress for now
+                  // Can be enhanced with FileSystem.createDownloadResumable if needed
+                  downloadAndSaveVideo(item.data);
+                }}
+                disabled={isLoadingDownloadVideo}
+              >
+                {isLoadingDownloadVideo ? (
+                  isDownloading ? (
+                    <View style={styles.downloadProgressContainer}>
+                      <Text style={styles.downloadProgressText}>
+                        {Math.round(progress * 100)}%
+                      </Text>
+                    </View>
+                  ) : (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  )
+                ) : (
+                  <Ionicons name="download" size={20} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+          );
         })}
       </View>
     );
@@ -515,14 +501,18 @@ const ChatMessage = memo(({
       );
     }
 
-    // Ensure URL is properly encoded
-    const processedUrl = imageData ? instructionForImageChatDisplay() : `https://app-dev.odyssey.com/api/local-media?file=${encodeURI(files?.[0]?.file_path || '')}`;
+    // Get the image URL with proper priority handling
+    const imageUrl = instructionForImageChatDisplay();
+    
+    console.log('[ChatMessage] renderImageContent - imageUrl:', imageUrl);
+    console.log('[ChatMessage] renderImageContent - files:', files);
+    console.log('[ChatMessage] renderImageContent - imageData:', imageData);
 
     return (
       <ContextMenu.Root>
         <ContextMenu.Trigger>
           <Link
-            href={`/(modal)/image/${encodeURIComponent(processedUrl || '')}?prompt=${encodeURIComponent(prompt || '')}`}
+            href={`/(modal)/image/${encodeURIComponent(imageUrl)}?prompt=${encodeURIComponent(prompt || '')}`}
             asChild
           >
             <Pressable
@@ -532,25 +522,23 @@ const ChatMessage = memo(({
               accessibilityLabel={`Image preview. ${prompt}`}
               accessibilityRole="image"
               testID="image-preview-pressable"
+              style={{width: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE}}
             >
-              <View style={styles.imageContainer} testID="image-container">
-                {(imageLoadError || !contentLoaded) && (
-                  <View style={styles.imageLoadingOverlay} testID="image-loading-overlay">
-                    <ActivityIndicator size="large" color={Colors.common.primary} />
-                    {imageLoadError && <Text style={styles.imageLoadingText}>Retrying...</Text>}
-                  </View>
-                )}
-                <Image
-                  source={{ uri: processedUrl, cache: 'force-cache' }}
-                  style={styles.previewImage}
-                  resizeMode="cover"
-                  onError={handleImageError}
-                  onLoad={() => {
-                    setContentLoaded(true);
-                  }}
-                  testID="preview-image"
-                />
-              </View>
+              <LazyImage
+                uri={imageUrl}
+                style={styles.previewImage}
+                containerStyle={styles.imageContainer}
+                resizeMode="cover"
+                onError={handleImageError}
+                onLoad={() => {
+                  setContentLoaded(true);
+                }}
+                threshold={600}
+                showLoadingIndicator={true}
+                priority="high"
+                cachePolicy="memory-disk"
+                testID="preview-image"
+              />
             </Pressable>
           </Link>
         </ContextMenu.Trigger>
@@ -558,7 +546,7 @@ const ChatMessage = memo(({
           {contextItems.map((item) => (
             <ContextMenu.Item
               key={item.id}
-              onSelect={() => item.action(processedUrl || '')}
+              onSelect={() => item.action(imageUrl)}
             >
               <ContextMenu.ItemTitle>{item.title}</ContextMenu.ItemTitle>
               <ContextMenu.ItemIcon
@@ -715,10 +703,10 @@ const ChatMessage = memo(({
             renderVideo()
           )}
 
-
-          {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '')) && renderImageContent()}
+          {/* Render user-uploaded images from files array */}
+          {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '' && (!additional_data || additional_data.length === 0))) && renderImageContent()}
           
-          {/* Render generated images and videos */}
+          {/* Render AI-generated images and videos from additional_data */}
           {renderAdditionalData()}
         </>
       );
@@ -756,9 +744,14 @@ const ChatMessage = memo(({
           {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
             renderAudio()
           )}
-          {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '')) && renderImageContent()}
+          {(files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video') && content === '' && (
+            renderVideo()
+          )}
           
-          {/* Render generated images and videos */}
+          {/* Render user-uploaded images from files array */}
+          {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '' && (!additional_data || additional_data.length === 0))) && renderImageContent()}
+          
+          {/* Render AI-generated images and videos from additional_data */}
           {renderAdditionalData()}
         </>)
     };
@@ -967,7 +960,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   previewImage: {
     width: '100%',
-    height: '100%',
+    height: 200,
     borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
   },
   imageLoadingOverlay: {
@@ -1092,26 +1085,111 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   // Additional data styles for generated content
   additionalDataContainer: {
     marginTop: 12,
-    gap: 12,
+    width: '100%',
   },
-  generatedImage: {
-    width: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
-    height: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
+  // Image Grid Layouts
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  singleImageGrid: {
+    width: '100%',
+  },
+  twoImageGrid: {
+    justifyContent: 'space-between',
+  },
+  multiImageGrid: {
+    justifyContent: 'flex-start',
+  },
+  // Image Wrapper Sizes - Optimized with aspect ratios
+  imageWrapper: {
+    
+    position: 'relative',
+    overflow: 'hidden',
     borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
     backgroundColor: '#f5f5f5',
   },
-  generatedVideoContainer: {
-    width: CHAT_MESSAGE.GENERATED.VIDEO_WIDTH,
-    height: CHAT_MESSAGE.GENERATED.VIDEO_HEIGHT,
-    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#000',
+  singleImageWrapper: {
+    width: '100%',
+    aspectRatio: 16 / 9,  // Widescreen aspect ratio for single images
+    maxHeight: 280,       // Maximum height constraint
   },
-  generatedVideo: {
+  twoImageWrapper: {
+    width: '48%',
+    aspectRatio: 1,       // Square aspect ratio for two images
+    maxHeight: 200,       // Reasonable max height
+  },
+  multiImageWrapper: {
+    width: '31%',
+    aspectRatio: 1,       // Square aspect ratio for grid
+    maxHeight: 150,       // Smaller for grid layout
+  },
+  // Generated Image
+  generatedImage: {
     width: '100%',
     height: '100%',
+    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
+    backgroundColor: '#f5f5f5',
   },
+  // Loading Skeleton
+  imageSkeleton: {
+    ...Platform.select({
+      ios: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      },
+      android: {
+        ...StyleSheet.absoluteFillObject,
+      },
+      default: StyleSheet.absoluteFillObject,
+    }),
+    backgroundColor: theme.colors.backgroundLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
+  },
+  imageHidden: {
+    opacity: 0,
+  },
+  // Error State
+  imageErrorState: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
+    padding: 8,
+    gap: 6,
+  },
+  imageErrorStateText: {
+    fontSize: 11,
+    color: Colors.common.grey,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  // Image Counter Badge
+  imageCounterBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  imageCounterText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  // Generation Badge
   generationBadge: {
     position: 'absolute',
     top: 8,
@@ -1129,6 +1207,20 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  // Video Styles
+  generatedVideoContainer: {
+    width: CHAT_MESSAGE.GENERATED.VIDEO_WIDTH,
+    height: CHAT_MESSAGE.GENERATED.VIDEO_HEIGHT,
+    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#000',
+    marginTop: 8,
+  },
+  generatedVideo: {
+    width: '100%',
+    height: '100%',
+  },
   videoFullscreenButton: {
     position: 'absolute',
     top: 8,
@@ -1144,6 +1236,17 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     padding: 8,
     borderRadius: 8,
+  },
+  downloadProgressContainer: {
+    minWidth: 40,
+    minHeight: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  downloadProgressText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
   },
 });
 

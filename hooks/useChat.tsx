@@ -171,12 +171,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   useEffect(() => {
-    console.log('[useChat] Updating message with additionalData:', additionalData);
-    setMessages(prev => updateLastItem(prev, message => ({
-      ...message,
-      content: stream,
-      additional_data: additionalData?.length > 0 ? additionalData : message.additional_data
-    })));
+    console.log('[useChat] Updating message - stream length:', stream?.length, 'additionalData:', additionalData);
+    setMessages(prev => updateLastItem(prev, message => {
+      const updatedMessage = {
+        ...message,
+        content: stream,
+      };
+      
+      // Update additional_data if we have new data, otherwise preserve existing
+      if (additionalData?.length > 0) {
+        updatedMessage.additional_data = additionalData;
+        console.log('[useChat] Setting additional_data on message:', additionalData);
+      } else if (message.additional_data) {
+        // Preserve existing additional_data
+        updatedMessage.additional_data = message.additional_data;
+      }
+      
+      return updatedMessage;
+    }));
   }, [stream, additionalData]);
 
   useEffect(() => {
@@ -460,6 +472,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError('');
     setStream('');
     setIntermediate('');
+    setAdditionalData([]); // Reset additional data for new message
     setIsSending(true);
 
     setMessages(prev => [
@@ -662,7 +675,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       console.log('[Cloud] Starting processStream...');
-      await processStream(
+      const res = await processStream(
         _response.body,
         setStream,
         handleError,
@@ -670,7 +683,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStreamWorking,
         setAdditionalData
       );
-      console.log('[Cloud] processStream completed');
+      console.log('[Cloud] processStream completed, result:', res);
+      
+      // Ensure additional_data is preserved after streaming completes
+      if (res?.data?.additional_data) {
+        console.log('[Cloud] Final additional_data from processStream:', res.data.additional_data);
+        setMessages(prev => updateLastItem(prev, message => ({
+          ...message,
+          additional_data: res?.data?.additional_data || []
+        })));
+      }
+      
       setInputDisabled(false);
       setPastedActive(false);
     } catch (e) {
@@ -678,7 +701,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsSending(false);
       setInputDisabled(false);
-      setChatLoading(false)
+      setChatLoading(false);
+      
+      // Don't reset additionalData here - it needs to persist in the message
+      console.log('[Cloud] Send message completed, additionalData preserved');
     }
   }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError]);
 
@@ -733,10 +759,39 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('[useChat] Fetched messages:', response.data.length);
         const msgs = response.data.map(m => {
           console.log('[useChat] Message additional_data:', m.additional_data);
-          return {
+          console.log('[useChat] Message files:', m.files);
+          
+          // Ensure additional_data is preserved and properly formatted
+          const message: Message = {
             ...m,
             role: `${m.role}` === "assistant" ? Role.Bot : Role.User,
+            additional_data: m.additional_data || [],
           };
+          
+          // Web compatibility: If files array contains items with data_type, treat them as additional_data
+          if (m.files && m.files.length > 0) {
+            m.files.forEach(file => {
+              // If file has data_type (from web), it should be in additional_data format
+              if (file.data_type && ['img', 'video', 'voice'].includes(file.data_type)) {
+                if (!message.additional_data) {
+                  message.additional_data = [];
+                }
+                // Add to additional_data if not already there
+                const alreadyExists = message.additional_data.some(
+                  ad => ad.data === (file.s3_url || file.file_path)
+                );
+                if (!alreadyExists) {
+                  message.additional_data.push({
+                    data_type: file.data_type,
+                    data: file.s3_url || file.file_path || ''
+                  });
+                }
+              }
+            });
+          }
+          
+          console.log('[useChat] Processed message with additional_data:', message.additional_data);
+          return message;
         });
         setMessages(msgs || []);
       }
@@ -793,6 +848,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages([]);
     setStream('');
     setIntermediate('');
+    setAdditionalData([]); // Reset additional data when clearing chat
   }, []);
 
   const deleteConversation = useCallback(async (conversationId: string): Promise<boolean> => {
@@ -895,6 +951,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let previousIsReady = false;
     let isMounted = true;
     let testScheduled = false;
+    let progressInterval: NodeJS.Timeout | null = null;
+    let readyInterval: NodeJS.Timeout | null = null;
     
     const updateModelState = () => {
       if (!isMounted || !llm) return;
@@ -910,6 +968,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLocalModelDownloadProgress(progress);
           console.log('[Local] Progress changed:', progress.toFixed(2));
           previousProgress = progress;
+        }
+        
+        // Stop polling once complete
+        if (progress >= 1 && progressInterval) {
+          console.log('[Local] Download complete, stopping progress polling');
+          clearInterval(progressInterval);
+          progressInterval = null;
         }
         
         // Test if model is ready when download reaches 100%
@@ -944,7 +1009,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Stop polling once model is ready to save resources
         if (isReady) {
-          console.log('[Local] Model is ready, stopping polling');
+          console.log('[Local] Model is ready, stopping ready state polling');
+          
+          if (readyInterval) {
+            clearInterval(readyInterval);
+            readyInterval = null;
+          }
           
           // Mark model as downloaded in tracker
           DownloadedModelsTracker.markAsDownloaded(
@@ -960,19 +1030,40 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateModelState();
     updateReadyState();
     
-    // Optimized polling - reduced frequency to prevent UI freezing
-    // Progress updates every 3 seconds (was 1 second)
-    const progressInterval = setInterval(updateModelState, 3000);
+    // Only start polling if not already complete/ready
+    const currentProgress = (llm as any).downloadProgress || 0;
+    const currentReady = (llm as any).isReady || false;
     
-    // Ready state checked every 2 seconds (separate from progress)
-    const readyInterval = setInterval(updateReadyState, 2000);
+    // Optimized polling - reduced frequency to prevent UI freezing
+    // Only poll if not complete
+    if (currentProgress < 1) {
+      // Progress updates every 5 seconds (reduced from 3s for better performance)
+      progressInterval = setInterval(updateModelState, 5000);
+      console.log('[Local] Started progress polling (5s interval)');
+    } else {
+      console.log('[Local] Model already at 100%, skipping progress polling');
+    }
+    
+    if (!currentReady) {
+      // Ready state checked every 3 seconds (reduced from 2s for better performance)
+      readyInterval = setInterval(updateReadyState, 3000);
+      console.log('[Local] Started ready state polling (3s interval)');
+    } else {
+      console.log('[Local] Model already ready, skipping ready state polling');
+    }
     
     return () => {
       isMounted = false;
-      clearInterval(progressInterval);
-      clearInterval(readyInterval);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+      if (readyInterval) {
+        clearInterval(readyInterval);
+        readyInterval = null;
+      }
     };
-  }, [llm, isLocal]);
+  }, [llm, isLocal, selectedLocalModel.id, selectedLocalModel.size, hasTestedModelReady, testModelReadiness]);
   
   // Test model when switching to local mode (only once per switch)
   useEffect(() => {
