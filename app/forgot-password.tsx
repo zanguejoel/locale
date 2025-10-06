@@ -14,6 +14,7 @@ import {
   Platform,
   SafeAreaView,
 } from "react-native";
+import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from '@/hooks/useTheme';
@@ -125,11 +126,13 @@ const ForgotPassword = () => {
             We've sent verification code to:
           </Text>
           <Text style={[styles.emailText, { color: theme.colors.primary }]}>{email}</Text>
-          <CustomInput
-            ref={codeInputRef}
-            icon="code-outline"
-            placeholder="Enter your code"
-            value={code}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Verification Code</Text>
+            <CustomInput
+              ref={codeInputRef}
+              icon="code-outline"
+              placeholder="Enter 6-digit code"
+              value={code}
             onChangeText={(text) => {
               setCode(text);
             }}
@@ -141,6 +144,7 @@ const ForgotPassword = () => {
             blurOnSubmit={true}
             autoFocus={true}
           />
+          </View>
           <View style={styles.btnContainer}>
             <TouchableOpacity
               style={[defaultStyles.btn, styles.returnButton, { backgroundColor: theme.colors.primary }]}
@@ -192,6 +196,7 @@ const ForgotPassword = () => {
         {isLoading && (
           <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={styles.loadingText}>Sending reset code...</Text>
           </View>
         )}
 
@@ -207,11 +212,13 @@ const ForgotPassword = () => {
         </View>
 
         <View style={styles.formContainer}>
-          <CustomInput
-            ref={emailInputRef}
-            icon="mail-outline"
-            placeholder="Enter your email"
-            value={email}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Email Address</Text>
+            <CustomInput
+              ref={emailInputRef}
+              icon="mail-outline"
+              placeholder="you@example.com"
+              value={email}
             onChangeText={(text) => {
               setEmail(text);
               if (isSubmitted) validateEmail();
@@ -226,6 +233,7 @@ const ForgotPassword = () => {
             autoFocus={true}
           />
           {error.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{error.email}</Text>}
+          </View>
 
           <View style={styles.btnContainer}>
             <TouchableOpacity
@@ -268,8 +276,8 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: 180,
+    height: 100,
     resizeMode: 'contain',
-    height: 75,
     marginBottom: 20,
   },
   appTitle: {
@@ -298,6 +306,15 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     paddingHorizontal: 24,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 2,
+    marginLeft: 4,
   },
   errorText: {
     fontSize: 12,
@@ -355,6 +372,12 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 12,
     borderWidth: 1.5,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.common.grey,
   },
 });
 

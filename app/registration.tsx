@@ -21,6 +21,7 @@ import {
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
+import PasswordStrengthMeter from "@/components/PasswordStrengthMeter";
 import WebView from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import contries from '@/data/countries.json'
@@ -256,6 +257,7 @@ const Registration = () => {
       {isLoading && (
         <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Creating your account...</Text>
         </View>
       )}
       <SafeAreaView>
@@ -272,11 +274,13 @@ const Registration = () => {
           </View>
 
           <View style={styles.formContainer}>
-            <CustomInput
-              ref={firstNameRef}
-              icon="person-outline"
-              placeholder="First Name"
-              value={formData.firstName}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>First Name</Text>
+              <CustomInput
+                ref={firstNameRef}
+                icon="person-outline"
+                placeholder="Enter your first name"
+                value={formData.firstName}
               onChangeText={(value) => handleInputChange("firstName", value)}
               error={!!errors.firstName}
               autoCapitalize="words"
@@ -286,12 +290,15 @@ const Registration = () => {
               autoFocus={true}
             />
             {errors.firstName && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.firstName}</Text>}
+            </View>
 
-            <CustomInput
-              ref={lastNameRef}
-              icon="person-outline"
-              placeholder="Last Name"
-              value={formData.lastName}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Last Name</Text>
+              <CustomInput
+                ref={lastNameRef}
+                icon="person-outline"
+                placeholder="Enter your last name"
+                value={formData.lastName}
               onChangeText={(value) => handleInputChange("lastName", value)}
               error={!!errors.lastName}
               autoCapitalize="words"
@@ -300,12 +307,15 @@ const Registration = () => {
               blurOnSubmit={false}
             />
             {errors.lastName && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.lastName}</Text>}
+            </View>
 
-            <CustomInput
-              ref={emailRef}
-              icon="mail-outline"
-              placeholder="Email"
-              value={formData.email}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Email Address</Text>
+              <CustomInput
+                ref={emailRef}
+                icon="mail-outline"
+                placeholder="you@example.com"
+                value={formData.email}
               onChangeText={(value) => handleInputChange("email", value)}
               error={!!errors.email}
               autoCapitalize="none"
@@ -315,9 +325,12 @@ const Registration = () => {
               blurOnSubmit={false}
             />
             {errors.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.email}</Text>}
+            </View>
 
             {/* Custom Phone Input with Country Code Selector */}
-            <View style={styles.phoneContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Phone Number (Optional)</Text>
+              <View style={styles.phoneContainer}>
               <TouchableOpacity
                 style={[styles.countrySelector, { borderColor: theme.colors.greyLight }]}
                 onPress={() => setShowCountryModal(true)}
@@ -342,14 +355,17 @@ const Registration = () => {
                   blurOnSubmit={false}
                 />
               </View>
-            </View>
+              </View>
             {errors.phone && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.phone}</Text>}
+            </View>
 
-            <CustomInput
-              ref={passwordRef}
-              icon="lock-closed-outline"
-              placeholder="Password"
-              value={formData.password}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Password</Text>
+              <CustomInput
+                ref={passwordRef}
+                icon="lock-closed-outline"
+                placeholder="Min. 8 characters with mixed case, number & symbol"
+                value={formData.password}
               onChangeText={(value) => handleInputChange("password", value)}
               error={!!errors.password}
               isPassword
@@ -357,13 +373,17 @@ const Registration = () => {
               onSubmitEditing={() => confirmPasswordRef.current?.focus()}
               blurOnSubmit={false}
             />
+            <PasswordStrengthMeter password={formData.password} />
             {errors.password && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.password}</Text>}
+            </View>
 
-            <CustomInput
-              ref={confirmPasswordRef}
-              icon="lock-closed-outline"
-              placeholder="Confirm Password"
-              value={formData.confirmPassword}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Confirm Password</Text>
+              <CustomInput
+                ref={confirmPasswordRef}
+                icon="lock-closed-outline"
+                placeholder="Re-enter your password"
+                value={formData.confirmPassword}
               onChangeText={(value) => handleInputChange("confirmPassword", value)}
               error={!!errors.confirmPassword}
               isPassword
@@ -372,6 +392,7 @@ const Registration = () => {
               blurOnSubmit={true}
             />
             {errors.confirmPassword && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.confirmPassword}</Text>}
+            </View>
 
             <View style={styles.btnContainer}>
               <TouchableOpacity
@@ -451,8 +472,8 @@ const styles = StyleSheet.create({
   headerContainer: {
     alignItems: 'center',
     // marginTop: 30,
-    marginBottom: 30,
-    paddingVertical: 20,
+    marginBottom: 10,
+    paddingVertical: 10,
   },
   logo: {
     resizeMode: 'contain',
@@ -478,6 +499,15 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     paddingHorizontal: 24,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 2,
+    marginLeft: 4,
   },
   phoneContainer: {
     flexDirection: 'row',
@@ -614,6 +644,12 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: '#f0f0f0',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.common.grey,
   },
 });
 

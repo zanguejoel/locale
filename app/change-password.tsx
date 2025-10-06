@@ -82,7 +82,7 @@ const ChangePassword = () => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Current Password</Text>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Current Password</Text>
               <CustomInput
                 ref={currentPasswordRef}
                 icon="lock-closed-outline"
@@ -99,7 +99,7 @@ const ChangePassword = () => {
             </View>
             
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>New Password</Text>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>New Password</Text>
               <CustomInput
                 ref={newPasswordRef}
                 icon="lock-closed-outline"
@@ -115,7 +115,7 @@ const ChangePassword = () => {
             </View>
             
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Confirm New Password</Text>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Confirm New Password</Text>
               <CustomInput
                 ref={confirmPasswordRef}
                 icon="lock-closed-outline"
@@ -154,8 +154,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   logo: {
-    width: 150,
-    height: 75,
+    width: 180,
+    height: 100,
+    resizeMode: 'contain',
     marginBottom: 20,
   },
   headerContainer: {
@@ -178,7 +179,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
-    color: theme.colors.greyLight,
+    fontWeight: '500',
+    marginBottom: 2,
   },
   inputWrapper: {
     flexDirection: 'row',

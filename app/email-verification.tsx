@@ -59,8 +59,9 @@ const EmailVerification = () => {
         >
             <SafeAreaView>
                 {isLoading && (
-                    <View style={defaultStyles.loadingOverlay}>
+                    <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
                         <ActivityIndicator size="large" color={theme.colors.primary} />
+                        <Text style={styles.loadingText}>Verifying...</Text>
                     </View>
                 )}
 
@@ -73,11 +74,13 @@ const EmailVerification = () => {
                 </View>
 
                 <View style={styles.formContainer}>
-                    <CustomInput
-                        ref={codeInputRef}
-                        icon="code-outline"
-                        placeholder="Enter your code"
-                        value={code}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Verification Code</Text>
+                        <CustomInput
+                            ref={codeInputRef}
+                            icon="code-outline"
+                            placeholder="Enter 6-digit code"
+                            value={code}
                         onChangeText={(text) => {
                             setCode(text);
                         }}
@@ -90,6 +93,7 @@ const EmailVerification = () => {
                         autoFocus={true}
                     />
                     {error.code && <Text style={styles.errorText}>{error.code}</Text>}
+                    </View>
 
                     <View style={styles.btnContainer}>
                         <TouchableOpacity
@@ -133,8 +137,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     logo: {
         width: 180,
+        height: 100,
         resizeMode: 'contain',
-        height: 75,
         marginBottom: 20,
     },
     title: {
@@ -160,6 +164,16 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     formContainer: {
         paddingHorizontal: 24,
+    },
+    inputGroup: {
+        marginBottom: 20,
+    },
+    inputLabel: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: theme.colors.textSecondary,
+        marginBottom: 2,
+        marginLeft: 4,
     },
     errorText: {
         color: theme.colors.red,
@@ -223,6 +237,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1.5,
         borderColor: theme.colors.primary,
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+        fontWeight: '500',
+        color: theme.colors.text,
     },
 });
 

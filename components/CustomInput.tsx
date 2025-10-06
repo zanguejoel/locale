@@ -60,6 +60,9 @@ const CustomInput = forwardRef<TextInput, CustomInputProps>(({
         <TouchableOpacity
           onPress={() => setShowPassword(!showPassword)}
           style={styles.eyeIcon}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+          accessibilityRole="button"
         >
           <Ionicons
             name={showPassword ? "eye-outline" : "eye-off-outline"}
@@ -83,7 +86,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     borderColor: theme.colors.greyLight,
     borderRadius: 12,
     backgroundColor: theme.colors.background,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: {
       width: 0,
       height: 2,

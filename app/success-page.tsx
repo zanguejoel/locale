@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { defaultStyles } from "@/constants/Styles";
 import {
     View,
@@ -7,7 +7,10 @@ import {
     TouchableOpacity,
     Image,
     SafeAreaView,
+    Animated,
+    Easing,
 } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
 import Colors from "@/constants/Colors";
 import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,7 +29,42 @@ const SuccessPage = () => {
     const styles = getStyles(theme);
 
     const { email, password } = useLocalSearchParams();
-    const [isLoading, setLoading] = useState(false)
+    const [isLoading, setLoading] = useState(false);
+    
+    // Animation values
+    const scaleAnim = useRef(new Animated.Value(0)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(30)).current;
+    
+    // Success animation on mount
+    useEffect(() => {
+        // Icon scale animation with bounce
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            tension: 50,
+            friction: 7,
+            useNativeDriver: true,
+        }).start();
+        
+        // Content fade and slide up
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 600,
+                delay: 200,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.ease),
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 600,
+                delay: 200,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.ease),
+            }),
+        ]).start();
+    }, []);
+    
     const handleHome = async () => {
         setLoading(true)
         try {
@@ -42,29 +80,53 @@ const SuccessPage = () => {
         <View style={styles.container} >
             <SafeAreaView style={styles.content}>
                 <View style={styles.headerContainer}>
-                    {/* Logo commented out */}
-                    {/* <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} /> */}
-                    <Text style={styles.appTitle}>Odyssey</Text>
-                    <View style={{ flex: 1, justifyContent: 'center', bottom: 20 }}>
-                        <View style={styles.titleContainer}>
-                            <Text style={styles.title}>Success!</Text>
-                            <Text style={styles.subtitle}>
-                                Congratulations, your account has been successfully created.
-                            </Text>
-                        </View>
-                    </View>
+                    <Image 
+                      source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} 
+                      style={styles.logo} 
+                    />
+                    
+                    <Animated.View style={[
+                        styles.successIconContainer,
+                        { transform: [{ scale: scaleAnim }] }
+                    ]}>
+                      <View style={styles.successIconCircle}>
+                        <Ionicons name="checkmark-circle" size={80} color={theme.colors.success} />
+                      </View>
+                    </Animated.View>
+                    
+                    <Animated.View style={[
+                        styles.titleContainer,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }]
+                        }
+                    ]}>
+                        <Text style={styles.title}>Success!</Text>
+                        <Text style={styles.subtitle}>
+                            Congratulations, your account has been successfully created.
+                        </Text>
+                    </Animated.View>
 
                 </View>
-                <View style={styles.formContainer}>
+                <Animated.View style={[
+                    styles.formContainer,
+                    {
+                        opacity: fadeAnim,
+                        transform: [{ translateY: slideAnim }]
+                    }
+                ]}>
                     <View style={styles.btnContainer}>
                         <TouchableOpacity
-                            style={[defaultStyles.btn, styles.resetButton]}
+                            style={[defaultStyles.btn, styles.continueButton]}
                             onPress={handleHome}
+                            disabled={isLoading}
                         >
-                            <Text style={styles.buttonText}>Home</Text>
+                            <Text style={styles.buttonText}>Continue to Odyssey</Text>
+                            <Ionicons name="arrow-forward-outline" size={18} color={theme.colors.white} />
                         </TouchableOpacity>
+                        <Text style={styles.autoLoginText}>You'll be signed in automatically</Text>
                     </View>
-                </View>
+                </Animated.View>
             </SafeAreaView>
         </View>
     );
@@ -82,10 +144,16 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     headerContainer: {
         flex: 1,
         alignItems: 'center',
-        marginTop: 80,
-        marginBottom: 50,
+        justifyContent: 'center',
         paddingHorizontal: 24,
         paddingVertical: 20,
+    },
+    successIconContainer: {
+        marginVertical: 32,
+    },
+    successIconCircle: {
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     resendContainerTimer: {
         flexDirection: 'row',
@@ -95,21 +163,15 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     titleContainer: {
     },
     logo: {
-        width: 150,
-        height: 75,
-        marginBottom: 20,
-    },
-    appTitle: {
-        fontSize: 42,
-        fontWeight: "bold",
-        marginBottom: 8,
-        letterSpacing: 1,
-        color: theme.colors.primary,
+        width: 180,
+        height: 100,
+        resizeMode: 'contain',
+        marginBottom: 24,
     },
     title: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: theme.colors.primary,
+        fontSize: 28,
+        fontWeight: "700",
+        color: theme.colors.text,
         marginBottom: 12,
         textAlign: 'center',
     },
@@ -121,10 +183,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         lineHeight: 22,
     },
     subtitle: {
-        fontSize: 17,
-        color: theme.colors.text,
+        fontSize: 16,
+        color: theme.colors.textSecondary,
         textAlign: 'center',
-        lineHeight: 22,
+        lineHeight: 24,
+        paddingHorizontal: 16,
     },
     formContainer: {
 
@@ -140,10 +203,18 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         gap: 16,
         marginTop: 24,
     },
-    resetButton: {
+    continueButton: {
         height: 50,
         backgroundColor: theme.colors.primary,
         borderRadius: 12,
+        flexDirection: 'row',
+        gap: 8,
+    },
+    autoLoginText: {
+        fontSize: 13,
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
+        marginTop: 8,
     },
     cancelButton: {
         height: 50,

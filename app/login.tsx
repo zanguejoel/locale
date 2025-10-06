@@ -15,6 +15,7 @@ import {
   SafeAreaView,
   Animated,
   TextInput,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import Colors from "@/constants/Colors";
@@ -40,6 +41,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [touchedFields, setTouchedFields] = useState<{email?: boolean; password?: boolean}>({});
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -80,22 +82,32 @@ const Login = () => {
     loadStoredEmail();
   }, []);
 
-  const validateForm = () => {
-    let errors: ErrorType = {};
-
+  const validateEmail = () => {
+    let emailError = undefined;
     if (!emailAddress) {
-      errors.email = "Email is required";
+      emailError = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(emailAddress)) {
-      errors.email = "Email is invalid";
+      emailError = "Email is invalid";
     }
+    setErrors(prev => ({ ...prev, email: emailError }));
+    return !emailError;
+  };
 
+  const validatePassword = () => {
+    let passwordError = undefined;
     if (!password) {
-      errors.password = "Password is required";
+      passwordError = "Password is required";
     }
+    setErrors(prev => ({ ...prev, password: passwordError }));
+    return !passwordError;
+  };
 
-    setErrors(errors);
-    setIsFormValid(Object.keys(errors).length === 0);
-    return Object.keys(errors).length === 0;
+  const validateForm = () => {
+    const emailValid = validateEmail();
+    const passwordValid = validatePassword();
+    const isValid = emailValid && passwordValid;
+    setIsFormValid(isValid);
+    return isValid;
   };
 
   const onSignInPress = async () => {
@@ -136,34 +148,40 @@ const Login = () => {
     <View style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={70}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         style={styles.keyboardView}
       >
         {isLoading && (
           <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={styles.loadingText}>Signing in...</Text>
           </View>
         )}
-        <SafeAreaView>
-          <Animated.View
-            style={[
-              styles.headerContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
+        <SafeAreaView style={styles.safeArea}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <Image
-              source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
-              style={styles.logo}
-            /> 
-            
-            <Text style={[styles.welcomeText]}>Welcome Back</Text>
-            <Text style={[styles.subtitle]}>Sign in to continue</Text>
-          </Animated.View>
+            <Animated.View
+              style={[
+                styles.headerContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }]
+                }
+              ]}
+            >
+              <Image
+                source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
+                style={styles.logo}
+              /> 
+              
+              <Text style={[styles.welcomeText]}>Welcome Back</Text>
+              <Text style={[styles.subtitle]}>Sign in to continue</Text>
+            </Animated.View>
 
-          <Animated.View
+            <Animated.View
             style={[
               styles.formContainer,
               {
@@ -172,52 +190,87 @@ const Login = () => {
               }
             ]}
           >
-            <CustomInput
-              ref={emailInputRef}
-              icon="mail-outline"
-              placeholder="Email"
-              value={emailAddress}
-              onChangeText={(value) => {
-                setEmailAddress(value);
-                if (rememberMe) {
-                  AsyncStorage.setItem("savedEmail", value);
-                }
-              }}
-              error={!!errors.email}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordInputRef.current?.focus()}
-              blurOnSubmit={false}
-              autoFocus={true}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <CustomInput
+                ref={emailInputRef}
+                icon="mail-outline"
+                placeholder="you@example.com"
+                value={emailAddress}
+                onChangeText={(value) => {
+                  setEmailAddress(value);
+                  if (rememberMe) {
+                    AsyncStorage.setItem("savedEmail", value);
+                  }
+                  // Clear error on change if field was touched
+                  if (touchedFields.email) {
+                    setErrors(prev => ({ ...prev, email: undefined }));
+                  }
+                }}
+                onBlur={() => {
+                  setTouchedFields(prev => ({ ...prev, email: true }));
+                  validateEmail();
+                }}
+                error={!!errors.email}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
+                blurOnSubmit={false}
+                autoFocus={true}
+              />
             {errors.email && <Text style={[styles.errorText]}>{errors.email}</Text>}
+            </View>
 
-            <CustomInput
-              ref={passwordInputRef}
-              icon="lock-closed-outline"
-              placeholder="Password"
-              value={password}
-              onChangeText={(value) => {
-                setPassword(value);
-              }}
-              error={!!errors.password}
-              isPassword
-              returnKeyType="go"
-              onSubmitEditing={onSignInPress}
-              blurOnSubmit={true}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <CustomInput
+                ref={passwordInputRef}
+                icon="lock-closed-outline"
+                placeholder="Enter your password"
+                value={password}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  // Clear error on change if field was touched
+                  if (touchedFields.password) {
+                    setErrors(prev => ({ ...prev, password: undefined }));
+                  }
+                }}
+                onBlur={() => {
+                  setTouchedFields(prev => ({ ...prev, password: true }));
+                  validatePassword();
+                }}
+                error={!!errors.password}
+                isPassword
+                returnKeyType="go"
+                onSubmitEditing={onSignInPress}
+                blurOnSubmit={true}
+              />
             {errors.password && <Text style={[styles.errorText]}>{errors.password}</Text>}
+            </View>
 
             <View style={styles.optionsContainer}>
-              <TouchableOpacity style={styles.rememberMeContainer} onPress={toggleRememberMe}>
+              <TouchableOpacity 
+                style={styles.rememberMeContainer} 
+                onPress={toggleRememberMe}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={rememberMe ? "Remember me enabled" : "Remember me disabled"}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: rememberMe }}
+              >
                 <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
                   {rememberMe && <Text style={styles.checkmark}>✓</Text>}
                 </View>
                 <Text style={[styles.rememberMeText]}>Remember me</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={handleForgotPassword}>
+              <TouchableOpacity 
+                onPress={handleForgotPassword}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel="Forgot password"
+                accessibilityRole="button"
+                accessibilityHint="Opens password reset flow"
+              >
                 <Text style={[styles.forgotPasswordText]}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
@@ -227,8 +280,8 @@ const Login = () => {
                 style={[defaultStyles.btn, styles.signInButton]}
                 onPress={onSignInPress}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Sign In</Text>
-                <Ionicons name="arrow-forward-outline" size={18} color="#fff" />
+                <Text style={styles.buttonText}>Sign In</Text>
+                <Ionicons name="arrow-forward-outline" size={18} color={theme.colors.white} />
               </TouchableOpacity>
 
               <View style={styles.dividerContainer}>
@@ -244,12 +297,13 @@ const Login = () => {
                 }}
                 style={[defaultStyles.btnSecondary, styles.createAccountButton]}
               >
-                <Text style={[{ color: theme.colors.primary }]}>
+                <Text style={styles.secondaryButtonText}>
                   Create an Account
                 </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
+          </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
     </View>
@@ -264,10 +318,17 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
+  safeArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
+  },
   headerContainer: {
     alignItems: "center",
-    marginTop: 80,
-    marginBottom: 50,
+    marginTop: 60,
+    marginBottom: 40,
     position: "relative",
     paddingVertical: 20,
   },
@@ -297,6 +358,16 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   formContainer: {
     paddingHorizontal: 24,
   },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
+    marginBottom: 2,
+    marginLeft: 4,
+  },
   errorText: {
     fontSize: 12,
     marginTop: 4,
@@ -315,8 +386,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     alignItems: "center",
   },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     borderWidth: 2,
     borderColor: theme.isDark ? theme.colors.greyLight : theme.colors.grey,
     borderRadius: 4,
@@ -374,6 +445,22 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     fontWeight: '500',
     lineHeight: 20,
     color: theme.colors.text
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.white,
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.colors.text,
   },
 });
 

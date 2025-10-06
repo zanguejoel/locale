@@ -44,6 +44,13 @@ export interface ColorTheme {
   destructive: string;
   destructiveForeground: string;
   
+  // Status colors
+  success: string;
+  warning: string;
+  info: string;
+  white: string;
+  shadow: string;
+  
   // Legacy/specific
   light: string;
   tabIconDefault: string;
@@ -132,6 +139,13 @@ const theme: AppTheme = {
     destructive: OdysseyLightColors.destructive,
     destructiveForeground: OdysseyLightColors.destructiveForeground,
     
+    // Status colors
+    success: '#4CD964',  // Green
+    warning: '#FF9500',  // Orange
+    info: '#5AC8FA',     // Light blue
+    white: '#FFFFFF',
+    shadow: '#000000',
+    
     // Legacy/specific
     light: '#fff',
     tabIconDefault: "#ccc",
@@ -189,6 +203,13 @@ const theme: AppTheme = {
     // Destructive
     destructive: OdysseyDarkColors.destructive,
     destructiveForeground: OdysseyDarkColors.destructiveForeground,
+    
+    // Status colors
+    success: '#4CD964',  // Green
+    warning: '#FF9500',  // Orange
+    info: '#5AC8FA',     // Light blue
+    white: '#FFFFFF',
+    shadow: '#000000',
     
     // Legacy/specific
     light: '#fff',

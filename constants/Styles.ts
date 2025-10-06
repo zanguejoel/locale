@@ -15,12 +15,12 @@ export const defaultStyles = StyleSheet.create({
   },
   btnSecondary: {
     height: 50,
-    borderRadius: 15,
+    borderRadius: 12,  // Fixed: was 15, now matches primary
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     paddingHorizontal: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.common.primary,
     ...textStyles.button, // Apply typography
   },
