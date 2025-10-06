@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import type { TextInput as TextInputType } from 'react-native';
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
 import {
@@ -71,6 +72,14 @@ const Registration = () => {
     password: "",
     confirmPassword: "",
   });
+  
+  // Input refs for keyboard navigation
+  const firstNameRef = useRef<TextInputType>(null);
+  const lastNameRef = useRef<TextInputType>(null);
+  const emailRef = useRef<TextInputType>(null);
+  const phoneRef = useRef<TextInputType>(null);
+  const passwordRef = useRef<TextInputType>(null);
+  const confirmPasswordRef = useRef<TextInputType>(null);
 
   // Validate a specific field
   const validateField = (field: keyof FormData, value: string, allFormData: FormData): string | undefined => {
@@ -264,26 +273,36 @@ const Registration = () => {
 
           <View style={styles.formContainer}>
             <CustomInput
+              ref={firstNameRef}
               icon="person-outline"
               placeholder="First Name"
               value={formData.firstName}
               onChangeText={(value) => handleInputChange("firstName", value)}
               error={!!errors.firstName}
               autoCapitalize="words"
+              returnKeyType="next"
+              onSubmitEditing={() => lastNameRef.current?.focus()}
+              blurOnSubmit={false}
+              autoFocus={true}
             />
             {errors.firstName && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.firstName}</Text>}
 
             <CustomInput
+              ref={lastNameRef}
               icon="person-outline"
               placeholder="Last Name"
               value={formData.lastName}
               onChangeText={(value) => handleInputChange("lastName", value)}
               error={!!errors.lastName}
               autoCapitalize="words"
+              returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
+              blurOnSubmit={false}
             />
             {errors.lastName && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.lastName}</Text>}
 
             <CustomInput
+              ref={emailRef}
               icon="mail-outline"
               placeholder="Email"
               value={formData.email}
@@ -291,6 +310,9 @@ const Registration = () => {
               error={!!errors.email}
               autoCapitalize="none"
               keyboardType="email-address"
+              returnKeyType="next"
+              onSubmitEditing={() => phoneRef.current?.focus()}
+              blurOnSubmit={false}
             />
             {errors.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.email}</Text>}
 
@@ -308,34 +330,46 @@ const Registration = () => {
               <View style={[styles.phoneInputContainer, !!errors.phone && styles.inputError, { borderColor: theme.colors.greyLight }]}>
                 <Ionicons name="call-outline" size={20} color={theme.colors.text} style={styles.phoneIcon} />
                 <TextInput
+                  ref={phoneRef}
                   style={[styles.phoneInput, { color: theme.colors.text }]}
                   placeholder="Phone Number (Optional)"
                   placeholderTextColor={theme.colors.greyLight}
                   value={formData.phone}
                   onChangeText={(value) => handleInputChange("phone", value)}
                   keyboardType="phone-pad"
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                  blurOnSubmit={false}
                 />
               </View>
             </View>
             {errors.phone && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.phone}</Text>}
 
             <CustomInput
+              ref={passwordRef}
               icon="lock-closed-outline"
               placeholder="Password"
               value={formData.password}
               onChangeText={(value) => handleInputChange("password", value)}
               error={!!errors.password}
               isPassword
+              returnKeyType="next"
+              onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+              blurOnSubmit={false}
             />
             {errors.password && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.password}</Text>}
 
             <CustomInput
+              ref={confirmPasswordRef}
               icon="lock-closed-outline"
               placeholder="Confirm Password"
               value={formData.confirmPassword}
               onChangeText={(value) => handleInputChange("confirmPassword", value)}
               error={!!errors.confirmPassword}
               isPassword
+              returnKeyType="done"
+              onSubmitEditing={onSignUpPress}
+              blurOnSubmit={true}
             />
             {errors.confirmPassword && <Text style={[styles.errorText, { color: theme.colors.red }]}>{errors.confirmPassword}</Text>}
 

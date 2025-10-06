@@ -16,36 +16,47 @@ import { useRef, useState, useEffect } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
-import { isLoaded } from 'expo-font';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
+import GenerationOptions, { GenerationOptionsState } from './GenerationOptions';
+import { CHAT_INPUT } from '@/constants/ChatConstants';
+import { handleError } from '@/utils/ErrorHandler';
 
 
 const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
-const MIN_HEIGHT = 40;
-
 export type Props = {
-  onShouldSend: (message: string, type?: string, operation?: string | null, additionalData?: string) => void;
+  onShouldSend: (message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => void;
   fetchMessages?: (conversationId?: string) => void | Promise<void>
   selectedImage?: ImagePicker.ImagePickerAsset | null
   setSelectedImage?: (a: ImagePicker.ImagePickerAsset | DocumentPicker.DocumentPickerAsset | null) => void,
   isLoading?: boolean
   onRecordingStateChange?: (isRecording: boolean, onCancel: () => void) => void;
+  isLocal?: boolean; // To show/hide generation options
 };
 
-const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading, onRecordingStateChange }: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading, onRecordingStateChange, isLocal = false }: Props) => {
   const [message, setMessage] = useState('');
   const theme = useTheme();
   const styles = getStyles(theme);
 
   const expanded = useSharedValue(0);
   const inputRef = useRef<TextInput>(null);
-  const [inputHeight, setInputHeight] = useState(MIN_HEIGHT);
+  const [inputHeight, setInputHeight] = useState(CHAT_INPUT.MIN_HEIGHT);
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+
+  // Generation options state
+  const [showGenerationOptions, setShowGenerationOptions] = useState(false);
+  const [generationOptions, setGenerationOptions] = useState<GenerationOptionsState>({
+    webSearch: false,
+    generateImage: 'none',
+    imageProvider: 'stability',
+    imageModel: 'stable-diffusion-xl',
+    generateVideo: 'none',
+  });
 
   // Notify parent about recording state changes
   useEffect(() => {
@@ -62,8 +73,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
       if (status !== 'granted') {
         const { status: newStatus } = await Audio.requestPermissionsAsync();
         if (newStatus !== 'granted') {
-          alert('Microphone permission not granted');
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          handleError(new Error('Microphone permission not granted'), 'Recording');
           return;
         }
       }
@@ -81,21 +91,21 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
           extension: '.m4a',
           outputFormat: Audio.AndroidOutputFormat.MPEG_4,
           audioEncoder: Audio.AndroidAudioEncoder.AAC,
-          sampleRate: 44100,
-          numberOfChannels: 2,
-          bitRate: 128000,
+          sampleRate: CHAT_INPUT.AUDIO.SAMPLE_RATE,
+          numberOfChannels: CHAT_INPUT.AUDIO.NUMBER_OF_CHANNELS,
+          bitRate: CHAT_INPUT.AUDIO.BIT_RATE,
         },
         ios: {
           extension: '.m4a',
           outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
           audioQuality: Audio.IOSAudioQuality.HIGH,
-          sampleRate: 44100,
-          numberOfChannels: 2,
-          bitRate: 128000,
+          sampleRate: CHAT_INPUT.AUDIO.SAMPLE_RATE,
+          numberOfChannels: CHAT_INPUT.AUDIO.NUMBER_OF_CHANNELS,
+          bitRate: CHAT_INPUT.AUDIO.BIT_RATE,
         },
         web: {
           mimeType: 'audio/webm',
-          bitsPerSecond: 128000,
+          bitsPerSecond: CHAT_INPUT.AUDIO.BIT_RATE,
         },
       });
       await newRecording.startAsync();
@@ -103,8 +113,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
       setRecording(newRecording);
       setIsRecording(true);
     } catch (err) {
-      console.error('Recording error:', err);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      handleError(err, 'Recording');
     }
   };
 
@@ -120,16 +129,14 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
       const uri = recording.getURI();
 
       if (!uri) {
-        console.error('Failed to retrieve the recording URI.');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        handleError(new Error('Failed to retrieve the recording URI.'), 'Recording');
         return;
       }
 
       onShouldSend(uri, 'audio');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
-      console.error('Error stopping the recording:', err);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      handleError(err, 'Recording');
     } finally {
       setRecording(null);
     }
@@ -147,23 +154,23 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
       // Don't send the recording, just discard it
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } catch (err) {
-      console.error('Error canceling the recording:', err);
+      handleError(err, 'Recording', { showAlert: false }); // Silent error for cancel
     } finally {
       setRecording(null);
     }
   };
 
   const expandItems = () => {
-    expanded.value = withTiming(1, { duration: 400 });
+    expanded.value = withTiming(1, { duration: CHAT_INPUT.ANIMATION_DURATION });
   };
 
   const collapseItems = () => {
-    expanded.value = withTiming(0, { duration: 400 });
+    expanded.value = withTiming(0, { duration: CHAT_INPUT.ANIMATION_DURATION });
   };
 
   const expandButtonStyle = useAnimatedStyle(() => {
     const opacityInterpolation = interpolate(expanded.value, [0, 1], [1, 0], Extrapolation.CLAMP);
-    const widthInterpolation = interpolate(expanded.value, [0, 1], [30, 0], Extrapolation.CLAMP);
+    const widthInterpolation = interpolate(expanded.value, [0, 1], [CHAT_INPUT.BUTTON_WIDTH, 0], Extrapolation.CLAMP);
 
     return {
       opacity: opacityInterpolation,
@@ -172,7 +179,9 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
   });
 
   const buttonViewStyle = useAnimatedStyle(() => {
-    const widthInterpolation = interpolate(expanded.value, [0, 1], [0, 100], Extrapolation.CLAMP);
+    // Adjust width based on whether we're showing generation options (4 buttons vs 3)
+    const maxWidth = !isLocal ? CHAT_INPUT.BUTTON_VIEW_WIDTH_CLOUD : CHAT_INPUT.BUTTON_VIEW_WIDTH_LOCAL;
+    const widthInterpolation = interpolate(expanded.value, [0, 1], [0, maxWidth], Extrapolation.CLAMP);
     return {
       width: widthInterpolation,
       opacity: expanded.value,
@@ -189,17 +198,31 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
     Keyboard.dismiss();
+    
+    // Prepare generation options for cloud models (skip for local)
+    const options = !isLocal ? generationOptions : undefined;
+    
     if (selectedImage) {
-      onShouldSend(selectedImage?.uri, 'image', null, message);
+      onShouldSend(selectedImage?.uri, 'image', null, message, options);
       fetchMessages?.()
     } else {
-      onShouldSend(message);
+      onShouldSend(message, 'text', null, '', options);
     }
     setSelectedImage?.(null)
     setMessage('');
-    setInputHeight(MIN_HEIGHT);
+    setInputHeight(CHAT_INPUT.MIN_HEIGHT);
 
   };
+
+  const handleOpenGenerationOptions = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowGenerationOptions(true);
+  };
+
+  // Check if any generation option is active
+  const hasActiveOptions = generationOptions.webSearch || 
+                          generationOptions.generateImage !== 'none' || 
+                          generationOptions.generateVideo !== 'none';
 
   const pickImageFromGallery = async () => {
     try {
@@ -215,7 +238,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
         // onShouldSend(assets.uri, 'image');
       }
     } catch (error) {
-      console.error('Error picking image from gallery:', error);
+      handleError(error, 'Image Picker');
     }
   };
 
@@ -223,7 +246,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        alert('Permission to access camera is required!');
+        handleError(new Error('Permission to access camera is required!'), 'Camera');
         return;
       }
 
@@ -239,7 +262,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
         // onShouldSend(uri, 'image');
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
+      handleError(error, 'Camera');
     }
   };
 
@@ -255,7 +278,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
 
       // onShouldSend(result.uri, 'file');
     } catch (error) {
-      console.error('Error picking document:', error);
+      handleError(error, 'Document Picker');
     }
   };
 
@@ -264,22 +287,60 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
     <View style={[styles.container]}>
       <View style={styles.inputContainer}>
         <View style={styles.row}>
-          <ATouchableOpacity onPress={expandItems} style={[styles.roundBtn, expandButtonStyle]}>
+          <ATouchableOpacity 
+            onPress={expandItems} 
+            style={[styles.roundBtn, expandButtonStyle]}
+            accessibilityLabel="Show more options"
+            accessibilityRole="button"
+            accessibilityHint="Expands to show camera, gallery, and document options"
+          >
             <Ionicons name="add" size={24} color={theme.colors.grey} />
           </ATouchableOpacity>
 
           <Animated.View style={[styles.buttonView, buttonViewStyle]}>
-            <TouchableOpacity onPress={takePhoto}>
+            <TouchableOpacity 
+              onPress={takePhoto}
+              accessibilityLabel="Take photo"
+              accessibilityRole="button"
+              accessibilityHint="Opens camera to take a photo"
+            >
               <Ionicons name="camera-outline" size={24} color={theme.colors.chatIcons} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={pickImageFromGallery}>
+            <TouchableOpacity 
+              onPress={pickImageFromGallery}
+              accessibilityLabel="Pick image from gallery"
+              accessibilityRole="button"
+              accessibilityHint="Opens photo gallery to select an image"
+            >
               <Ionicons name="image-outline" size={24} color={theme.colors.chatIcons} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={pickDocument}>
+            <TouchableOpacity 
+              onPress={pickDocument}
+              accessibilityLabel="Pick document"
+              accessibilityRole="button"
+              accessibilityHint="Opens file picker to select a document"
+            >
               <Ionicons name="folder-outline" size={24} color={theme.colors.chatIcons} />
             </TouchableOpacity>
+
+            {/* Generation options button - only for cloud models */}
+            {!isLocal && (
+              <TouchableOpacity 
+                onPress={handleOpenGenerationOptions}
+                accessibilityLabel={hasActiveOptions ? "Generation options active" : "Generation options"}
+                accessibilityRole="button"
+                accessibilityHint="Configure image and video generation options"
+                accessibilityState={{ selected: hasActiveOptions }}
+              >
+                <Ionicons 
+                  name="sparkles" 
+                  size={24} 
+                  color={hasActiveOptions ? theme.colors.primary : theme.colors.chatIcons} 
+                />
+              </TouchableOpacity>
+            )}
           </Animated.View>
 
           <TextInput
@@ -287,6 +348,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             ref={inputRef}
             placeholder="Message"
             style={[styles.messageInput]}
+            placeholderTextColor={theme.colors.grey}
             onFocus={collapseItems}
             onChangeText={onChangeText}
             value={message}
@@ -297,6 +359,10 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
               disabled={isLoading} 
               onPress={onSend}
               style={{ transform: [{ scale: 1 }] }}
+              accessibilityLabel="Send message"
+              accessibilityRole="button"
+              accessibilityHint="Sends your message"
+              accessibilityState={{ disabled: isLoading }}
             >
               <Ionicons 
                 name="arrow-up-circle" 
@@ -305,12 +371,27 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
               />
             </ATouchableOpacity>
           ) : (
-            <TouchableOpacity disabled={isLoading} onPress={isRecording ? stopRecording : startRecording}>
+            <TouchableOpacity 
+              disabled={isLoading} 
+              onPress={isRecording ? stopRecording : startRecording}
+              accessibilityLabel={isRecording ? "Stop recording" : "Start voice recording"}
+              accessibilityRole="button"
+              accessibilityHint={isRecording ? "Stops and sends voice message" : "Starts voice recording"}
+              accessibilityState={{ disabled: isLoading, selected: isRecording }}
+            >
               <Ionicons name="mic-outline" size={30} color={isRecording ? theme.colors.red : (isLoading ? theme.colors.chatIcons : theme.colors.chatIcons)} />
             </TouchableOpacity>
           )}
         </View>
       </View>
+
+      {/* Generation Options Modal */}
+      <GenerationOptions
+        visible={showGenerationOptions}
+        onClose={() => setShowGenerationOptions(false)}
+        options={generationOptions}
+        onOptionsChange={setGenerationOptions}
+      />
     </View>
   );
 };
@@ -318,12 +399,12 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.backgroundLight
+    backgroundColor: 'transparent'
   },
   inputContainer: {
     paddingTop: 10,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+   // borderTopLeftRadius: 24,
+    //borderTopRightRadius: 24,
     overflow: 'hidden',
   },
   row: {
@@ -334,7 +415,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   messageInput: {
     flex: 1,
-    maxHeight: 75,
+    maxHeight: CHAT_INPUT.MAX_HEIGHT,
     marginHorizontal: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 20,
@@ -344,8 +425,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     backgroundColor: theme.colors.chatInputBg,
   },
   roundBtn: {
-    width: 30,
-    height: 30,
+    width: CHAT_INPUT.BUTTON_WIDTH,
+    height: CHAT_INPUT.BUTTON_WIDTH,
     borderRadius: 20,
     backgroundColor: Colors.common.input,
     alignItems: 'center',
@@ -369,6 +450,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     left: 33,
     top: 2,
     zIndex: 1000
-  }
+  },
 });
 export default ChatInput;

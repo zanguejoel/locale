@@ -34,6 +34,9 @@ import AudioPlayer from './AudioPlayer';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { shadows } from '@/constants/Shadows';
+import { isAudio, isImage } from '@/utils/FileTypeHelpers';
+import { CHAT_MESSAGE } from '@/constants/ChatConstants';
+import { handleErrorSilent } from '@/utils/ErrorHandler';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -47,10 +50,8 @@ interface ChatMessageProps extends Message {
   sendingText?: string
   imageData?: string
   intermediate?: string // Add intermediate prop for streaming
+  additional_data?: import('@/utils/Interfaces').AdditionalData[];
 }
-
-const IMAGE_PREVIEW_SIZE = 240;
-const BORDER_RADIUS = 15;
 
 const contextItems = [
   {
@@ -98,15 +99,15 @@ const LoadingDots = memo(() => {
           Animated.delay(delay),
           Animated.timing(dot, {
             toValue: 1,
-            duration: 300,
+            duration: CHAT_MESSAGE.ANIMATION.LOADING_DOT,
             useNativeDriver: true,
           }),
           Animated.timing(dot, {
             toValue: 0,
-            duration: 300,
+            duration: CHAT_MESSAGE.ANIMATION.LOADING_DOT,
             useNativeDriver: true,
           }),
-          Animated.delay(300), // Add consistent delay between cycles
+          Animated.delay(CHAT_MESSAGE.ANIMATION.LOADING_DOT), // Add consistent delay between cycles
         ])
       );
     };
@@ -114,8 +115,8 @@ const LoadingDots = memo(() => {
     // Create and start animations with different delays for a cascading effect
     const animations = [
       createDotAnimation(dotAnimations[0], 0),
-      createDotAnimation(dotAnimations[1], 150),
-      createDotAnimation(dotAnimations[2], 300)
+      createDotAnimation(dotAnimations[1], CHAT_MESSAGE.ANIMATION.LOADING_DOT_DELAY),
+      createDotAnimation(dotAnimations[2], CHAT_MESSAGE.ANIMATION.LOADING_DOT_DELAY * 2)
     ];
 
     animationsRunning.current = true;
@@ -132,7 +133,7 @@ const LoadingDots = memo(() => {
   const getTranslateY = (dot: Animated.Value) => {
     return dot.interpolate({
       inputRange: [0, 1],
-      outputRange: [0, -8],
+      outputRange: [0, CHAT_MESSAGE.LOADING_DOTS.TRANSLATE_Y],
     });
   };
 
@@ -175,7 +176,8 @@ const ChatMessage = memo(({
   imageData,
   intermediate,
   timestamp,
-  status
+  status,
+  additional_data
 }: ChatMessageProps) => {
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -185,7 +187,8 @@ const ChatMessage = memo(({
   const [imageLoadError, setImageLoadError] = useState(false);
   const [contentLoaded, setContentLoaded] = useState(false);
   const [imageAttempts, setImageAttempts] = useState(0);
-  const [isLoadingDownloadVideo, setLoadingDownloadVideo] = useState(false)
+  const [isLoadingDownloadVideo, setLoadingDownloadVideo] = useState(false);
+  const maxImageRetryAttempts = CHAT_MESSAGE.MAX_IMAGE_RETRY_ATTEMPTS
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
 
@@ -194,6 +197,17 @@ const ChatMessage = memo(({
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const videoRef = useRef<Video>(null);
+  
+  // Cleanup audio when component unmounts
+  useEffect(() => {
+    return () => {
+      if (sound.current) {
+        sound.current.unloadAsync().catch(err => {
+          handleErrorSilent(err, 'Audio Cleanup');
+        });
+      }
+    };
+  }, []);
 
   const handleFullScreenVideo = () => {
     if (videoRef.current) {
@@ -205,18 +219,6 @@ const ChatMessage = memo(({
   // Force loading state to be a boolean
   const isLoading = loading === true;
 
-  const isAudio = (uri: string) => {
-    if (!uri) return false;
-    const audioExtensions = ['.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac', '.amr'];
-    return audioExtensions.some(ext => uri.toLowerCase().endsWith(ext));
-  };
-
-  const isImage = (uri?: string) => {
-    if (!uri) return false;
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
-    return imageExtensions.some(ext => uri.toLowerCase().endsWith(ext));
-  };
-
   // Add subtle pulse animation for streaming content
   useEffect(() => {
     if (streamingContent) {
@@ -224,12 +226,12 @@ const ChatMessage = memo(({
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1.03,
-            duration: 800,
+            duration: CHAT_MESSAGE.ANIMATION.PULSE,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 800,
+            duration: CHAT_MESSAGE.ANIMATION.PULSE,
             useNativeDriver: true,
           }),
         ])
@@ -250,7 +252,7 @@ const ChatMessage = memo(({
         setContentLoaded(true);
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 300,
+          duration: CHAT_MESSAGE.ANIMATION.FADE_IN,
           useNativeDriver: true,
         }).start();
       }, 100);
@@ -266,16 +268,16 @@ const ChatMessage = memo(({
     }
   }, [isLoading, fadeAnim]);
 
-  // Retry loading image if it fails (up to 3 attempts)
+  // Retry loading image if it fails (up to MAX_IMAGE_RETRY_ATTEMPTS)
   useEffect(() => {
-    if (imageLoadError && imageAttempts < 3) {
+    if (imageLoadError && imageAttempts < maxImageRetryAttempts) {
       const timer = setTimeout(() => {
         setImageLoadError(false);
         setImageAttempts(prev => prev + 1);
-      }, 1500);
+      }, CHAT_MESSAGE.IMAGE_RETRY_DELAY);
       return () => clearTimeout(timer);
     }
-  }, [imageLoadError, imageAttempts]);
+  }, [imageLoadError, imageAttempts, maxImageRetryAttempts]);
 
   const handlePress = useCallback(() => {
     onPress?.();
@@ -354,7 +356,7 @@ const ChatMessage = memo(({
         });
       }
     } catch (error) {
-      console.error('Error playing audio:', error);
+      handleErrorSilent(error, 'Audio Player');
     }
   };
 
@@ -380,10 +382,98 @@ const ChatMessage = memo(({
     }
   }
 
+  // Render generated images and videos from additional_data
+  const renderAdditionalData = () => {
+    if (!additional_data || additional_data.length === 0) return null;
+
+    return (
+      <View style={styles.additionalDataContainer}>
+        {additional_data.map((item, index) => {
+          if (item.data_type === 'img') {
+            return (
+              <ContextMenu.Root key={`additional-img-${index}`}>
+                <ContextMenu.Trigger>
+                  <Link href={`/(modal)/image/${encodeURIComponent(item.data)}`} asChild>
+                    <Pressable>
+                      <Image
+                        source={{ uri: item.data }}
+                        style={styles.generatedImage}
+                        resizeMode="cover"
+                        onError={(e) => console.error('Generated image load error:', e.nativeEvent.error)}
+                      />
+                      <View style={styles.generationBadge}>
+                        <Ionicons name="sparkles" size={12} color="#FFFFFF" />
+                        <Text style={styles.generationBadgeText}>Generated</Text>
+                      </View>
+                    </Pressable>
+                  </Link>
+                </ContextMenu.Trigger>
+                <ContextMenu.Content>
+                  {contextItems.map((contextItem) => (
+                    <ContextMenu.Item
+                      key={contextItem.id}
+                      onSelect={() => contextItem.action(item.data)}
+                    >
+                      <ContextMenu.ItemTitle>{contextItem.title}</ContextMenu.ItemTitle>
+                      <ContextMenu.ItemIcon
+                        ios={{
+                          name: contextItem.systemIcon,
+                          pointSize: 18,
+                        }}
+                      />
+                    </ContextMenu.Item>
+                  ))}
+                </ContextMenu.Content>
+              </ContextMenu.Root>
+            );
+          }
+
+          if (item.data_type === 'video') {
+            return (
+              <View key={`additional-video-${index}`} style={styles.generatedVideoContainer}>
+                <Video
+                  ref={videoRef}
+                  source={{ uri: item.data }}
+                  style={styles.generatedVideo}
+                  useNativeControls
+                  isLooping={false}
+                  onError={(e) => console.error('Generated video load error:', e)}
+                />
+                <TouchableOpacity 
+                  style={styles.videoFullscreenButton}
+                  onPress={handleFullScreenVideo}
+                >
+                  <Ionicons name="expand" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+                <View style={styles.generationBadge}>
+                  <Ionicons name="sparkles" size={12} color="#FFFFFF" />
+                  <Text style={styles.generationBadgeText}>Generated</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.downloadVideoButton}
+                  onPress={() => downloadAndSaveVideo(item.data)}
+                  disabled={isLoadingDownloadVideo}
+                >
+                  {isLoadingDownloadVideo ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="download" size={20} color="#FFFFFF" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            );
+          }
+
+          return null;
+        })}
+      </View>
+    );
+  };
+
   const renderImageContent = () => {
 
 
-    if (imageLoadError && imageAttempts >= 3) {
+    if (imageLoadError && imageAttempts >= maxImageRetryAttempts) {
       return (
         <View style={styles.imageErrorContainer}>
           <Ionicons name="image-outline" size={40} color={Colors.common.grey} />
@@ -603,6 +693,9 @@ const ChatMessage = memo(({
 
 
           {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '')) && renderImageContent()}
+          
+          {/* Render generated images and videos */}
+          {renderAdditionalData()}
         </>
       );
     } else {
@@ -640,6 +733,9 @@ const ChatMessage = memo(({
             renderAudio()
           )}
           {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '')) && renderImageContent()}
+          
+          {/* Render generated images and videos */}
+          {renderAdditionalData()}
         </>)
     };
   }
@@ -770,7 +866,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     paddingVertical: 8,
   },
   contentContainer: {
-    borderRadius: 18,
+    borderRadius: CHAT_MESSAGE.MESSAGE_BORDER_RADIUS,
     paddingHorizontal: 16,
     paddingVertical: 10,
     maxWidth: '100%',
@@ -784,14 +880,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     alignSelf: 'flex-start',
   },
   botContent: {
-    backgroundColor: theme.colors.card,
-    borderBottomLeftRadius: 6, // Tail effect
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: 'transparent',
+    borderBottomLeftRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS, // Tail effect
   },
   userContent: {
     backgroundColor: theme.colors.primary,
-    borderBottomRightRadius: 6, // Tail effect
+    borderBottomRightRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS, // Tail effect
     ...shadows.md, // User messages have more elevation
   },
   text: {
@@ -813,8 +907,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     right: 0
   },
   video: {
-    width: 260,
-    height: 145,
+    width: CHAT_MESSAGE.VIDEO.WIDTH,
+    height: CHAT_MESSAGE.VIDEO.HEIGHT,
     borderRadius: 12,
   },
   fullScreenContainer: {
@@ -837,9 +931,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   imageContainer: {
     marginTop: 12,
     position: 'relative',
-    width: IMAGE_PREVIEW_SIZE,
-    height: IMAGE_PREVIEW_SIZE,
-    borderRadius: BORDER_RADIUS,
+    width: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
+    height: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
+    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
     overflow: 'hidden',
     alignSelf: 'center',
     backgroundColor: '#f5f5f5',
@@ -849,7 +943,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '100%',
-    borderRadius: BORDER_RADIUS,
+    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
   },
   imageLoadingOverlay: {
     position: 'absolute',
@@ -872,9 +966,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     overflow: 'hidden',
   },
   imageErrorContainer: {
-    width: IMAGE_PREVIEW_SIZE,
-    height: IMAGE_PREVIEW_SIZE,
-    borderRadius: BORDER_RADIUS,
+    width: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
+    height: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
+    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
     backgroundColor: '#f5f5f5',
     borderWidth: 1,
     borderColor: '#e0e0e0',
@@ -913,11 +1007,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: 'center',
   },
   loadingDot: {
-    width: 7,
-    height: 7,
+    width: CHAT_MESSAGE.LOADING_DOTS.SIZE,
+    height: CHAT_MESSAGE.LOADING_DOTS.SIZE,
     borderRadius: 5,
     backgroundColor: Colors.common.primary,
-    marginHorizontal: 3,
+    marginHorizontal: CHAT_MESSAGE.LOADING_DOTS.SPACING,
   },
   errorContainer: {
     alignItems: 'flex-start',
@@ -969,6 +1063,62 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     borderRadius: 5,
     borderWidth: 1.5,
     borderColor: theme.colors.textSecondary,
+  },
+  // Additional data styles for generated content
+  additionalDataContainer: {
+    marginTop: 12,
+    gap: 12,
+  },
+  generatedImage: {
+    width: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
+    height: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
+    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
+    backgroundColor: '#f5f5f5',
+  },
+  generatedVideoContainer: {
+    width: CHAT_MESSAGE.GENERATED.VIDEO_WIDTH,
+    height: CHAT_MESSAGE.GENERATED.VIDEO_HEIGHT,
+    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#000',
+  },
+  generatedVideo: {
+    width: '100%',
+    height: '100%',
+  },
+  generationBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(138, 43, 226, 0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  generationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  videoFullscreenButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    padding: 8,
+    borderRadius: 8,
+  },
+  downloadVideoButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    padding: 8,
+    borderRadius: 8,
   },
 });
 

@@ -79,7 +79,7 @@ interface ChatContextType {
   isLoading: boolean;
   isSending: boolean;
   stream: string;
-  sendMessage: (message: string, messageType?: string, operation?: string | null, additionalData?: string) => Promise<void>;
+  sendMessage: (message: string, messageType?: string, operation?: string | null, additionalData?: string, options?: any) => Promise<void>;
   fetchMessages: (conversationId: string) => Promise<void>;
   fetchConversation: (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => Promise<Conversations[] | void>;
   createConversation: (participantIds: string[]) => Promise<string>;
@@ -171,7 +171,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages(prev => updateLastItem(prev, message => ({
       ...message,
       content: stream,
-      files: additionalData
+      additional_data: additionalData?.length > 0 ? additionalData : message.additional_data
     })));
   }, [stream, additionalData]);
 
@@ -437,8 +437,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ---------------- Chat Operations ----------------
 
-  const sendMessage = useCallback(async (message: string, messageType = 'text', operation: string | null = null, additionalData: string = '') => {
-    console.log('[Cloud] Starting cloud message send:', { message, messageType, operation });
+  const sendMessage = useCallback(async (
+    message: string, 
+    messageType = 'text', 
+    operation: string | null = null, 
+    additionalData: string = '',
+    options?: {
+      webSearch?: boolean;
+      generateImage?: string;
+      imageProvider?: string;
+      imageModel?: string;
+      generateVideo?: string;
+    }
+  ) => {
+    console.log('[Cloud] Starting cloud message send:', { message, messageType, operation, options });
     
     setChatLoading(true)
     setError('');
@@ -560,6 +572,25 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsSending(false);
         setInputDisabled(false);
         throw new Error('Failed to create new conversation');
+      }
+    }
+
+    // Add generation options if provided
+    if (options?.webSearch) {
+      formData.append('web_search', 'true');
+    }
+    
+    if (options?.generateVideo && options.generateVideo !== 'none') {
+      formData.append('generate_video', options.generateVideo);
+    }
+    
+    if (options?.generateImage && options.generateImage !== 'none') {
+      formData.append('generate_image', options.generateImage);
+      if (options.imageProvider) {
+        formData.append('image_provider', options.imageProvider);
+      }
+      if (options.imageModel) {
+        formData.append('image_model', options.imageModel);
       }
     }
 
@@ -818,7 +849,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       const token = await getToken();
       await api.setAuthToken(token || '');
-      const response = await api.post<Conversations>('/conversation', { title: 'New Chat' });
+      
+      // Get default model based on current mode
+      const defaultModelId = isLocal ? getDefaultLocalModelId() : getDefaultModelId();
+      
+      const response = await api.post<Conversations>('/conversation', { 
+        title: 'New Chat',
+        model_type: defaultModelId
+      });
       if (!response.ok || !response.data) {
         throw new Error('Failed to create new conversation');
       }
@@ -833,7 +871,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [user, setConversations, setCurrentRoom, resetChat]);
+  }, [user, setConversations, setCurrentRoom, resetChat, isLocal]);
 
   // Get local model state (declarations moved to top of component)
   

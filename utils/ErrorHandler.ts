@@ -3,7 +3,8 @@
  * Provides consistent error handling across the application
  */
 
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 /**
  * Custom application error class
@@ -76,7 +77,8 @@ export const parseApiError = (error: any): AppError => {
 /**
  * Handle error with user-visible alert
  */
-export const handleError = (error: any, context?: string): void => {
+export const handleError = (error: any, context?: string, options?: { showAlert?: boolean; haptic?: boolean }): void => {
+  const { showAlert = true, haptic = true } = options || {};
   const appError = parseApiError(error);
   
   // Log to console for debugging
@@ -88,13 +90,23 @@ export const handleError = (error: any, context?: string): void => {
     stack: appError.stack,
   });
 
+  // Provide haptic feedback for errors
+  if (haptic) {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {
+      // Silently fail if haptics not available
+    });
+  }
+
   // Show user-friendly alert
-  Alert.alert(
-    'Error',
-    appError.message,
-    [{ text: 'OK' }],
-    { cancelable: true }
-  );
+  if (showAlert) {
+    const friendlyMessage = getUserFriendlyMessage(appError);
+    Alert.alert(
+      context ? `${context} Error` : 'Error',
+      friendlyMessage,
+      [{ text: 'OK' }],
+      { cancelable: true }
+    );
+  }
 };
 
 /**

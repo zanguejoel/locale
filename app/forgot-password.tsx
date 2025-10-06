@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import type { TextInput } from 'react-native';
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
 import {
@@ -32,6 +33,10 @@ const ForgotPassword = () => {
   const [resetSent, setResetSent] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [code, setCode] = useState("");
+  
+  // Input refs for keyboard navigation
+  const emailInputRef = useRef<TextInput>(null);
+  const codeInputRef = useRef<TextInput>(null);
 
 
   useEffect(() => {
@@ -121,6 +126,7 @@ const ForgotPassword = () => {
           </Text>
           <Text style={[styles.emailText, { color: theme.colors.primary }]}>{email}</Text>
           <CustomInput
+            ref={codeInputRef}
             icon="code-outline"
             placeholder="Enter your code"
             value={code}
@@ -130,6 +136,10 @@ const ForgotPassword = () => {
             error={!!error.code}
             autoCapitalize="none"
             keyboardType="numeric"
+            returnKeyType="go"
+            onSubmitEditing={handleValidCode}
+            blurOnSubmit={true}
+            autoFocus={true}
           />
           <View style={styles.btnContainer}>
             <TouchableOpacity
@@ -198,6 +208,7 @@ const ForgotPassword = () => {
 
         <View style={styles.formContainer}>
           <CustomInput
+            ref={emailInputRef}
             icon="mail-outline"
             placeholder="Enter your email"
             value={email}
@@ -209,6 +220,10 @@ const ForgotPassword = () => {
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
+            returnKeyType="send"
+            onSubmitEditing={handleResetPassword}
+            blurOnSubmit={true}
+            autoFocus={true}
           />
           {error.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{error.email}</Text>}
 

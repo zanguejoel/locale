@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import {
   View,
   TextInput,
@@ -19,13 +19,13 @@ interface CustomInputProps extends TextInputProps {
   containerStyle?: ViewStyle;
 }
 
-const CustomInput = ({
+const CustomInput = forwardRef<TextInput, CustomInputProps>(({
   icon,
   error,
   isPassword,
   containerStyle,
   ...props
-}: CustomInputProps) => {
+}, ref) => {
   const theme = useTheme();
   const styles = getStyles(theme);
   const [showPassword, setShowPassword] = useState(false);
@@ -47,6 +47,7 @@ const CustomInput = ({
       />
 
       <TextInput
+        ref={ref}
         {...props}
         style={styles.inputField}
         secureTextEntry={isPassword && !showPassword}
@@ -69,7 +70,9 @@ const CustomInput = ({
       )}
     </View>
   );
-};
+});
+
+CustomInput.displayName = 'CustomInput';
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   inputContainer: {

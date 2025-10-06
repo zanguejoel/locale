@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard, Clipboard, Alert } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -10,10 +10,10 @@ import { defaultStyles } from '@/constants/Styles';
 import { Message, Role } from '@/utils/Interfaces';
 import Colors from '@/constants/Colors';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useRoute } from '@react-navigation/native';
-import { ImagePickerAsset } from 'expo-image-picker';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { LocalModelDownloadProgress } from './LocalModelDownloadProgress';
@@ -95,7 +95,30 @@ const ChatPage = () => {
 
   const id = (params as { id?: string })?.id
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<ImagePickerAsset | null>(null);
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+
+  // Type-safe wrapper for setSelectedImage
+  const handleSetSelectedImage = useCallback((asset: ImagePicker.ImagePickerAsset | DocumentPicker.DocumentPickerAsset | null) => {
+    // If it's a DocumentPickerAsset, we only use the URI which is compatible with ImagePickerAsset
+    if (asset && 'mimeType' in asset) {
+      // DocumentPickerAsset - convert to a compatible format
+      setSelectedImage({
+        uri: asset.uri,
+        width: 0,
+        height: 0,
+        assetId: null,
+      } as ImagePicker.ImagePickerAsset);
+    } else {
+      setSelectedImage(asset as ImagePicker.ImagePickerAsset | null);
+    }
+  }, []);
+
+  // Type-safe wrapper for fetchMessages
+  const handleFetchMessages = useCallback((conversationId?: string) => {
+    if (id) {
+      return fetchMessages(id);
+    }
+  }, [id, fetchMessages]);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
@@ -392,7 +415,6 @@ const ChatPage = () => {
         keyboardVerticalOffset={110}
         style={[
           styles.keyboardAvoidingView,
-          // isKeyboardVisible && KeyboardVisibleStyle,
           isSending && KeyboardVisibleStyle,
         ]}
       >
@@ -416,7 +438,6 @@ const ChatPage = () => {
                 }
               ]}
             >
-             {/*  <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.image} /> */}
              <Text style={styles.logoText}>Odyssey</Text>
               <Text style={styles.welcomeText}>How can I assist you today?</Text>
               {(selectedCloudModel || selectedLocalModel) && (
@@ -446,23 +467,7 @@ const ChatPage = () => {
                 const lastMessage = messages[messages.length - 1];
                 const showSuggestions = !isSending && lastMessage?.role === Role.Bot && messages.length > 1;
                 
-                return (
-                  <>
-                   {/*  {isSending && !stream && messages.length > 0 && (
-                      <TypingIndicator 
-                        modelName={isLocal ? selectedLocalModel?.displayName : selectedCloudModel?.displayName} 
-                      />
-                    )} */}
-                    {/* Temporarily commented out - interfering with voice UI */}
-                    {/* {showSuggestions && (
-                      <SmartSuggestions 
-                        onSelectSuggestion={(suggestion) => {
-                          isLocal ? handleSendLocalMessage(suggestion) : sendMessage(suggestion);
-                        }}
-                      />
-                    )} */}
-                  </>
-                );
+                return null;
               }}
               refreshControl={
                 <RefreshControl
@@ -488,7 +493,6 @@ const ChatPage = () => {
             </TouchableOpacity>
           )}
         </View>
-        {messages.length === 0 && <MessageIdeas onSelectCard={isLocal ? handleSendLocalMessage : sendMessage} />}
         {selectedImage && renderSelectedFile()}
         {isLocal && (
           <LocalModelDownloadProgress 
@@ -500,24 +504,25 @@ const ChatPage = () => {
           isRecording={isRecording}
           onCancel={cancelRecording}
         />
-        <BlurView intensity={80} tint="light" style={[styles.inputBlurContainer]}>
+        <View style={[styles.inputBlurContainer]}>
           <MessageInput
-            setSelectedImage={setSelectedImage as any} // Type mismatch between ImagePickerAsset and DocumentPickerAsset
+            setSelectedImage={handleSetSelectedImage}
             selectedImage={selectedImage}
-            fetchMessages={fetchMessages as any} // Signature mismatch - accepts optional param
-            onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string) => {
+            fetchMessages={handleFetchMessages}
+            onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
               isManualScrollRef.current = false;
               setAutoScrollEnabled(true);
               scrollToBottomWithDelay(300);
-              return isLocal ? handleSendLocalMessage(message) : sendMessage(message, type, operation, additionalData);
+              return isLocal ? handleSendLocalMessage(message) : sendMessage(message, type, operation, additionalData, options);
             }}
             isLoading={isSending}
+            isLocal={isLocal}
             onRecordingStateChange={(recording, onCancel) => {
               setIsRecording(recording);
               setCancelRecording(() => onCancel);
             }}
           />
-        </BlurView>
+        </View>
       </KeyboardAvoidingView>
 
     </GradientBackground>
@@ -581,7 +586,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
-
   },
   logo: {
     width: 180,

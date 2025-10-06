@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import type { TextInput } from 'react-native';
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
 import {
@@ -34,6 +35,9 @@ const EmailVerification = () => {
     const [code, setCode] = useState("");
     const [error, setError] = useState<ErrorType>({});
     const [isSubmitted, setIsSubmitted] = useState(false);
+    
+    // Input ref for keyboard navigation
+    const codeInputRef = useRef<TextInput>(null);
 
     const handleConfirm = async () => {
         setIsSubmitted(true);
@@ -70,6 +74,7 @@ const EmailVerification = () => {
 
                 <View style={styles.formContainer}>
                     <CustomInput
+                        ref={codeInputRef}
                         icon="code-outline"
                         placeholder="Enter your code"
                         value={code}
@@ -79,7 +84,10 @@ const EmailVerification = () => {
                         error={!!error.code}
                         autoCapitalize="none"
                         keyboardType="numeric"
-                    // autoComplete="email"
+                        returnKeyType="go"
+                        onSubmitEditing={handleConfirm}
+                        blurOnSubmit={true}
+                        autoFocus={true}
                     />
                     {error.code && <Text style={styles.errorText}>{error.code}</Text>}
 

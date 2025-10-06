@@ -9,27 +9,55 @@ import {
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 
-// Predefined messages with emojis
+// Predefined messages
 const PredefinedMessages = [
   { 
-    icon: '📈',
+    title: 'Image', 
+    text: "Generate an image of a mountain landscape",
+  },
+  { 
+    title: 'Video', 
+    text: "Create a short product explainer video",
+  },
+  { 
+    title: 'Analysis', 
+    text: "Analyze my sales report data",
+  },
+  { 
     title: 'Stocks', 
-    text: "Get current stock prices",
+    text: "What's the stock price trend for AAPL?",
   },
   { 
-    icon: '📰',
+    title: 'PDF', 
+    text: "Summarize this PDF document",
+  },
+  { 
+    title: 'Calendar', 
+    text: "Create a content calendar for social media",
+  },
+  { 
+    title: 'Product Images', 
+    text: "Generate product description images",
+  },
+  { 
+    title: 'Email', 
+    text: "Draft an email to reschedule a meeting",
+  },
+  { 
+    title: 'Logo', 
+    text: "Create a logo design concept",
+  },
+  { 
     title: 'News', 
-    text: 'Give me a quick news update',
+    text: "Give me a quick news summary",
   },
   { 
-    icon: '🗺️',
-    title: 'Product Roadmap', 
-    text: "Create a product roadmap template.",
+    title: 'Audio', 
+    text: "Transcribe and summarize this audio",
   },
   { 
-    icon: '📋',
-    title: 'Create Agenda', 
-    text: "Make an agenda for my next meeting.",
+    title: 'Presentation', 
+    text: "Create a presentation outline",
   },
 ];
 
@@ -55,7 +83,6 @@ const MessageIdeas: React.FC<Props> = ({ onSelectCard }) => {
             onPress={() => onSelectCard(`${item.text}`)}
             activeOpacity={0.7}
           >
-            <Text style={styles.suggestionEmoji}>{item.icon}</Text>
             <Text style={styles.suggestionText}>{item.title}</Text>
           </TouchableOpacity>
         ))}
@@ -90,10 +117,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    gap: 6,
-  },
-  suggestionEmoji: {
-    fontSize: 16,
   },
   suggestionText: {
     fontSize: 14,

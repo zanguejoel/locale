@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import type { TextInput } from 'react-native';
 import {
   View,
   StyleSheet,
@@ -33,6 +34,11 @@ const ChangePassword = () => {
     newPassword: false,
     confirmNewPassword: false,
   });
+  
+  // Input refs for keyboard navigation
+  const currentPasswordRef = useRef<TextInput>(null);
+  const newPasswordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
 
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
@@ -75,22 +81,54 @@ const ChangePassword = () => {
       <View style={styles.container}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            {passwordFields.map((field, index) => (
-              <View key={index} style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>{field.label}</Text>
-                <CustomInput
-                  icon="lock-closed-outline"
-                  style={styles.input}
-                  value={formData[field.key as keyof typeof formData]}
-                  onChangeText={(value) =>
-                    handleInputChange(field.key as keyof typeof formData, value)
-                  }
-                  placeholder={field.placeholder}
-                  secureTextEntry={!showPassword[field.key as keyof typeof showPassword]}
-                  isPassword
-                />
-              </View>
-            ))}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Current Password</Text>
+              <CustomInput
+                ref={currentPasswordRef}
+                icon="lock-closed-outline"
+                style={styles.input}
+                value={formData.currentPassword}
+                onChangeText={(value) => handleInputChange("currentPassword", value)}
+                placeholder="Enter current password"
+                isPassword
+                returnKeyType="next"
+                onSubmitEditing={() => newPasswordRef.current?.focus()}
+                blurOnSubmit={false}
+                autoFocus={true}
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>New Password</Text>
+              <CustomInput
+                ref={newPasswordRef}
+                icon="lock-closed-outline"
+                style={styles.input}
+                value={formData.newPassword}
+                onChangeText={(value) => handleInputChange("newPassword", value)}
+                placeholder="Enter new password"
+                isPassword
+                returnKeyType="next"
+                onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                blurOnSubmit={false}
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Confirm New Password</Text>
+              <CustomInput
+                ref={confirmPasswordRef}
+                icon="lock-closed-outline"
+                style={styles.input}
+                value={formData.confirmNewPassword}
+                onChangeText={(value) => handleInputChange("confirmNewPassword", value)}
+                placeholder="Confirm new password"
+                isPassword
+                returnKeyType="done"
+                onSubmitEditing={handleSavePassword}
+                blurOnSubmit={true}
+              />
+            </View>
           </View>
         </View>
         <TouchableOpacity

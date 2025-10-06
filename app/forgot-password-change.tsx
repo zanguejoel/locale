@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import type { TextInput } from 'react-native';
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
 import {
@@ -43,6 +44,10 @@ const ForgotPasswordChange = () => {
   });
 
   const { email, token } = useLocalSearchParams();
+  
+  // Input refs for keyboard navigation
+  const newPasswordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
 
 
   const passwordFields = [
@@ -103,23 +108,40 @@ const ForgotPasswordChange = () => {
         </View>
 
         <View style={styles.formContainer}>
-          {passwordFields.map((field, index) => (
-            <View key={index} style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>{field.label}</Text>
-              <CustomInput
-                icon="lock-closed-outline"
-                autoComplete="off"
-                style={styles.input}
-                value={formData[field.key as keyof typeof formData]}
-                onChangeText={(value) =>
-                  handleInputChange(field.key as keyof typeof formData, value)
-                }
-                placeholder={field.placeholder}
-                secureTextEntry={!showPassword[field.key as keyof typeof showPassword]}
-                isPassword
-              />
-            </View>
-          ))}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>New Password</Text>
+            <CustomInput
+              ref={newPasswordRef}
+              icon="lock-closed-outline"
+              autoComplete="off"
+              style={styles.input}
+              value={formData.newPassword}
+              onChangeText={(value) => handleInputChange("newPassword", value)}
+              placeholder="Enter new password"
+              isPassword
+              returnKeyType="next"
+              onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+              blurOnSubmit={false}
+              autoFocus={true}
+            />
+          </View>
+          
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Confirm New Password</Text>
+            <CustomInput
+              ref={confirmPasswordRef}
+              icon="lock-closed-outline"
+              autoComplete="off"
+              style={styles.input}
+              value={formData.confirmNewPassword}
+              onChangeText={(value) => handleInputChange("confirmNewPassword", value)}
+              placeholder="Confirm new password"
+              isPassword
+              returnKeyType="done"
+              onSubmitEditing={handleSavePassword}
+              blurOnSubmit={true}
+            />
+          </View>
           {error.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{error.email}</Text>}
 
           <View style={styles.btnContainer}>

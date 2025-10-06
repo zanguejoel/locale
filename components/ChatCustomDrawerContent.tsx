@@ -604,14 +604,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     newChatButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.card,
+        backgroundColor: 'transparent',
         marginHorizontal: 16,
         marginVertical: 12,
         paddingVertical: 14,
         paddingHorizontal: 16,
         borderRadius: 12,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
         gap: 10,
     },
     newChatButtonText: {

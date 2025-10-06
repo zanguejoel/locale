@@ -18,6 +18,11 @@ export enum MessageStatus {
   Failed = 'failed',
 }
 
+export interface AdditionalData {
+  data_type: string; // 'img', 'video', 'voice', 'stock', etc.
+  data: string; // URL or data content
+}
+
 export interface Message {
   role: Role;
   content: string;
@@ -30,6 +35,7 @@ export interface Message {
   status?: MessageStatus;
   id?: string;
   imageData?: string;
+  additional_data?: AdditionalData[];
 }
 
 export interface Chat {
