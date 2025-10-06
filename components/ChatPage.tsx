@@ -31,6 +31,7 @@ import { getDateSeparator, isSameDay } from '@/utils/dateHelpers';
 import { RefreshControl } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { storage } from '@/hooks/useMMKVStorage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ChatPage = () => {
 
@@ -38,6 +39,7 @@ const ChatPage = () => {
 
   const theme = useTheme();
   const styles = getStyles(theme);
+  const insets = useSafeAreaInsets();
   
   // Get selected models (using hooks to ensure reactivity)
   const selectedCloudModel = useDefaultModel();
@@ -366,8 +368,8 @@ const ChatPage = () => {
         ),
       }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={110}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         style={[
           styles.keyboardAvoidingView,
           isSending && KeyboardVisibleStyle,
@@ -413,7 +415,8 @@ const ChatPage = () => {
               data={reversedMessages}
               renderItem={renderItem}
               keyExtractor={(item, index) => item.id || `msg-${index}`}
-              keyboardDismissMode="on-drag"
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
               onScroll={handleScroll}
               estimatedItemSize={200}
               scrollEventThrottle={16}

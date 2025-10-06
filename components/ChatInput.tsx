@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { View, StyleSheet, TouchableOpacity, Image, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, Keyboard, Platform, LayoutAnimation, UIManager, TextInput as RNTextInput } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -7,10 +7,19 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  withSpring,
+  useAnimatedKeyboard,
+  useAnimatedReaction,
+  runOnJS,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRef, useState, useEffect } from 'react';
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -21,9 +30,13 @@ import { Theme } from '@/constants/Types';
 import GenerationOptions, { GenerationOptionsState } from './GenerationOptions';
 import { CHAT_INPUT } from '@/constants/ChatConstants';
 import { handleError } from '@/utils/ErrorHandler';
+import KeyboardAccessoryView from './KeyboardAccessoryView';
 
 
 const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
+// Keyboard accessory view ID for iOS
+const INPUT_ACCESSORY_VIEW_ID = 'chatInputAccessory';
 
 export type Props = {
   onShouldSend: (message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => void;
@@ -39,10 +52,12 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
   const [message, setMessage] = useState('');
   const theme = useTheme();
   const styles = getStyles(theme);
+  const insets = useSafeAreaInsets();
 
   const expanded = useSharedValue(0);
   const inputRef = useRef<TextInput>(null);
-  const [inputHeight, setInputHeight] = useState(CHAT_INPUT.MIN_HEIGHT);
+  const [inputHeight, setInputHeight] = useState<number>(CHAT_INPUT.MIN_HEIGHT);
+  const keyboard = useAnimatedKeyboard();
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -186,6 +201,24 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
       opacity: expanded.value,
     };
   });
+
+  // Handle multiline input with smooth animations
+  const handleContentSizeChange = (event: any) => {
+    const newHeight = Math.min(
+      Math.max(CHAT_INPUT.MIN_HEIGHT, event.nativeEvent.contentSize.height),
+      CHAT_INPUT.MAX_HEIGHT
+    );
+    
+    // Smooth animation for height changes
+    LayoutAnimation.configureNext({
+      duration: 150,
+      create: { type: 'linear', property: 'opacity' },
+      update: { type: 'spring', springDamping: 0.7 },
+      delete: { type: 'linear', property: 'opacity' },
+    });
+    
+    setInputHeight(newHeight);
+  };
 
   const onChangeText = (text: string) => {
     collapseItems();
@@ -346,12 +379,18 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             // autoFocus
             ref={inputRef}
             placeholder="Message"
-            style={[styles.messageInput]}
+            style={[styles.messageInput, { height: inputHeight }]}
             placeholderTextColor={theme.colors.mutedForeground}
             onFocus={collapseItems}
             onChangeText={onChangeText}
             value={message}
             multiline={true}
+            onContentSizeChange={handleContentSizeChange}
+            textAlignVertical="center"
+            returnKeyType="default"
+            blurOnSubmit={false}
+            enablesReturnKeyAutomatically={true}
+            inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_VIEW_ID : undefined}
           />
           {message.length > 0 ? (
             <ATouchableOpacity 
@@ -391,6 +430,15 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
         options={generationOptions}
         onOptionsChange={setGenerationOptions}
       />
+
+      {/* iOS Keyboard Accessory View */}
+      <KeyboardAccessoryView
+        inputAccessoryViewID={INPUT_ACCESSORY_VIEW_ID}
+        onDismiss={() => {
+          Keyboard.dismiss();
+          inputRef.current?.blur();
+        }}
+      />
     </View>
   );
 };
@@ -414,14 +462,18 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   messageInput: {
     flex: 1,
-    maxHeight: CHAT_INPUT.MAX_HEIGHT,
+    minHeight: CHAT_INPUT.MIN_HEIGHT,
     marginHorizontal: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 20,
-    padding: 10,
+    paddingHorizontal: 14,
+    paddingTop: Platform.OS === 'ios' ? 10 : 8,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
     color: theme.colors.text,
     borderColor: theme.colors.greyLight,
     backgroundColor: theme.colors.chatInputBg,
+    fontSize: 16,
+    lineHeight: 20,
   },
   roundBtn: {
     width: CHAT_INPUT.BUTTON_WIDTH,
