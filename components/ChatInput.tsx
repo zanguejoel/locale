@@ -1,4 +1,3 @@
-import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { View, StyleSheet, TouchableOpacity, Image, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
@@ -294,7 +293,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             accessibilityRole="button"
             accessibilityHint="Expands to show camera, gallery, and document options"
           >
-            <Ionicons name="add" size={24} color={theme.colors.grey} />
+            <Ionicons name="add" size={24} color={theme.colors.mutedForeground} />
           </ATouchableOpacity>
 
           <Animated.View style={[styles.buttonView, buttonViewStyle]}>
@@ -348,7 +347,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             ref={inputRef}
             placeholder="Message"
             style={[styles.messageInput]}
-            placeholderTextColor={theme.colors.grey}
+            placeholderTextColor={theme.colors.mutedForeground}
             onFocus={collapseItems}
             onChangeText={onChangeText}
             value={message}
@@ -367,7 +366,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
               <Ionicons 
                 name="arrow-up-circle" 
                 size={30} 
-                color={isLoading ? theme.colors.grey : theme.colors.primary} 
+                color={isLoading ? theme.colors.mutedForeground : theme.colors.primary} 
               />
             </ATouchableOpacity>
           ) : (
@@ -428,7 +427,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     width: CHAT_INPUT.BUTTON_WIDTH,
     height: CHAT_INPUT.BUTTON_WIDTH,
     borderRadius: 20,
-    backgroundColor: Colors.common.input,
+    backgroundColor: theme.colors.input,
     alignItems: 'center',
     justifyContent: 'center',
   },
