@@ -403,7 +403,12 @@ const ChatMessage = memo(({
 
   // Render generated images and videos from additional_data
   const renderAdditionalData = () => {
-    if (!additional_data || additional_data.length === 0) return null;
+    if (!additional_data || additional_data.length === 0) {
+      console.log('[ChatMessage] No additional_data to render');
+      return null;
+    }
+
+    console.log('[ChatMessage] Rendering additional_data:', additional_data);
 
     return (
       <View style={styles.additionalDataContainer}>
@@ -906,6 +911,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderBottomRightRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS, // Tail effect
     ...shadows.md, // User messages have more elevation
+    paddingVertical: 6, // Reduced padding for user messages
   },
   text: {
     fontSize: 16,

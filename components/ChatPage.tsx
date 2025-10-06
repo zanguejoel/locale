@@ -53,11 +53,10 @@ const ChatPage = () => {
   // States
   const [height, setHeight] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [lastContentHeight, setLastContentHeight] = useState(0);
-  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [cancelRecording, setCancelRecording] = useState<() => void>(() => () => {});
+  const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
 
 
   // Animation values
@@ -67,11 +66,7 @@ const ChatPage = () => {
 
   // Refs
   const messageListRef = useRef<FlashList<Message>>(null);
-  const scrollPositionRef = useRef(0);
-  const contentHeightRef = useRef(0);
-  const layoutHeightRef = useRef(0);
-  const isManualScrollRef = useRef(false);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollOffsetRef = useRef(0);
 
   // Hooks
   const chat = useChat();
@@ -126,14 +121,6 @@ const ChatPage = () => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
       if (isMounted) {
         setKeyboardVisible(true);
-        // Call scroll directly with delay
-        if (messageListRef.current) {
-          try {
-            messageListRef.current.scrollToEnd({ animated: true });
-          } catch (error) {
-            console.error('Failed to scroll on keyboard show:', error);
-          }
-        }
       }
     });
     const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
@@ -152,7 +139,7 @@ const ChatPage = () => {
   useEffect(() => {
     if (id) {
       setCurrentRoom(id);
-      setAutoScrollEnabled(true);
+      setUserHasScrolledUp(false);
     }
     // Entrance animation
     Animated.timing(fadeAnim, {
@@ -163,12 +150,9 @@ const ChatPage = () => {
     }).start();
   }, [id]);
 
-  // Force scroll to bottom when messages array changes (new message added)
-  // Force scroll to bottom when messages array changes (new message added)
+  // Handle logo animation based on messages
   useEffect(() => {
-    if (messages.length > 0 && autoScrollEnabled) {
-      scrollToBottomWithDelay(300);
-
+    if (messages.length > 0) {
       // Animate logo out
       Animated.timing(logoAnimation, {
         toValue: 0,
@@ -176,7 +160,7 @@ const ChatPage = () => {
         useNativeDriver: true,
         easing: Easing.out(Easing.quad)
       }).start();
-    } else if (messages.length === 0) {
+    } else {
       // Animate logo in
       Animated.timing(logoAnimation, {
         toValue: 1,
@@ -187,96 +171,47 @@ const ChatPage = () => {
     }
   }, [messages.length]);
 
-  // Auto-scroll when streaming content updates
+  // Show "scroll to bottom" when user scrolls up
   useEffect(() => {
-    if (stream && autoScrollEnabled && !isManualScrollRef.current) {
-      scrollToBottomWithDelay(0);
+    // Show button after a short delay when user scrolls up
+    if (userHasScrolledUp && messages.length > 0) {
+      setShowScrollButton(true);
+    } else {
+      setShowScrollButton(false);
     }
-  }, [stream]);
-
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, []);
+  }, [userHasScrolledUp, messages.length]);
 
   const onLayout = (event: any) => {
     const { height } = event.nativeEvent.layout;
     setHeight(height / 2);
-    layoutHeightRef.current = height;
   };
 
   const handleScroll = (event: any) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const scrollY = contentOffset.y;
-    const contentHeight = contentSize.height;
+    const { contentOffset } = event.nativeEvent;
+    const currentOffset = contentOffset.y;
+    
+    // Store current scroll offset
+    scrollOffsetRef.current = currentOffset;
 
-    // Update references for later use
-    scrollPositionRef.current = scrollY;
-    contentHeightRef.current = contentHeight;
-    layoutHeightRef.current = layoutMeasurement.height;
-
-    // Calculate if we're at the bottom
-    const distanceFromBottom = contentHeight - (scrollY + layoutMeasurement.height);
-    const isAtBottom = distanceFromBottom < 20;
-
-    // Show or hide scroll button
-    setShowScrollButton(!isAtBottom);
-
-    // Detect user manual scrolling away from bottom
-    if (!isAtBottom && Math.abs(lastContentHeight - contentHeight) < 10) {
-      isManualScrollRef.current = true;
-      setAutoScrollEnabled(false);
+    // In inverted list, positive scroll = scrolling up to see older messages
+    // Show button when user has scrolled up more than 100 points
+    if (currentOffset > 100) {
+      setUserHasScrolledUp(true);
+    } else {
+      setUserHasScrolledUp(false);
     }
-
-    // If user scrolled to bottom manually, re-enable auto-scroll
-    if (isAtBottom && isManualScrollRef.current) {
-      isManualScrollRef.current = false;
-      setAutoScrollEnabled(true);
-    }
-
-    setLastContentHeight(contentHeight);
-  };
-
-  const scrollToBottomWithDelay = (delay = 0) => {
-    // Clear any existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-
-    // Set new timeout
-    scrollTimeoutRef.current = setTimeout(() => {
-      if (messageListRef.current) {
-        try {
-          messageListRef.current.scrollToEnd({ animated: true });
-        } catch (error) {
-          console.error('Failed to scroll to bottom:', error);
-        }
-      }
-    }, delay);
   };
 
   const scrollToBottom = () => {
-    isManualScrollRef.current = false;
-    setAutoScrollEnabled(true);
-    scrollToBottomWithDelay(0);
-  };
-
-  const handleContentSizeChange = (width: number, height: number) => {
-    contentHeightRef.current = height;
-
-    if (autoScrollEnabled && !isManualScrollRef.current && messages.length > 0) {
-      scrollToBottomWithDelay(0);
+    if (messageListRef.current) {
+      try {
+        messageListRef.current.scrollToOffset({ offset: 0, animated: true });
+        setUserHasScrolledUp(false);
+      } catch (error) {
+        console.error('Failed to scroll to bottom:', error);
+      }
     }
   };
-  useEffect(() => {
-    if (isSending && messageListRef?.current && messages.length) {
-      scrollToBottom()
-    }
-  }, [messages, isSending]);
   const onRefresh = async () => {
     setRefreshing(true);
     if (id) {
@@ -333,27 +268,28 @@ const ChatPage = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
+  // Reverse messages for inverted list (newest at index 0)
+  const reversedMessages = [...messages].reverse();
+
   const renderItem = ({ item, index }: { item: Message; index: number }) => {
+    // In inverted list with reversed array, index 0 is the newest message
     const isLastBotMessage =
       item.role === Role.Bot &&
-      index === messages.length - 1;
+      index === 0;
 
     const isLoading = isLastBotMessage && isSending && !stream;
     const isStreaming = isLastBotMessage && isSending && !!stream;
     
-    // Show date separator if first message or different day from previous
+    // Show date separator if last message or different day from next (inverted)
     const showDateSeparator = 
-      index === 0 || 
-      !isSameDay(item.timestamp, messages[index - 1]?.timestamp);
+      index === reversedMessages.length - 1 || 
+      !isSameDay(item.timestamp, reversedMessages[index + 1]?.timestamp);
 
     // Check if message can be retried (user message that failed or needs retry)
     const canRetry = item.role === Role.User && !isLoading;
 
     return (
       <>
-        {showDateSeparator && item.timestamp && (
-          <DateSeparator label={getDateSeparator(item.timestamp)} />
-        )}
         <SwipeableMessage
           messageId={item.id || `${index}`}
           role={item.role}
@@ -370,6 +306,9 @@ const ChatPage = () => {
             streamingContent={isStreaming}
           />
         </SwipeableMessage>
+        {showDateSeparator && item.timestamp && (
+          <DateSeparator label={getDateSeparator(item.timestamp)} />
+        )}
       </>
     );
   };
@@ -465,30 +404,29 @@ const ChatPage = () => {
           <CustomView style={{ flex: 1 }}>
             <FlashList
               style={{ flex: 1 }}
-              contentContainerStyle={{ paddingTop: 20 }}
+              contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}
               showsVerticalScrollIndicator={false}
               ref={messageListRef}
-              data={messages}
+              data={reversedMessages}
               renderItem={renderItem}
+              keyExtractor={(item, index) => item.id || `msg-${index}`}
               keyboardDismissMode="on-drag"
               onScroll={handleScroll}
-              estimatedItemSize={100}
+              estimatedItemSize={120}
               scrollEventThrottle={16}
               extraData={[isSending, stream]}
-              onContentSizeChange={handleContentSizeChange}
-              ListFooterComponent={() => {
-                const lastMessage = messages[messages.length - 1];
-                const showSuggestions = !isSending && lastMessage?.role === Role.Bot && messages.length > 1;
-                
-                return null;
+              inverted
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+                autoscrollToTopThreshold: 10
               }}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  tintColor={theme.colors.primary}
-                />
-              }
+              onEndReachedThreshold={0.5}
+              onEndReached={() => {
+                // Load more messages when scrolling to top (older messages)
+                if (!refreshing && reversedMessages.length > 0) {
+                  // You can implement pagination here
+                }
+              }}
             />
           </CustomView>
           {showScrollButton && messages.length > 0 && (
@@ -499,9 +437,7 @@ const ChatPage = () => {
               accessibilityRole="button"
               activeOpacity={0.6}
             >
-              <Text style={styles.textScrollDown}>
-                {autoScrollEnabled ? 'Scroll down' : 'Scroll to bottom'}
-              </Text>
+              <Text style={styles.textScrollDown}>New messages</Text>
               <Ionicons name="chevron-down" size={16} color={Colors.common.grey} />
             </TouchableOpacity>
           )}
@@ -523,9 +459,9 @@ const ChatPage = () => {
             selectedImage={selectedImage}
             fetchMessages={handleFetchMessages}
             onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
-              isManualScrollRef.current = false;
-              setAutoScrollEnabled(true);
-              scrollToBottomWithDelay(300);
+              // Scroll to bottom when sending a new message
+              setUserHasScrolledUp(false);
+              scrollToBottom();
               return isLocal ? handleSendLocalMessage(message) : sendMessage(message, type, operation, additionalData, options);
             }}
             isLoading={isSending}

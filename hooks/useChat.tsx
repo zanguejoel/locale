@@ -171,6 +171,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   useEffect(() => {
+    console.log('[useChat] Updating message with additionalData:', additionalData);
     setMessages(prev => updateLastItem(prev, message => ({
       ...message,
       content: stream,
@@ -729,10 +730,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         params: { conversation_id: conversationId, limit: 50 },
       });
       if (response.ok && response.data) {
-        const msgs = response.data.map(m => ({
-          ...m,
-          role: `${m.role}` === "assistant" ? Role.Bot : Role.User,
-        }));
+        console.log('[useChat] Fetched messages:', response.data.length);
+        const msgs = response.data.map(m => {
+          console.log('[useChat] Message additional_data:', m.additional_data);
+          return {
+            ...m,
+            role: `${m.role}` === "assistant" ? Role.Bot : Role.User,
+          };
+        });
         setMessages(msgs || []);
       }
     } catch (error) {
