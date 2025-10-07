@@ -3,13 +3,15 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { useDefaultLocalModel } from '@/hooks/useDefaultLocalModel';
+import LocalModelErrorBoundary from './LocalModelErrorBoundary';
 
 interface LocalModelDownloadProgressProps {
   progress: number; // 0 to 1
   isReady: boolean;
+  onFallbackToCloud?: () => void;
 }
 
-export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProps> = React.memo(({ 
+const LocalModelDownloadProgressInner: React.FC<LocalModelDownloadProgressProps> = React.memo(({ 
   progress, 
   isReady 
 }) => {
@@ -88,6 +90,15 @@ export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProp
   const progressDiff = Math.abs(prevProps.progress - nextProps.progress);
   return progressDiff < 0.05 && prevProps.isReady === nextProps.isReady;
 });
+
+// Wrapper component with error boundary
+export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProps> = (props) => {
+  return (
+    <LocalModelErrorBoundary fallbackToCloud={props.onFallbackToCloud}>
+      <LocalModelDownloadProgressInner {...props} />
+    </LocalModelErrorBoundary>
+  );
+};
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {

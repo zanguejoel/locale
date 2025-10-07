@@ -15,14 +15,40 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.neptunetech.odyssey"
+      "bundleIdentifier": "com.neptunetech.odyssey",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["odyssey", "com.neptunetech.odyssey"]
+          }
+        ],
+        "LSApplicationQueriesSchemes": [
+          "googlegmail",
+          "comgooglegmail",
+          "ms-outlook",
+          "msauth"
+        ]
+      }
     },
     "android": {
       "package": "com.neptunetech.odyssey",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "odyssey",
+              "host": "auth"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -30,7 +56,15 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

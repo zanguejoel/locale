@@ -46,9 +46,10 @@ export type Props = {
   isLoading?: boolean
   onRecordingStateChange?: (isRecording: boolean, onCancel: () => void) => void;
   isLocal?: boolean; // To show/hide generation options
+  onExportPress?: () => void; // Export conversation callback
 };
 
-const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading, onRecordingStateChange, isLocal = false }: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading, onRecordingStateChange, isLocal = false, onExportPress }: Props) => {
   const [message, setMessage] = useState('');
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -193,14 +194,16 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
   });
 
   const buttonViewStyle = useAnimatedStyle(() => {
-    // Adjust width based on whether we're showing generation options (4 buttons vs 3)
-    const maxWidth = !isLocal ? CHAT_INPUT.BUTTON_VIEW_WIDTH_CLOUD : CHAT_INPUT.BUTTON_VIEW_WIDTH_LOCAL;
+    // Adjust width based on buttons shown: camera + gallery + folder + export + (sparkles if cloud)
+    // 4 buttons always (camera, gallery, folder, export) + 1 optional (sparkles if cloud)
+    const buttonCount = onExportPress ? (isLocal ? 4 : 5) : (isLocal ? 3 : 4);
+    const maxWidth = buttonCount * 36; // 24px icon + 12px gap
     const widthInterpolation = interpolate(expanded.value, [0, 1], [0, maxWidth], Extrapolation.CLAMP);
     return {
       width: widthInterpolation,
       opacity: expanded.value,
     };
-  });
+  }, [onExportPress, isLocal]);
 
   // Handle multiline input with smooth animations
   const handleContentSizeChange = (event: any) => {
@@ -356,6 +359,22 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             >
               <Ionicons name="folder-outline" size={24} color={theme.colors.chatIcons} />
             </TouchableOpacity>
+
+            {/* Export conversation button */}
+            {onExportPress && (
+              <TouchableOpacity 
+                onPress={onExportPress}
+                accessibilityLabel="Export conversation"
+                accessibilityRole="button"
+                accessibilityHint="Export or share conversation"
+              >
+                <Ionicons 
+                  name="share-outline" 
+                  size={24} 
+                  color={theme.colors.chatIcons} 
+                />
+              </TouchableOpacity>
+            )}
 
             {/* Generation options button - only for cloud models */}
             {!isLocal && (

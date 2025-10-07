@@ -20,7 +20,11 @@ interface SwipeableMessageProps {
   onCopy?: () => void;
   onDelete?: () => void;
   onRetry?: () => void;
+  onEdit?: () => void;
+  onPin?: () => void;
+  onReply?: () => void;
   canRetry?: boolean;
+  isPinned?: boolean;
 }
 
 export const SwipeableMessage: React.FC<SwipeableMessageProps> = ({
@@ -31,7 +35,11 @@ export const SwipeableMessage: React.FC<SwipeableMessageProps> = ({
   onCopy,
   onDelete,
   onRetry,
+  onEdit,
+  onPin,
+  onReply,
   canRetry = false,
+  isPinned = false,
 }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -51,13 +59,33 @@ export const SwipeableMessage: React.FC<SwipeableMessageProps> = ({
     if (role !== Role.User) return null;
 
     const translateX = dragX.interpolate({
-      inputRange: [-150, 0],
-      outputRange: [0, 150],
+      inputRange: [-280, 0],
+      outputRange: [0, 280],
       extrapolate: 'clamp',
     });
 
     return (
       <Animated.View style={[styles.rightActions, { transform: [{ translateX }] }]}>
+        {onReply && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.replyButton]}
+            onPress={() => handleAction(onReply)}
+          >
+            <Ionicons name="return-down-forward-outline" size={20} color="#fff" />
+            <Text style={styles.actionText}>Reply</Text>
+          </TouchableOpacity>
+        )}
+
+        {onEdit && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => handleAction(onEdit)}
+          >
+            <Ionicons name="create-outline" size={20} color="#fff" />
+            <Text style={styles.actionText}>Edit</Text>
+          </TouchableOpacity>
+        )}
+        
         {onCopy && (
           <TouchableOpacity
             style={[styles.actionButton, styles.copyButton]}
@@ -65,16 +93,6 @@ export const SwipeableMessage: React.FC<SwipeableMessageProps> = ({
           >
             <Ionicons name="copy-outline" size={20} color="#fff" />
             <Text style={styles.actionText}>Copy</Text>
-          </TouchableOpacity>
-        )}
-        
-        {canRetry && onRetry && (
-          <TouchableOpacity
-            style={[styles.actionButton, styles.retryButton]}
-            onPress={() => handleAction(onRetry)}
-          >
-            <Ionicons name="refresh-outline" size={20} color="#fff" />
-            <Text style={styles.actionText}>Retry</Text>
           </TouchableOpacity>
         )}
         
@@ -99,13 +117,23 @@ export const SwipeableMessage: React.FC<SwipeableMessageProps> = ({
     if (role !== Role.Bot) return null;
 
     const translateX = dragX.interpolate({
-      inputRange: [0, 80],
-      outputRange: [-80, 0],
+      inputRange: [0, 150],
+      outputRange: [-150, 0],
       extrapolate: 'clamp',
     });
 
     return (
       <Animated.View style={[styles.leftActions, { transform: [{ translateX }] }]}>
+        {onReply && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.replyButton]}
+            onPress={() => handleAction(onReply)}
+          >
+            <Ionicons name="return-down-forward-outline" size={20} color="#fff" />
+            <Text style={styles.actionText}>Reply</Text>
+          </TouchableOpacity>
+        )}
+        
         {onCopy && (
           <TouchableOpacity
             style={[styles.actionButton, styles.copyButton]}
@@ -113,6 +141,16 @@ export const SwipeableMessage: React.FC<SwipeableMessageProps> = ({
           >
             <Ionicons name="copy-outline" size={20} color="#fff" />
             <Text style={styles.actionText}>Copy</Text>
+          </TouchableOpacity>
+        )}
+
+        {onPin && (
+          <TouchableOpacity
+            style={[styles.actionButton, isPinned ? styles.unpinButton : styles.pinButton]}
+            onPress={() => handleAction(onPin)}
+          >
+            <Ionicons name={isPinned ? "pin" : "pin-outline"} size={20} color="#fff" />
+            <Text style={styles.actionText}>{isPinned ? 'Unpin' : 'Pin'}</Text>
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -164,6 +202,18 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#ef4444', // Red
+  },
+  editButton: {
+    backgroundColor: '#8b5cf6', // Purple
+  },
+  replyButton: {
+    backgroundColor: '#10b981', // Green
+  },
+  pinButton: {
+    backgroundColor: '#f59e0b', // Orange
+  },
+  unpinButton: {
+    backgroundColor: '#64748b', // Gray
   },
   actionText: {
     color: '#fff',

@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
+import OAuthButtons from "@/components/OAuthButtons";
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from "@/constants/Types";
@@ -283,6 +284,16 @@ const Login = () => {
                 <Text style={styles.buttonText}>Sign In</Text>
                 <Ionicons name="arrow-forward-outline" size={18} color={theme.colors.white} />
               </TouchableOpacity>
+
+              {/* OAuth Buttons */}
+              <OAuthButtons
+                onSuccess={(result) => {
+                  console.log('OAuth success:', result);
+                }}
+                onError={(error) => {
+                  console.error('OAuth error:', error);
+                }}
+              />
 
               <View style={styles.dividerContainer}>
                 <View style={[styles.divider]} />

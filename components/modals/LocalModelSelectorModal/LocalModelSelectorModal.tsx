@@ -15,29 +15,33 @@ import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { getSupportedLocalModels, LocalModel } from '@/constants/LocalModels';
 import { isLocalLLMSupported } from '@/utils/DeviceCapabilities';
-import { useChat } from '@/hooks/useChat';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { ModelEvent } from '@/types/mixpanel';
+import LocalModelErrorBoundary from '@/components/LocalModelErrorBoundary';
 
 interface LocalModelSelectorModalProps {
   visible: boolean;
   onClose: () => void;
   selectedModelId: string;
   onSelectModel: (modelId: string) => void;
+  onFallbackToCloud?: () => void;
+  isLocalModelReady?: boolean;
+  localModelDownloadProgress?: number;
 }
 
-const LocalModelSelectorModal: React.FC<LocalModelSelectorModalProps> = ({
+const LocalModelSelectorModalInner: React.FC<LocalModelSelectorModalProps> = ({
   visible,
   onClose,
   selectedModelId,
   onSelectModel,
+  isLocalModelReady = false,
+  localModelDownloadProgress = 0,
 }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
   const isSupported = isLocalLLMSupported();
   const supportedModels = getSupportedLocalModels();
   const [searchQuery, setSearchQuery] = useState('');
-  const { isLocalModelReady, localModelDownloadProgress } = useChat();
 
   // Filter models based on search
   const filteredModels = useMemo(() => {
@@ -520,6 +524,23 @@ const getStyles = (theme: Theme) =>
       maxWidth: 300,
     },
   });
+
+// Wrapper component with error boundary
+const LocalModelSelectorModal: React.FC<LocalModelSelectorModalProps> = (props) => {
+  const handleFallbackToCloud = () => {
+    // Switch back to cloud models when local model selector fails
+    if (props.onFallbackToCloud) {
+      props.onFallbackToCloud();
+    }
+    props.onClose();
+  };
+  
+  return (
+    <LocalModelErrorBoundary fallbackToCloud={handleFallbackToCloud}>
+      <LocalModelSelectorModalInner {...props} />
+    </LocalModelErrorBoundary>
+  );
+};
 
 export default LocalModelSelectorModal;
 

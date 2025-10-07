@@ -21,6 +21,7 @@ import {
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
+import OAuthButtons from "@/components/OAuthButtons";
 import PasswordStrengthMeter from "@/components/PasswordStrengthMeter";
 import WebView from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
@@ -401,6 +402,16 @@ const Registration = () => {
               >
                 <Text style={styles.btnPrimaryText}>Create Account</Text>
               </TouchableOpacity>
+
+              {/* OAuth Buttons */}
+              <OAuthButtons
+                onSuccess={(result) => {
+                  console.log('OAuth registration success:', result);
+                }}
+                onError={(error) => {
+                  console.error('OAuth registration error:', error);
+                }}
+              />
 
               <View style={styles.loginContainer}>
                 <Text style={[styles.loginText, { color: theme.colors.text }]}>Already have an account?</Text>

@@ -7,6 +7,7 @@ import { createSecureSession, getSecureSession } from '@/utils/SecureSession';
 import { formatAuthHeader } from '@/utils/AuthHelpers';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { AuthEvent } from '@/types/mixpanel';
+import OAuthService, { OAuthResult } from '@/utils/OAuthService';
 
 export interface FormData {
   firstName: string;
@@ -35,7 +36,9 @@ interface AuthContextType {
   updateUser: (formatData: FormData, captchaToken: string, router: any) => Promise<void>;
   changePassword: (oldPassword: string, newP: string, confirm: string) => void;
   confirmCode: (code: string) => void;
-  handleForgotPasswordChange: (email: string, token: string, newPassword: string, router: any) => Promise<void>
+  handleForgotPasswordChange: (email: string, token: string, newPassword: string, router: any) => Promise<void>;
+  signInWithOAuth: (provider: 'google' | 'microsoft') => Promise<OAuthResult>;
+  signOutFromOAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,51 +77,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   const signIn = async (email: string, password: string) => {
-    // Track login started
-    await mixpanelService.trackAuth(AuthEvent.LOGIN_STARTED, {
-      method: 'email',
-    });
-
     try {
       setIsLoading(true);
-      const response = await api.post<{ token: string } | any>('/auth/login', {
-        email,
-        password
-      });
+      
+      // Track login started (non-blocking)
+      mixpanelService.trackAuth(AuthEvent.LOGIN_STARTED, {
+        method: 'email',
+      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
+
+      // Add timeout to network request
+      const response = await Promise.race([
+        api.post<{ token: string } | any>('/auth/login', { email, password }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Login timeout')), 30000)
+        )
+      ]);
+
       if (!response.ok) {
         const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Login failed';
         
-        // Track login failed
-        await mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
+        // Track login failed (non-blocking)
+        mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
           method: 'email',
           error_message: typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage),
-        });
+        }).catch(() => {});
         
-        throw errorMessage;
+        throw new Error(typeof errorMessage === 'string' ? errorMessage : 'Login failed');
       }
+
       if (!response.data?.token) {
-        // Track login failed
-        await mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
+        // Track login failed (non-blocking)
+        mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
           method: 'email',
           error_message: 'No token received',
-        });
+        }).catch(() => {});
         
-        throw { detail: "Error, Try again later." }
+        throw new Error('No token received');
       }
       
-      // Store token securely in SecureStore
-      await saveToken(response.data.token);
-      api.setAuthToken(response.data.token);
+      // Store token securely with error handling
+      try {
+        await saveToken(response.data.token);
+        api.setAuthToken(response.data.token);
+      } catch (storageError) {
+        console.error('[Auth] Token storage failed:', storageError);
+        throw new Error('Failed to securely store credentials');
+      }
       
-      const userResponse = await api.get<User | any>('/auth/me');
+      // Fetch user data with timeout
+      const userResponse = await Promise.race([
+        api.get<User | any>('/auth/me'),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('User data fetch timeout')), 30000)
+        )
+      ]);
+
       if (!(userResponse.ok && userResponse.data)) {
-        // Track login failed
-        await mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
+        // Track login failed (non-blocking)
+        mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
           method: 'email',
           error_message: 'Failed to fetch user data',
-        });
+        }).catch(() => {});
         
-        throw { detail: "Error, Try again later." }
+        throw new Error('Failed to fetch user data');
       }
 
       // Store user data WITHOUT token
@@ -127,31 +148,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (isMountedRef.current) {
         setUser(newUser);
         
-        // Identify user in Mixpanel
-        await mixpanelService.identify(newUser.user_id.toString());
-        
-        // Set user profile
-        await mixpanelService.setUserProfile({
-          $email: newUser.email,
-          $name: `${newUser.first_name} ${newUser.last_name}`,
-          $created: newUser.created_at,
-          user_id: newUser.user_id.toString(),
-          account_created_date: newUser.created_at,
-          membership_tier: 'free', // Update if you have subscription info
-          last_login_date: new Date().toISOString(),
-        });
-        
-        // Increment login count
-        await mixpanelService.incrementUserProperty('login_count', 1);
-        
-        // Track login completed
-        await mixpanelService.trackAuth(AuthEvent.LOGIN_COMPLETED, {
-          method: 'email',
-          user_id: newUser.user_id.toString(),
-        });
+        // All Mixpanel operations are non-blocking
+        Promise.all([
+          mixpanelService.identify(newUser.user_id.toString()),
+          mixpanelService.setUserProfile({
+            $email: newUser.email,
+            $name: `${newUser.first_name} ${newUser.last_name}`,
+            $created: newUser.created_at,
+            user_id: newUser.user_id.toString(),
+            account_created_date: newUser.created_at,
+            membership_tier: 'free',
+            last_login_date: new Date().toISOString(),
+          }),
+          mixpanelService.incrementUserProperty('login_count', 1),
+          mixpanelService.trackAuth(AuthEvent.LOGIN_COMPLETED, {
+            method: 'email',
+            user_id: newUser.user_id.toString(),
+          })
+        ]).catch(err => console.warn('[Mixpanel] Post-login tracking failed:', err));
       }
-    } catch (error) {
-      // console.error('Sign in error:', JSON.stringify(error));
+    } catch (error: any) {
+      // Unified error handling
+      const errorMessage = error?.message || 'Login failed';
+      console.error('[Auth] Sign in error:', errorMessage);
+      
+      // Track failure (non-blocking)
+      mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
+        method: 'email',
+        error_message: errorMessage,
+      }).catch(() => {});
+      
       throw error;
     } finally {
       if (isMountedRef.current) {
@@ -235,61 +261,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const signUp = async (formData: FormData, router: any) => {
-    // Track sign up started
-    await mixpanelService.trackAuth(AuthEvent.SIGN_UP_STARTED, {
-      method: 'email',
-    });
-
     try {
       setIsLoading(true);
 
-      const response = await api.post<{ token: string } | any>("/auth/signup", {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        username: `${formData.firstName}${formData.lastName}`,
-        email: formData.email,
-        phone: formData.phone?.length > 5 ? formData.phone : undefined,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-        }
-      });
+      // Track sign up started (non-blocking)
+      mixpanelService.trackAuth(AuthEvent.SIGN_UP_STARTED, {
+        method: 'email',
+      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
+
+      // Add timeout to network request
+      const response = await Promise.race([
+        api.post<{ token: string } | any>("/auth/signup", {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          username: `${formData.firstName}${formData.lastName}`,
+          email: formData.email,
+          phone: formData.phone?.length > 5 ? formData.phone : undefined,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword
+        }, {
+          headers: {
+            "Content-Type": "application/json",
+          }
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Sign up timeout')), 30000)
+        )
+      ]);
       
       if (response.ok) {
-        // Track sign up completed
-        await mixpanelService.trackAuth(AuthEvent.SIGN_UP_COMPLETED, {
+        // Track sign up completed (non-blocking)
+        mixpanelService.trackAuth(AuthEvent.SIGN_UP_COMPLETED, {
           method: 'email',
-        });
+        }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
 
-        // Create secure session instead of passing password in URL
-        const sessionId = await createSecureSession({
-          email: formData.email,
-          password: formData.password,
-          requiresVerification: true
-        });
-        router.push(`/email-verification?session=${sessionId}`)
+        // Create secure session with error handling
+        try {
+          const sessionId = await createSecureSession({
+            email: formData.email,
+            password: formData.password,
+            requiresVerification: true
+          });
+          router.push(`/email-verification?session=${sessionId}`)
+        } catch (sessionError) {
+          console.error('[Auth] Session creation failed:', sessionError);
+          throw new Error('Failed to create secure session');
+        }
       } else {
         // Handle error properly when response.data is null or doesn't have detail
         const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Registration failed';
         
-        // Track sign up failed
-        await mixpanelService.trackAuth(AuthEvent.SIGN_UP_FAILED, {
+        // Track sign up failed (non-blocking)
+        mixpanelService.trackAuth(AuthEvent.SIGN_UP_FAILED, {
           method: 'email',
           error_message: typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage),
-        });
+        }).catch(() => {});
         
-        throw errorMessage;
+        throw new Error(typeof errorMessage === 'string' ? errorMessage : 'Registration failed');
       }
-    } catch (error) {
-      // console.error("Sign up error: ", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Registration failed';
+      console.error('[Auth] Sign up error:', errorMessage);
       
-      // Track sign up failed if not already tracked
-      await mixpanelService.trackAuth(AuthEvent.SIGN_UP_FAILED, {
+      // Track sign up failed (non-blocking)
+      mixpanelService.trackAuth(AuthEvent.SIGN_UP_FAILED, {
         method: 'email',
-        error_message: error instanceof Error ? error.message : String(error),
-      });
+        error_message: errorMessage,
+      }).catch(() => {});
       
       throw error;
     } finally {
@@ -442,8 +480,100 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsSignedIn(false);
   };
 
+  /**
+   * Sign in with OAuth provider (Google or Microsoft)
+   */
+  const signInWithOAuth = async (provider: 'google' | 'microsoft'): Promise<OAuthResult> => {
+    try {
+      setIsLoading(true);
+      
+      // Track OAuth login started (non-blocking)
+      mixpanelService.trackAuth(AuthEvent.LOGIN_STARTED, {
+        method: provider,
+      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
+
+      const result = provider === 'google'
+        ? await OAuthService.signInWithGoogle()
+        : await OAuthService.signInWithMicrosoft();
+
+      if (result.success && result.token) {
+        // Token is already stored by OAuthService in SecureStore
+        api.setAuthToken(result.token);
+        
+        // Fetch user data with timeout
+        const userResponse = await Promise.race([
+          api.get<User | any>('/auth/me'),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('User data fetch timeout')), 30000)
+          )
+        ]);
+
+        if (userResponse.ok && userResponse.data) {
+          const newUser = { ...userResponse.data };
+          
+          if (isMountedRef.current) {
+            setUser(newUser);
+            
+            // All Mixpanel operations are non-blocking
+            Promise.all([
+              mixpanelService.identify(newUser.user_id.toString()),
+              mixpanelService.setUserProfile({
+                $email: newUser.email,
+                $name: `${newUser.first_name} ${newUser.last_name}`,
+                $created: newUser.created_at,
+                user_id: newUser.user_id.toString(),
+                account_created_date: newUser.created_at,
+                membership_tier: 'free',
+                last_login_date: new Date().toISOString(),
+                oauth_provider: provider,
+              }),
+              mixpanelService.incrementUserProperty('login_count', 1),
+              mixpanelService.trackAuth(AuthEvent.LOGIN_COMPLETED, {
+                method: provider,
+                user_id: newUser.user_id.toString(),
+              })
+            ]).catch(err => console.warn('[Mixpanel] Post-OAuth tracking failed:', err));
+          }
+        }
+        
+        return result;
+      } else {
+        // Track OAuth login failed (non-blocking)
+        mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
+          method: provider,
+          error_message: result.error || 'OAuth sign-in failed',
+        }).catch(() => {});
+        
+        throw new Error(result.error || 'OAuth sign-in failed');
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || 'OAuth sign-in failed';
+      console.error('[Auth] OAuth error:', errorMessage);
+      
+      // Track OAuth login failed (non-blocking)
+      mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
+        method: provider,
+        error_message: errorMessage,
+      }).catch(() => {});
+      
+      throw error;
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  /**
+   * Sign out from OAuth providers
+   */
+  const signOutFromOAuth = async () => {
+    await OAuthService.signOut();
+    await signOut();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isInitialLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser, changePassword, confirmCode, handleForgotPasswordChange }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading, isInitialLoading, isSignedIn, resetPassword, forgotPassword, confirmEmail, updateUser, changePassword, confirmCode, handleForgotPasswordChange, signInWithOAuth, signOutFromOAuth }}>
       {children}
     </AuthContext.Provider>
   );

@@ -29,6 +29,12 @@
         <data android:scheme="odyssey"/>
         <data android:scheme="com.neptunetech.odyssey"/>
       </intent-filter>
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="odyssey" android:host="auth"/>
+      </intent-filter>
     </activity>
   </application>
 </manifest>

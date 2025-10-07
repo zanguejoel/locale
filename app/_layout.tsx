@@ -30,16 +30,22 @@ export {
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-// Polyfill TextDecoder
+// Polyfill TextDecoder with memory leak prevention
 if (typeof global.TextDecoder !== 'undefined') {
   const OriginalTextDecoder = global.TextDecoder;
-  const decoderMap = new Map();
+  const MAX_DECODERS = 5; // Limit cache size to prevent unbounded growth
+  const decoderMap = new Map<string, any>();
 
   global.TextDecoder = function(encoding = 'utf-8', options = {}) {
     const key = encoding.toLowerCase();
     
     if (key === 'latin1' || key === 'iso-8859-1') {
       if (!decoderMap.has(key)) {
+        // Prevent unbounded growth by removing oldest entry
+        if (decoderMap.size >= MAX_DECODERS) {
+          const firstKey = decoderMap.keys().next().value;
+          decoderMap.delete(firstKey);
+        }
         decoderMap.set(key, new OriginalTextDecoder('utf-8', options));
       }
       return decoderMap.get(key);
@@ -49,6 +55,21 @@ if (typeof global.TextDecoder !== 'undefined') {
   } as any;
 
   global.TextDecoder.prototype = OriginalTextDecoder.prototype;
+  
+  // Clean up decoder map when app goes to background
+  if (typeof require !== 'undefined') {
+    try {
+      const { AppState } = require('react-native');
+      AppState.addEventListener('change', (nextAppState: string) => {
+        if (nextAppState === 'background') {
+          decoderMap.clear();
+        }
+      });
+    } catch (e) {
+      // AppState not available, skip cleanup listener
+      console.warn('[TextDecoder] AppState listener not added:', e);
+    }
+  }
 }
 
 export default function RootLayout() {
@@ -93,24 +114,11 @@ const CustomBackButton = () => {
 };
 
 const Layout = () => {
-  const [loaded, error] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-  });
+  // Fonts are already loaded in RootLayout - no need to duplicate
   const { user, isInitialLoading, isSignedIn } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const theme = useTheme();
-
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
 
   useEffect(() => {
     if (isInitialLoading) return;
@@ -124,7 +132,7 @@ const Layout = () => {
     }
   }, [isSignedIn]);
 
-  if (!loaded || isInitialLoading) {
+  if (isInitialLoading) {
     return <Slot />;
   }
 

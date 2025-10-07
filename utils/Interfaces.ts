@@ -23,6 +23,13 @@ export interface AdditionalData {
   data: string; // URL or data content
 }
 
+export interface MessageReaction {
+  emoji: string;
+  count: number;
+  users: string[]; // User IDs who reacted
+  hasReacted: boolean; // Whether current user has reacted
+}
+
 export interface Message {
   role: Role;
   content: string;
@@ -36,6 +43,14 @@ export interface Message {
   id?: string;
   imageData?: string;
   additional_data?: AdditionalData[];
+  // New features
+  reactions?: MessageReaction[];
+  isPinned?: boolean;
+  isEdited?: boolean;
+  editedAt?: Date | string;
+  replyToMessageId?: string; // For thread/reply system
+  replyToContent?: string;
+  replyToRole?: Role;
 }
 
 export interface Chat {

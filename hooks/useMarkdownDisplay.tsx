@@ -8,6 +8,7 @@ import { StyleSheet, Text, View, Image, Platform, Linking } from 'react-native';
 import Colors from '@/constants/Colors';
 import { Theme } from '@/constants/Types';
 import { useTheme } from './useTheme';
+import CodeBlockWithCopy from '@/components/CodeBlockWithCopy';
 
 // Define the navigation params for each screen
 interface NavigationParams {
@@ -345,9 +346,21 @@ const useMarkdownDisplay = () => {
 
     code_block: (node, children, parent, styles) => {
       return (
-        <View key={node.key} style={styles.code_block}>
-          <Text selectable>{node.content}</Text>
-        </View>
+        <CodeBlockWithCopy
+          key={node.key}
+          content={node.content}
+          language={node.sourceInfo || undefined}
+        />
+      );
+    },
+    
+    fence: (node, children, parent, styles) => {
+      return (
+        <CodeBlockWithCopy
+          key={node.key}
+          content={node.content}
+          language={node.sourceInfo || undefined}
+        />
       );
     },
 

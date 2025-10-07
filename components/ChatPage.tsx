@@ -7,7 +7,7 @@ import ChatMessage from '@/components/ChatMessage';
 import MessageIdeas from '@/components/MessageIdeas';
 import MessageInput from '@/components/ChatInput';
 import { defaultStyles } from '@/constants/Styles';
-import { Message, Role } from '@/utils/Interfaces';
+import { Message, Role, MessageReaction } from '@/utils/Interfaces';
 import Colors from '@/constants/Colors';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler } from 'react-native-gesture-handler';
@@ -21,18 +21,24 @@ import { useDefaultModel } from '@/hooks/useDefaultModel';
 import { useDefaultLocalModel } from '@/hooks/useDefaultLocalModel';
 import { GradientBackground } from './GradientBackground';
 import TypingIndicator from './TypingIndicator';
+import HeaderModelSelector from './HeaderModelSelector';
 import DateSeparator from './DateSeparator';
 import SmartSuggestions from './SmartSuggestions';
 import OfflineBanner from './OfflineBanner';
 import SwipeableMessage from './SwipeableMessage';
 import VoiceRecordingUI from './VoiceRecordingUI';
-import HeaderModelSelector from './HeaderModelSelector';
 import { getDateSeparator, isSameDay } from '@/utils/dateHelpers';
 import { RefreshControl } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { storage } from '@/hooks/useMMKVStorage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
+import MessageReactions from '@/components/MessageReactions';
+import MessageEditModal from '@/components/MessageEditModal';
+import MessageSearchBar from '@/components/MessageSearchBar';
+import ExportConversationModal from '@/components/ExportConversationModal';
+import PinnedMessagesBar from '@/components/PinnedMessagesBar';
+import ThreadReplyIndicator from '@/components/ThreadReplyIndicator';
 
 // Helper function to get time-based greeting
 const getGreeting = (firstName: string = 'there') => {
@@ -60,13 +66,6 @@ const ChatPage = () => {
   // Get selected models (using hooks to ensure reactivity)
   const selectedCloudModel = useDefaultModel();
   const selectedLocalModel = useDefaultLocalModel();
-  
-  // Log model initialization on mount
-  useEffect(() => {
-    // console.log('[ChatPage] Models loaded on launch:');
-    // console.log('  Cloud Model:', selectedCloudModel?.displayName, '(ID:', selectedCloudModel?.id + ')');
-    // console.log('  Local Model:', selectedLocalModel?.displayName, '(ID:', selectedLocalModel?.id + ')');
-  }, []);
 
   // States
   const [height, setHeight] = useState(0);
@@ -75,6 +74,15 @@ const ChatPage = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [cancelRecording, setCancelRecording] = useState<() => void>(() => () => {});
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
+  
+  // New feature states
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredMessages, setFilteredMessages] = useState<Message[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
 
 
   // Animation values
@@ -292,6 +300,82 @@ const ChatPage = () => {
     return [...messages].reverse();
   }, [messages]);
 
+  // New feature handlers
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setFilteredMessages([]);
+      return;
+    }
+    
+    const filtered = messages.filter(msg =>
+      msg.content.toLowerCase().includes(query.toLowerCase())
+    );
+    setFilteredMessages(filtered);
+  }, [messages]);
+
+  const handleMessagePin = useCallback((messageId: string) => {
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+
+    const isPinned = pinnedMessages.some(m => m.id === messageId);
+    
+    if (isPinned) {
+      setPinnedMessages(prev => prev.filter(m => m.id !== messageId));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      setPinnedMessages(prev => [...prev, { ...message, isPinned: true }]);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [messages, pinnedMessages]);
+
+  const handleScrollToPinnedMessage = useCallback((messageId: string) => {
+    const reversedIndex = reversedMessages.findIndex(m => m.id === messageId);
+    if (reversedIndex >= 0 && messageListRef.current) {
+      messageListRef.current.scrollToIndex({
+        index: reversedIndex,
+        animated: true,
+        viewPosition: 0.5,
+      });
+    }
+  }, [reversedMessages]);
+
+  const handleEditMessage = useCallback((messageId: string) => {
+    const message = messages.find(m => m.id === messageId);
+    if (message && message.role === Role.User) {
+      setEditingMessage(message);
+    }
+  }, [messages]);
+
+  const handleSaveEdit = useCallback((newContent: string) => {
+    if (!editingMessage) return;
+    
+    // Update local messages state
+    // In production, you'd also send this to the backend
+    // For now, we'll just update locally
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setEditingMessage(null);
+  }, [editingMessage]);
+
+  const handleReplyToMessage = useCallback((messageId: string) => {
+    const message = messages.find(m => m.id === messageId);
+    if (message) {
+      setReplyToMessage(message);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  }, [messages]);
+
+  const handleAddReaction = useCallback((messageId: string, emoji: string) => {
+    // In production, send this to backend
+    // For now, update locally
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const handleRemoveReaction = useCallback((messageId: string, emoji: string) => {
+    // In production, send this to backend
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
   const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => {
     // In inverted list with reversed array, index 0 is the newest message
     const isLastBotMessage =
@@ -308,6 +392,9 @@ const ChatPage = () => {
 
     // Check if message can be retried (user message that failed or needs retry)
     const canRetry = item.role === Role.User && !isLoading;
+    
+    // Check if message is pinned
+    const isPinned = pinnedMessages.some(m => m.id === item.id);
 
     return (
       <>
@@ -318,21 +405,43 @@ const ChatPage = () => {
           onCopy={() => handleCopyMessage(item.content)}
           onDelete={() => handleDeleteMessage(item.id || `${index}`)}
           onRetry={() => handleRetryMessage(item.content)}
+          onEdit={() => handleEditMessage(item.id || `${index}`)}
+          onPin={() => handleMessagePin(item.id || `${index}`)}
+          onReply={() => handleReplyToMessage(item.id || `${index}`)}
           canRetry={canRetry}
+          isPinned={isPinned}
         >
-          <ChatMessage
-            {...item}
-            intermediate={intermediate}
-            loading={isLoading}
-            streamingContent={isStreaming}
-          />
+          <View>
+            {item.replyToMessageId && (
+              <ThreadReplyIndicator
+                replyToMessageId={item.replyToMessageId}
+                replyToContent={item.replyToContent}
+                replyToRole={item.replyToRole}
+                onPress={() => handleScrollToPinnedMessage(item.replyToMessageId!)}
+              />
+            )}
+            <ChatMessage
+              {...item}
+              intermediate={intermediate}
+              loading={isLoading}
+              streamingContent={isStreaming}
+            />
+            {item.reactions && item.reactions.length > 0 && (
+              <MessageReactions
+                messageId={item.id || `${index}`}
+                reactions={item.reactions}
+                onAddReaction={handleAddReaction}
+                onRemoveReaction={handleRemoveReaction}
+              />
+            )}
+          </View>
         </SwipeableMessage>
         {showDateSeparator && item.timestamp && (
           <DateSeparator label={getDateSeparator(item.timestamp)} />
         )}
       </>
     );
-  }, [reversedMessages, isSending, stream, intermediate, handleCopyMessage, handleDeleteMessage, handleRetryMessage]);
+  }, [reversedMessages, isSending, stream, intermediate, pinnedMessages, handleCopyMessage, handleDeleteMessage, handleRetryMessage, handleEditMessage, handleMessagePin, handleReplyToMessage, handleScrollToPinnedMessage, handleAddReaction, handleRemoveReaction]);
 
   const CustomView = Platform.OS === 'ios' ? PanGestureHandler : View
 
@@ -360,6 +469,16 @@ const ChatPage = () => {
   return (
     <GradientBackground variant="background" style={styles.pageContainer}>
       <OfflineBanner isLocal={isLocal} />
+      {showSearch && (
+        <MessageSearchBar
+          onSearch={handleSearch}
+          onClose={() => {
+            setShowSearch(false);
+            setSearchQuery('');
+            setFilteredMessages([]);
+          }}
+        />
+      )}
       <Stack.Screen options={{
         headerTitleAlign: 'center',
         headerTitle: () => (
@@ -368,7 +487,6 @@ const ChatPage = () => {
               source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} 
               style={styles.logo} 
             />
-           
           </View>
         ),
         headerRight: () => (
@@ -390,6 +508,13 @@ const ChatPage = () => {
           isSending && KeyboardVisibleStyle,
         ]}
       >
+        {pinnedMessages.length > 0 && (
+          <PinnedMessagesBar
+            pinnedMessages={pinnedMessages}
+            onMessagePress={handleScrollToPinnedMessage}
+            onUnpin={handleMessagePin}
+          />
+        )}
         <View style={styles.page} onLayout={onLayout}>
           {messages.length === 0 && (
             <Animated.View
@@ -412,13 +537,6 @@ const ChatPage = () => {
             >
              <Text style={styles.logoText}>{getGreeting(user?.first_name)}</Text>
               <Text style={styles.welcomeText}>How can I assist you today?</Text>
-              {(selectedCloudModel || selectedLocalModel) && (
-                <Text style={[styles.modelNameText, { color: theme.isDark ? theme.colors.greyLight : theme.colors.grey }]}>
-                  {isLocal 
-                    ? `${selectedLocalModel?.displayName || 'Local Model'}` 
-                    : `${selectedCloudModel?.displayName || 'Cloud Model'}`}
-                </Text>
-              )}
             </Animated.View>
           )}
           <CustomView style={{ flex: 1 }}>
@@ -473,6 +591,16 @@ const ChatPage = () => {
           isRecording={isRecording}
           onCancel={cancelRecording}
         />
+        {replyToMessage && (
+          <View style={styles.replyContainer}>
+            <ThreadReplyIndicator
+              replyToMessageId={replyToMessage.id}
+              replyToContent={replyToMessage.content}
+              replyToRole={replyToMessage.role}
+              onClear={() => setReplyToMessage(null)}
+            />
+          </View>
+        )}
         <View style={[styles.inputBlurContainer]}>
           <MessageInput
             setSelectedImage={handleSetSelectedImage}
@@ -490,10 +618,25 @@ const ChatPage = () => {
               setIsRecording(recording);
               setCancelRecording(() => onCancel);
             }}
+            onExportPress={() => setShowExportModal(true)}
           />
         </View>
       </KeyboardAvoidingView>
 
+      {/* Modals */}
+      <ExportConversationModal
+        visible={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        messages={messages}
+        conversationTitle={id ? `Conversation ${id}` : 'Chat'}
+      />
+
+      <MessageEditModal
+        visible={!!editingMessage}
+        originalContent={editingMessage?.content || ''}
+        onClose={() => setEditingMessage(null)}
+        onSave={handleSaveEdit}
+      />
     </GradientBackground>
   );
 }
@@ -596,7 +739,14 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     left: 33,
     top: 2,
     zIndex: 1000
-  }
+  },
+  replyContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.background,
+    borderTopWidth: 1,
+    borderTopColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
+  },
 
 });
 

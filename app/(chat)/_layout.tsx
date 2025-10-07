@@ -22,6 +22,7 @@ import ChatPage from './new';
 import ChatPageId from '../../components/ChatPage';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
+import ChatErrorBoundary from '@/components/ChatErrorBoundary';
 
 const Drawer = createDrawerNavigator();
 
@@ -48,50 +49,43 @@ const Layout = () => {
     }
   };
 
+  const handleErrorReset = () => {
+    // Reset chat state when recovering from error
+    resetChat();
+    router.push('/(chat)/new');
+  };
+
   return (
-    <View style={{ flex: 1 }}>
+    <ChatErrorBoundary onReset={handleErrorReset}>
+      <View style={{ flex: 1 }}>
 
-      <Drawer.Navigator
-        drawerContent={(props) => <CustomDrawerContent {...props} />}
-        screenOptions={{
-          drawerActiveBackgroundColor: '#selectedColor',
-          drawerActiveTintColor: '#000',
-          drawerInactiveTintColor: '#000',
-          headerTintColor: Colors.light.tint,
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-            height: 110,
-          },
-          headerShadowVisible: true,
-          overlayColor: 'rgba(0, 0, 0, 0.2)',
-          drawerItemStyle: { borderRadius: 12 },
-          drawerLabelStyle: { marginLeft: -20 },
-          drawerStyle: {
-            backgroundColor: '#FFFFFF',
-          },
-          drawerType: 'slide',
-          swipeEdgeWidth: 50,
-          swipeMinDistance: 10,
-        }}
-      >
+        <Drawer.Navigator
+          drawerContent={(props) => <CustomDrawerContent {...props} />}
+          screenOptions={{
+            drawerActiveBackgroundColor: '#selectedColor',
+            drawerActiveTintColor: '#000',
+            drawerInactiveTintColor: '#000',
+            headerTintColor: Colors.light.tint,
+            headerStyle: {
+              backgroundColor: theme.colors.background,
+              height: 110,
+            },
+            headerShadowVisible: true,
+            overlayColor: 'rgba(0, 0, 0, 0.2)',
+            drawerItemStyle: { borderRadius: 12 },
+            drawerLabelStyle: { marginLeft: -20 },
+            drawerStyle: {
+              backgroundColor: '#FFFFFF',
+            },
+            drawerType: 'slide',
+            swipeEdgeWidth: 50,
+            swipeMinDistance: 10,
+          }}
+        >
 
 
 
-        <Drawer.Screen name="new" component={ChatPage} options={{
-          title: 'Odyssey',
-          headerRight: () => (
-            <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
-              <Ionicons
-                name="add"
-                size={24}
-                color={Colors.light.tint}
-              />
-            </TouchableOpacity>
-          ),
-        }} />
-
-        <Drawer.Screen name="[id]"
-          component={ChatPageId} options={{
+          <Drawer.Screen name="new" component={ChatPage} options={{
             title: 'Odyssey',
             headerRight: () => (
               <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
@@ -104,8 +98,23 @@ const Layout = () => {
             ),
           }} />
 
-      </Drawer.Navigator>
-    </View>
+          <Drawer.Screen name="[id]"
+            component={ChatPageId} options={{
+              title: 'Odyssey',
+              headerRight: () => (
+                <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
+                  <Ionicons
+                    name="add"
+                    size={24}
+                    color={Colors.light.tint}
+                  />
+                </TouchableOpacity>
+              ),
+            }} />
+
+        </Drawer.Navigator>
+      </View>
+    </ChatErrorBoundary>
 
   );
 };

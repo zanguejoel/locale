@@ -17,6 +17,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from 'react';
 import {
   useLLM,
@@ -127,6 +128,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [additionalData, setAdditionalData] = useState<any[]>([]);
   const [isLocal, setIsLocal] = useState(false);
   
+  // AbortController refs for managing streaming requests
+  const streamControllerRef = useRef<AbortController | null>(null);
+  const fetchControllerRef = useRef<AbortController | null>(null);
+  const currentConversationIdRef = useRef<string | null>(null);
+  
   // Local model state - declare early to use in effects below
   const [localModelDownloadProgress, setLocalModelDownloadProgress] = useState(0);
   const [isLocalModelReady, setIsLocalModelReady] = useState(false);
@@ -173,6 +179,25 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // console.log('[Local] Model changed - state reset for new model');
   }, [selectedLocalModel.id]);
 
+
+  // Cleanup AbortControllers on unmount
+  useEffect(() => {
+    return () => {
+      if (streamControllerRef.current) {
+        streamControllerRef.current.abort();
+        streamControllerRef.current = null;
+      }
+      if (fetchControllerRef.current) {
+        fetchControllerRef.current.abort();
+        fetchControllerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update conversation ID ref when it changes
+  useEffect(() => {
+    currentConversationIdRef.current = currentConversationId;
+  }, [currentConversationId]);
 
   // Wait for user to be loaded before fetching conversations
   useEffect(() => {
@@ -255,55 +280,57 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [llm, deviceSupportsLocalLLM]);
 
   const handleSendLocalMessage = async (message: string) => {
-    // console.log('[Local] Starting local message send:', message);
-    
-    // Start timing for response
-    const responseStartTime = Date.now();
-    
-    // Track message sent with local model
-    await mixpanelService.trackAI(AIEvent.CHAT_MESSAGE_SENT, {
-      message_type: 'text',
-      message_length: message.length,
-      model_used: selectedLocalModel?.id || 'unknown',
-      is_local_model: true,
-      conversation_id: currentConversationId || '',
-    });
-    
-    // Check if device supports local LLM
-    if (!deviceSupportsLocalLLM) {
-      // console.error('[Local] Device does not support local LLM');
-      Alert.alert(
-        'Local LLM Not Supported',
-        getLocalLLMUnsupportedMessage(),
-        [{ text: 'OK' }]
-      );
+    // Wrap entire function in try-catch for unexpected errors
+    try {
+      // console.log('[Local] Starting local message send:', message);
       
-      // Track failure
-      await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
+      // Start timing for response
+      const responseStartTime = Date.now();
+      
+      // Track message sent with local model (non-blocking)
+      mixpanelService.trackAI(AIEvent.CHAT_MESSAGE_SENT, {
+        message_type: 'text',
+        message_length: message.length,
         model_used: selectedLocalModel?.id || 'unknown',
         is_local_model: true,
-        error_message: 'Device does not support local LLM',
-      });
-      return;
-    }
-    
-    // Check if LLM hasn't been initialized yet (shouldn't happen but safety check)
-    if (!llm) {
-      // console.error('[Local] LLM not initialized');
-      Alert.alert(
-        'Model Initializing',
-        'The local model is being initialized. Please wait a moment and try again.',
-        [{ text: 'OK' }]
-      );
+        conversation_id: currentConversationId || '',
+      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
       
-      // Track failure
-      await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
-        model_used: selectedLocalModel?.id || 'unknown',
-        is_local_model: true,
-        error_message: 'LLM not initialized',
-      });
-      return;
-    }
+      // Check if device supports local LLM
+      if (!deviceSupportsLocalLLM) {
+        // console.error('[Local] Device does not support local LLM');
+        Alert.alert(
+          'Local LLM Not Supported',
+          getLocalLLMUnsupportedMessage(),
+          [{ text: 'OK' }]
+        );
+        
+        // Track failure (non-blocking)
+        mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
+          model_used: selectedLocalModel?.id || 'unknown',
+          is_local_model: true,
+          error_message: 'Device does not support local LLM',
+        }).catch(() => {});
+        return;
+      }
+      
+      // Check if LLM hasn't been initialized yet (shouldn't happen but safety check)
+      if (!llm) {
+        // console.error('[Local] LLM not initialized');
+        Alert.alert(
+          'Model Initializing',
+          'The local model is being initialized. Please wait a moment and try again.',
+          [{ text: 'OK' }]
+        );
+        
+        // Track failure (non-blocking)
+        mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
+          model_used: selectedLocalModel?.id || 'unknown',
+          is_local_model: true,
+          error_message: 'LLM not initialized',
+        }).catch(() => {});
+        return;
+      }
     
     // Log LLM state for debugging
     // console.log('[Local] LLM state:', { 
@@ -328,9 +355,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // console.log('[Local] Calling llm.generate...');
       
-      // Format message for react-native-executorch API
-      // It expects an array of message objects: [{ role: 'user', content: 'text' }]
-      const formattedMessages = [{ role: 'user', content: message }];
+      // Format message history for react-native-executorch API
+      // It expects an array of message objects: [{ role: 'user' | 'assistant', content: 'text' }]
+      // Note: At this point, messages array includes the new user message and '...' placeholder (last 2 items)
+      const conversationHistory = messages
+        //.slice(0, -2) // Exclude the last 2 messages (new user message and '...' placeholder)
+        .map(msg => ({
+          role: msg.role === Role.User ? 'user' : 'assistant',
+          content: msg.content || ''
+        }))
+        .filter(msg => msg.content.trim() !== ''); // Remove empty messages
+      
+      // Add the new user message (not from state, but from parameter to ensure it's fresh)
+      conversationHistory.push({ role: 'user', content: message });
+      
+      // Limit context window to last N messages to avoid token limits
+      // Most local models have limited context windows (typically 2K-4K tokens)
+      const MAX_CONTEXT_MESSAGES = 20; // ~10 conversation turns
+      const contextMessages = conversationHistory.slice(-MAX_CONTEXT_MESSAGES);
+      
+      console.log('[Local] Sending with context:', contextMessages.length, 'messages in history');
       
       // Use InteractionManager to avoid blocking UI during generation
       await InteractionManager.runAfterInteractions(async () => {
@@ -338,7 +382,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await new Promise(resolve => setTimeout(resolve, 100));
       });
       
-      const result = await (llm as any).generate(formattedMessages);
+      const result = await (llm as any).generate(contextMessages);
       // console.log('[Local] Generation result:', result);
       
       // Update last used timestamp for this model
@@ -355,19 +399,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       return result;
-    } catch (error) {
+    } catch (error: any) {
       // console.error('[Local] LLM generation error:', error);
       
-      // Track failed response
-      await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
+      // Track failed response (non-blocking)
+      mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
         model_used: selectedLocalModel?.id || 'unknown',
         is_local_model: true,
         conversation_id: currentConversationId || '',
         error_message: error instanceof Error ? error.message : String(error),
-      });
+      }).catch(() => {});
       
-      const modelName = selectedLocalModel.displayName;
-      const modelSize = selectedLocalModel.size;
+      const modelName = selectedLocalModel?.displayName || 'Local Model';
+      const modelSize = selectedLocalModel?.size || 'Unknown';
       
       // Check if error is due to model still loading
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -375,6 +419,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         Alert.alert(
           'Model Still Loading',
           `${modelName} (${modelSize}) is still downloading. This may take several minutes depending on your connection.\n\nYou can switch to cloud models for immediate responses.`,
+          [{ text: 'OK' }]
+        );
+      } else if (errorMessage.toLowerCase().includes('memory') || errorMessage.toLowerCase().includes('out of memory')) {
+        Alert.alert(
+          'Memory Error',
+          `Your device does not have enough memory to run ${modelName}.\n\nTry switching to a smaller model or use cloud models instead.`,
           [{ text: 'OK' }]
         );
       } else {
@@ -386,6 +436,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } finally {
       // Always reset sending state
+      setIsSending(false);
+    }
+    } catch (unexpectedError: any) {
+      // Catch any unexpected errors in the entire function
+      console.error('[Local] Unexpected error in handleSendLocalMessage:', unexpectedError);
+      
+      // Track unexpected error (non-blocking)
+      mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
+        model_used: selectedLocalModel?.id || 'unknown',
+        is_local_model: true,
+        conversation_id: currentConversationId || '',
+        error_message: 'Unexpected error: ' + (unexpectedError instanceof Error ? unexpectedError.message : String(unexpectedError)),
+      }).catch(() => {});
+      
+      Alert.alert(
+        'Unexpected Error',
+        'An unexpected error occurred. Please try again or switch to cloud models.',
+        [{ text: 'OK' }]
+      );
+      
       setIsSending(false);
     }
   };
@@ -683,7 +753,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    const _controller = new AbortController();
+    // Abort any previous stream
+    if (streamControllerRef.current) {
+      streamControllerRef.current.abort();
+      streamControllerRef.current = null;
+    }
+    
+    streamControllerRef.current = new AbortController();
+    
     try {
       // Get token from secure storage
       const token = await getToken();
@@ -715,7 +792,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         reactNative: { 
           textStreaming: true 
         },
-        signal: _controller.signal,
+        signal: streamControllerRef.current.signal,
         // Ensure streaming is enabled
         cache: 'no-cache',
       });
@@ -778,7 +855,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setInputDisabled(false);
       setPastedActive(false);
-    } catch (e) {
+    } catch (e: any) {
+      // Check if request was aborted (user cancelled or switched conversations)
+      if (e.name === 'AbortError') {
+        console.log('[Cloud] Request cancelled');
+        return;
+      }
+      
       // Track failed response
       const modelId = getDefaultModelId();
       const conversationId = currentConversationId || '';
@@ -791,6 +874,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
+      streamControllerRef.current = null;
       setIsSending(false);
       setInputDisabled(false);
       setChatLoading(false);
@@ -842,54 +926,75 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchMessages = useCallback(async (conversationId?: string) => {
     if (!conversationId) return;
+    
+    // Abort any previous fetch
+    if (fetchControllerRef.current) {
+      fetchControllerRef.current.abort();
+      fetchControllerRef.current = null;
+    }
+    
+    fetchControllerRef.current = new AbortController();
+    const fetchConvId = conversationId; // Capture for closure
+    
     try {
       setIsLoading(true);
       const response = await api.get<Message[]>(`/conversation/${conversationId}/logs`, {
         params: { conversation_id: conversationId, limit: 50 },
       });
-      if (response.ok && response.data) {
-        // console.log('[useChat] Fetched messages:', response.data.length);
-        const msgs = response.data.map(m => {
-          // console.log('[useChat] Message additional_data:', m.additional_data);
-          // console.log('[useChat] Message files:', m.files);
-          
-          // Ensure additional_data is preserved and properly formatted
-          const message: Message = {
-            ...m,
-            role: `${m.role}` === "assistant" ? Role.Bot : Role.User,
-            additional_data: m.additional_data || [],
-          };
-          
-          // Web compatibility: If files array contains items with data_type, treat them as additional_data
-          if (m.files && m.files.length > 0) {
-            m.files.forEach(file => {
-              // If file has data_type (from web), it should be in additional_data format
-              if (file.data_type && ['img', 'video', 'voice'].includes(file.data_type)) {
-                if (!message.additional_data) {
-                  message.additional_data = [];
+      
+      // Only update messages if this is still the current conversation
+      if (currentConversationIdRef.current === fetchConvId) {
+        if (response.ok && response.data) {
+          // console.log('[useChat] Fetched messages:', response.data.length);
+          const msgs = response.data.map(m => {
+            // console.log('[useChat] Message additional_data:', m.additional_data);
+            // console.log('[useChat] Message files:', m.files);
+            
+            // Ensure additional_data is preserved and properly formatted
+            const message: Message = {
+              ...m,
+              role: `${m.role}` === "assistant" ? Role.Bot : Role.User,
+              additional_data: m.additional_data || [],
+            };
+            
+            // Web compatibility: If files array contains items with data_type, treat them as additional_data
+            if (m.files && m.files.length > 0) {
+              m.files.forEach(file => {
+                // If file has data_type (from web), it should be in additional_data format
+                if (file.data_type && ['img', 'video', 'voice'].includes(file.data_type)) {
+                  if (!message.additional_data) {
+                    message.additional_data = [];
+                  }
+                  // Add to additional_data if not already there
+                  const alreadyExists = message.additional_data.some(
+                    ad => ad.data === (file.s3_url || file.file_path)
+                  );
+                  if (!alreadyExists) {
+                    message.additional_data.push({
+                      data_type: file.data_type,
+                      data: file.s3_url || file.file_path || ''
+                    });
+                  }
                 }
-                // Add to additional_data if not already there
-                const alreadyExists = message.additional_data.some(
-                  ad => ad.data === (file.s3_url || file.file_path)
-                );
-                if (!alreadyExists) {
-                  message.additional_data.push({
-                    data_type: file.data_type,
-                    data: file.s3_url || file.file_path || ''
-                  });
-                }
-              }
-            });
-          }
-          
-          // console.log('[useChat] Processed message with additional_data:', message.additional_data);
-          return message;
-        });
-        setMessages(msgs || []);
+              });
+            }
+            
+            // console.log('[useChat] Processed message with additional_data:', message.additional_data);
+            return message;
+          });
+          setMessages(msgs || []);
+        }
+      } else {
+        console.log('[Chat] Fetch cancelled - conversation changed');
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('[Chat] Fetch messages cancelled');
+        return;
+      }
       // console.error('Fetch messages error:', error);
     } finally {
+      fetchControllerRef.current = null;
       setIsLoading(false);
     }
   }, []);
