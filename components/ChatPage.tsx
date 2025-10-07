@@ -32,10 +32,26 @@ import { RefreshControl } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { storage } from '@/hooks/useMMKVStorage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '@/hooks/useAuth';
+
+// Helper function to get time-based greeting
+const getGreeting = (firstName: string = 'there') => {
+  const hour = new Date().getHours();
+  
+  if (hour >= 5 && hour < 12) {
+    return `Good morning, ${firstName}`;
+  } else if (hour >= 12 && hour < 17) {
+    return `Good afternoon, ${firstName}`;
+  } else {
+    // 5 PM - 4:59 AM shows "Good evening"
+    return `Good evening, ${firstName}`;
+  }
+};
 
 const ChatPage = () => {
 
   const { params } = useRoute();
+  const { user } = useAuth();
 
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -47,9 +63,9 @@ const ChatPage = () => {
   
   // Log model initialization on mount
   useEffect(() => {
-    console.log('[ChatPage] Models loaded on launch:');
-    console.log('  Cloud Model:', selectedCloudModel?.displayName, '(ID:', selectedCloudModel?.id + ')');
-    console.log('  Local Model:', selectedLocalModel?.displayName, '(ID:', selectedLocalModel?.id + ')');
+    // console.log('[ChatPage] Models loaded on launch:');
+    // console.log('  Cloud Model:', selectedCloudModel?.displayName, '(ID:', selectedCloudModel?.id + ')');
+    // console.log('  Local Model:', selectedLocalModel?.displayName, '(ID:', selectedLocalModel?.id + ')');
   }, []);
 
   // States
@@ -210,7 +226,7 @@ const ChatPage = () => {
         messageListRef.current.scrollToOffset({ offset: 0, animated: true });
         setUserHasScrolledUp(false);
       } catch (error) {
-        console.error('Failed to scroll to bottom:', error);
+        // console.error('Failed to scroll to bottom:', error);
       }
     }
   };
@@ -234,7 +250,7 @@ const ChatPage = () => {
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      console.error('Error switching model:', error);
+      // console.error('Error switching model:', error);
       Alert.alert('Error', 'Failed to switch model');
     }
   };
@@ -335,7 +351,6 @@ const ChatPage = () => {
           source={{ uri: selectedImage?.uri, cache: 'force-cache' }}
           style={styles.previewImage}
           resizeMode="cover"
-          onError={(e) => console.error('Error loading inline image:', e.nativeEvent.error)}
           testID="inline-image"
         />
       </View>
@@ -395,7 +410,7 @@ const ChatPage = () => {
                 }
               ]}
             >
-             <Text style={styles.logoText}>Odyssey</Text>
+             <Text style={styles.logoText}>{getGreeting(user?.first_name)}</Text>
               <Text style={styles.welcomeText}>How can I assist you today?</Text>
               {(selectedCloudModel || selectedLocalModel) && (
                 <Text style={[styles.modelNameText, { color: theme.isDark ? theme.colors.greyLight : theme.colors.grey }]}>
@@ -408,7 +423,6 @@ const ChatPage = () => {
           )}
           <CustomView style={{ flex: 1 }}>
             <FlashList
-              style={{ flex: 1 }}
               contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}
               showsVerticalScrollIndicator={false}
               ref={messageListRef}

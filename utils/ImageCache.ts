@@ -60,9 +60,9 @@ export async function clearAllImageCache(): Promise<void> {
   try {
     await Image.clearMemoryCache();
     await Image.clearDiskCache();
-    console.log('[ImageCache] Successfully cleared all image caches');
+    // console.log('[ImageCache] Successfully cleared all image caches');
   } catch (error) {
-    console.error('[ImageCache] Error clearing cache:', error);
+    // console.error('[ImageCache] Error clearing cache:', error);
     throw error;
   }
 }
@@ -74,9 +74,9 @@ export async function clearAllImageCache(): Promise<void> {
 export async function clearMemoryCache(): Promise<void> {
   try {
     await Image.clearMemoryCache();
-    console.log('[ImageCache] Successfully cleared memory cache');
+    // console.log('[ImageCache] Successfully cleared memory cache');
   } catch (error) {
-    console.error('[ImageCache] Error clearing memory cache:', error);
+    // console.error('[ImageCache] Error clearing memory cache:', error);
     throw error;
   }
 }
@@ -88,9 +88,9 @@ export async function clearMemoryCache(): Promise<void> {
 export async function clearDiskCache(): Promise<void> {
   try {
     await Image.clearDiskCache();
-    console.log('[ImageCache] Successfully cleared disk cache');
+    // console.log('[ImageCache] Successfully cleared disk cache');
   } catch (error) {
-    console.error('[ImageCache] Error clearing disk cache:', error);
+    // console.error('[ImageCache] Error clearing disk cache:', error);
     throw error;
   }
 }
@@ -103,9 +103,9 @@ export async function prefetchImages(urls: string[]): Promise<void> {
   try {
     const prefetchPromises = urls.map(url => Image.prefetch(url));
     await Promise.all(prefetchPromises);
-    console.log(`[ImageCache] Successfully prefetched ${urls.length} images`);
+    // console.log(`[ImageCache] Successfully prefetched ${urls.length} images`);
   } catch (error) {
-    console.error('[ImageCache] Error prefetching images:', error);
+    // console.error('[ImageCache] Error prefetching images:', error);
     // Don't throw - prefetch failures shouldn't break the app
   }
 }
@@ -137,7 +137,7 @@ export async function getEstimatedCacheSize(): Promise<{
       canCalculate: false,
     };
   } catch (error) {
-    console.error('[ImageCache] Error getting cache size:', error);
+    // console.error('[ImageCache] Error getting cache size:', error);
     return {
       disk: 0,
       canCalculate: false,
@@ -155,18 +155,18 @@ export async function smartCacheCleanup(): Promise<void> {
     
     // If we can't calculate cache size, do a periodic cleanup anyway
     if (!cacheSize.canCalculate) {
-      console.log('[ImageCache] Running periodic cache cleanup');
+      // console.log('[ImageCache] Running periodic cache cleanup');
       await clearMemoryCache(); // Clear memory only, keep disk cache
       return;
     }
     
     // Clear if over warning threshold
     if (cacheSize.disk > CACHE_LIMITS.DISK * CACHE_LIMITS.WARNING_THRESHOLD) {
-      console.log('[ImageCache] Cache size exceeds threshold, clearing disk cache');
+      // console.log('[ImageCache] Cache size exceeds threshold, clearing disk cache');
       await clearDiskCache();
     }
   } catch (error) {
-    console.error('[ImageCache] Error in smart cleanup:', error);
+    // console.error('[ImageCache] Error in smart cleanup:', error);
     // Continue without breaking the app
   }
 }
@@ -214,8 +214,8 @@ export function getRecommendedCachePolicy(imageSize?: number, isGenerated?: bool
  * Call this on app startup
  */
 export function initializeImageCache(): void {
-  console.log('[ImageCache] Image cache initialized with expo-image');
-  console.log('[ImageCache] Memory limit:', CACHE_LIMITS.MEMORY / 1024 / 1024, 'MB');
-  console.log('[ImageCache] Disk limit:', CACHE_LIMITS.DISK / 1024 / 1024, 'MB');
+  // console.log('[ImageCache] Image cache initialized with expo-image');
+  // console.log('[ImageCache] Memory limit:', CACHE_LIMITS.MEMORY / 1024 / 1024, 'MB');
+  // console.log('[ImageCache] Disk limit:', CACHE_LIMITS.DISK / 1024 / 1024, 'MB');
 }
 

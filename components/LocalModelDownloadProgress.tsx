@@ -23,7 +23,7 @@ export const LocalModelDownloadProgress: React.FC<LocalModelDownloadProgressProp
 
   // Don't show if model is ready
   if (isReady) {
-    console.log('[LocalModelProgress] Hidden - model is ready');
+    // console.log('[LocalModelProgress] Hidden - model is ready');
     return null;
   }
 

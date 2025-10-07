@@ -82,13 +82,13 @@ export const handleError = (error: any, context?: string, options?: { showAlert?
   const appError = parseApiError(error);
   
   // Log to console for debugging
-  console.error(`[${context || 'App'}] Error:`, {
-    message: appError.message,
-    code: appError.code,
-    status: appError.status,
-    detail: appError.detail,
-    stack: appError.stack,
-  });
+  // console.error(`[${context || 'App'}] Error:`, {
+  //   message: appError.message,
+  //   code: appError.code,
+  //   status: appError.status,
+  //   detail: appError.detail,
+  //   stack: appError.stack,
+  // });
 
   // Provide haptic feedback for errors
   if (haptic) {
@@ -115,11 +115,11 @@ export const handleError = (error: any, context?: string, options?: { showAlert?
 export const handleErrorSilent = (error: any, context?: string): AppError => {
   const appError = parseApiError(error);
   
-  console.error(`[${context || 'App'}] Silent Error:`, {
-    message: appError.message,
-    code: appError.code,
-    status: appError.status,
-  });
+  // console.error(`[${context || 'App'}] Silent Error:`, {
+  //   message: appError.message,
+  //   code: appError.code,
+  //   status: appError.status,
+  // });
   
   return appError;
 };

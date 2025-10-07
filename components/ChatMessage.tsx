@@ -327,7 +327,7 @@ const ChatMessage = memo(({
         message: content,
       });
     } catch (error) {
-      console.error('Error sharing message:', error);
+      // console.error('Error sharing message:', error);
     }
   }, [content]);
 
@@ -411,11 +411,11 @@ const ChatMessage = memo(({
   // Render generated images and videos from additional_data
   const renderAdditionalData = () => {
     if (!additional_data || additional_data.length === 0) {
-      console.log('[ChatMessage] No additional_data to render');
+      // console.log('[ChatMessage] No additional_data to render');
       return null;
     }
 
-    console.log('[ChatMessage] Rendering additional_data:', JSON.stringify(additional_data, null, 2));
+    // console.log('[ChatMessage] Rendering additional_data:', JSON.stringify(additional_data, null, 2));
 
     
     const videos = additional_data.filter(item => item.data_type === 'video');
@@ -438,7 +438,6 @@ const ChatMessage = memo(({
                 style={styles.generatedVideo}
                 useNativeControls
                 isLooping={false}
-                onError={(e) => console.error('Generated video load error:', e)}
               />
               <TouchableOpacity 
                 style={styles.videoFullscreenButton}
@@ -504,9 +503,9 @@ const ChatMessage = memo(({
     // Get the image URL with proper priority handling
     const imageUrl = instructionForImageChatDisplay();
     
-    console.log('[ChatMessage] renderImageContent - imageUrl:', imageUrl);
-    console.log('[ChatMessage] renderImageContent - files:', files);
-    console.log('[ChatMessage] renderImageContent - imageData:', imageData);
+    // console.log('[ChatMessage] renderImageContent - imageUrl:', imageUrl);
+    // console.log('[ChatMessage] renderImageContent - files:', files);
+    // console.log('[ChatMessage] renderImageContent - imageData:', imageData);
 
     return (
       <ContextMenu.Root>

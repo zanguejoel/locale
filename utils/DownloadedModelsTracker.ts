@@ -28,7 +28,7 @@ export class DownloadedModelsTracker {
       const data: ModelDownloadInfo[] = JSON.parse(stored);
       return data.map(m => m.modelId);
     } catch (error) {
-      console.error('[DownloadedModelsTracker] Error getting downloaded models:', error);
+      // console.error('[DownloadedModelsTracker] Error getting downloaded models:', error);
       return [];
     }
   }
@@ -43,7 +43,7 @@ export class DownloadedModelsTracker {
       
       return JSON.parse(stored);
     } catch (error) {
-      console.error('[DownloadedModelsTracker] Error getting download info:', error);
+      // console.error('[DownloadedModelsTracker] Error getting download info:', error);
       return [];
     }
   }
@@ -83,9 +83,9 @@ export class DownloadedModelsTracker {
       }
       
       storage.set(DOWNLOADED_MODELS_KEY, JSON.stringify(current));
-      console.log('[DownloadedModelsTracker] Marked as downloaded:', modelId);
+      // console.log('[DownloadedModelsTracker] Marked as downloaded:', modelId);
     } catch (error) {
-      console.error('[DownloadedModelsTracker] Error marking downloaded:', error);
+      // console.error('[DownloadedModelsTracker] Error marking downloaded:', error);
     }
   }
 
@@ -102,7 +102,7 @@ export class DownloadedModelsTracker {
         storage.set(DOWNLOADED_MODELS_KEY, JSON.stringify(current));
       }
     } catch (error) {
-      console.error('[DownloadedModelsTracker] Error updating last used:', error);
+      // console.error('[DownloadedModelsTracker] Error updating last used:', error);
     }
   }
 
@@ -114,9 +114,9 @@ export class DownloadedModelsTracker {
       const current = this.getDownloadedModels();
       const filtered = current.filter(m => m.modelId !== modelId);
       storage.set(DOWNLOADED_MODELS_KEY, JSON.stringify(filtered));
-      console.log('[DownloadedModelsTracker] Removed:', modelId);
+      // console.log('[DownloadedModelsTracker] Removed:', modelId);
     } catch (error) {
-      console.error('[DownloadedModelsTracker] Error removing model:', error);
+      // console.error('[DownloadedModelsTracker] Error removing model:', error);
     }
   }
 
@@ -126,9 +126,9 @@ export class DownloadedModelsTracker {
   static clearAll(): void {
     try {
       storage.delete(DOWNLOADED_MODELS_KEY);
-      console.log('[DownloadedModelsTracker] Cleared all tracked models');
+      // console.log('[DownloadedModelsTracker] Cleared all tracked models');
     } catch (error) {
-      console.error('[DownloadedModelsTracker] Error clearing:', error);
+      // console.error('[DownloadedModelsTracker] Error clearing:', error);
     }
   }
 

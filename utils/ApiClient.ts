@@ -132,7 +132,7 @@ class ApiClient {
           }
           return config;
         } catch (error) {
-          console.error('Cache interceptor error:', error);
+          // console.error('Cache interceptor error:', error);
           return config;
         }
       },
@@ -148,7 +148,7 @@ class ApiClient {
           }
           return response;
         } catch (error) {
-          console.error('Cache response error:', error);
+          // console.error('Cache response error:', error);
           return response;
         }
       },
@@ -266,7 +266,7 @@ class ApiClient {
       currentRetryCount < CONFIG.MAX_RETRIES
     ) {
       this.retryCount.set(this.getCacheKey(requestConfig), currentRetryCount + 1);
-      console.log(`Retrying request (${currentRetryCount + 1}/${CONFIG.MAX_RETRIES})...`);
+      // console.log(`Retrying request (${currentRetryCount + 1}/${CONFIG.MAX_RETRIES})...`);
       return this.api.axiosInstance(requestConfig);
     }
 
@@ -281,11 +281,11 @@ class ApiClient {
       } */
 
       if (response.problem === 'NETWORK_ERROR') {
-        console.error({
-          message: 'Please check your internet connection.',
-          duration: 5000,
-          title: 'Network Error',
-        });
+        // console.error({
+        //   message: 'Please check your internet connection.',
+        //   duration: 5000,
+        //   title: 'Network Error',
+        // });
       }
     });
   }
@@ -322,7 +322,7 @@ class ApiClient {
     }
     this.cache.clear();
     this.retryCount.clear();
-    console.log('[ApiClient] Cleanup complete - intervals cleared and cache purged');
+    // console.log('[ApiClient] Cleanup complete - intervals cleared and cache purged');
   }
 }
 

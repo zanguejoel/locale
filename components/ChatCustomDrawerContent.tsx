@@ -130,7 +130,7 @@ export const CustomDrawerContent = (props: any) => {
                             Alert.alert('Error', 'Failed to delete chat');
                         }
                     } catch (error) {
-                        console.error('Error deleting chat:', error);
+                        // console.error('Error deleting chat:', error);
                         Alert.alert('Error', 'An unexpected error occurred');
                     } finally {
                         setLocalLoading(false);
@@ -165,7 +165,7 @@ export const CustomDrawerContent = (props: any) => {
                                 Alert.alert('Error', 'Failed to rename chat');
                             }
                         } catch (error) {
-                            console.error('Error renaming chat:', error);
+                            // console.error('Error renaming chat:', error);
                             Alert.alert('Error', 'An unexpected error occurred');
                         } finally {
                             setLocalLoading(false);
@@ -234,7 +234,7 @@ export const CustomDrawerContent = (props: any) => {
                     }
                 }
             } catch (error) {
-                console.error('Error handling model switch:', error);
+                // console.error('Error handling model switch:', error);
                 Alert.alert('Error', 'Failed to switch model');
             } finally {
                 setLocalLoading(false);
@@ -274,7 +274,7 @@ export const CustomDrawerContent = (props: any) => {
             setHasMore(true);
             await fetchConversation(query, limitRef.current);
         } catch (error) {
-            console.error("Error refreshing:", error);
+            // console.error("Error refreshing:", error);
         } finally {
             setTimeout(() => {
                 setIsRefreshing(false);
@@ -525,7 +525,7 @@ export const CustomDrawerContent = (props: any) => {
             </TouchableOpacity>
 
             {!isShowData ? <></> :
-                <>
+                <View style={{ flex: 1 }}>
                     {filteredConversations.length === 0 ? (
                         <View style={styles.emptyStateContainer}>
                             <Ionicons name="chatbubble-outline" size={50} color={Colors.common.greyLight} />
@@ -550,10 +550,9 @@ export const CustomDrawerContent = (props: any) => {
                             onEndReached={loadMoreConversations}
                             onEndReachedThreshold={0.5}
                             contentContainerStyle={styles.scrollViewContent}
-                            style={{ flex: 1 }}
                         />
                     )}
-                </>
+                </View>
             }
             <View style={[styles.footerContainer, { paddingBottom: 10 + bottom }]}>
                 <Link href="/(modal)/settings" asChild>

@@ -49,7 +49,7 @@ export const StorageMonitor: React.FC = () => {
         percentUsed: deviceInfo.percentUsed,
       });
     } catch (error) {
-      console.error('[StorageMonitor] Error loading storage info:', error);
+      // console.error('[StorageMonitor] Error loading storage info:', error);
     } finally {
       setLoading(false);
     }

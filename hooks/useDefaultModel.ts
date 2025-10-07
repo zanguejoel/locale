@@ -15,12 +15,12 @@ export const useDefaultModel = (): Model => {
       // Initialize storage with default if not set
       if (!storedModelId) {
         storage.set('default_model_id', DEFAULT_MODEL_ID);
-        console.log('[DefaultModel] Initialized default cloud model:', DEFAULT_MODEL_ID);
+        // console.log('[DefaultModel] Initialized default cloud model:', DEFAULT_MODEL_ID);
       }
       
       return getModelById(modelId) || getModelById(DEFAULT_MODEL_ID)!;
     } catch (error) {
-      console.error('Error reading default model from storage:', error);
+      // console.error('Error reading default model from storage:', error);
       return getModelById(DEFAULT_MODEL_ID)!;
     }
   });
@@ -38,7 +38,7 @@ export const useDefaultModel = (): Model => {
             }
           }
         } catch (error) {
-          console.error('Error updating default model:', error);
+          // console.error('Error updating default model:', error);
         }
       }
     });
@@ -60,7 +60,7 @@ export const getDefaultModelId = (): string => {
     const storedModelId = storage.getString('default_model_id');
     return storedModelId || DEFAULT_MODEL_ID;
   } catch (error) {
-    console.error('Error reading default model ID:', error);
+    // console.error('Error reading default model ID:', error);
     return DEFAULT_MODEL_ID;
   }
 };

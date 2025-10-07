@@ -22,7 +22,7 @@ export const processStream = async (
   setStreamWorking: (v: boolean) => void,
   setAdditionalData?: (a: any[]) => void
 ): Promise<StreamData | null> => {
-  console.log("[ChatStream] processStream called, response exists:", !!response);
+  // console.log("[ChatStream] processStream called, response exists:", !!response);
   setStreamWorking(true);
   let res: StreamData | null = null;
   let buffer = '';
@@ -30,7 +30,7 @@ export const processStream = async (
   let chunkCount = 0;
 
   if (!response) {
-    console.error("[ChatStream] Error: No response stream");
+    // console.error("[ChatStream] Error: No response stream");
     handleError("No response stream available");
     setStreamWorking(false);
     return null;
@@ -39,12 +39,12 @@ export const processStream = async (
   const decoder = new TextDecoder();
 
   try {
-    console.log("[ChatStream] Getting reader...");
+    // console.log("[ChatStream] Getting reader...");
     reader = response.getReader();
-    console.log("[ChatStream] Reader obtained successfully");
+    // console.log("[ChatStream] Reader obtained successfully");
 
     if (!reader) {
-      console.error("[ChatStream] Error: Unable to get stream reader");
+      // console.error("[ChatStream] Error: Unable to get stream reader");
       handleError("Unable to get stream reader");
       setStreamWorking(false);
       return null;
@@ -56,20 +56,20 @@ export const processStream = async (
         chunkCount++;
         
         if (done) {
-          console.log("[ChatStream] Stream completed after", chunkCount, "chunks");
+          // console.log("[ChatStream] Stream completed after", chunkCount, "chunks");
           break;
         }
 
         if (value) {
           // Decode the chunk
           const chunk = decoder.decode(value, { stream: true });
-          console.log(`[ChatStream] Chunk ${chunkCount}:`, chunk.substring(0, 100));
+          // console.log(`[ChatStream] Chunk ${chunkCount}:`, chunk.substring(0, 100));
           buffer += chunk;
 
           // Process accumulated buffer
           const { results, remaining } = processJSONChunks(buffer);
           buffer = remaining;
-          console.log(`[ChatStream] Parsed ${results.length} results from chunk`);
+          // console.log(`[ChatStream] Parsed ${results.length} results from chunk`);
 
           // Handle each parsed result
           for (const data of results) {
@@ -90,7 +90,7 @@ export const processStream = async (
                 case 'meta':
                   // Handle metadata during streaming (e.g., generated images)
                   if (data?.data?.additional_data) {
-                    console.log('[ChatStream] Received meta with additional_data:', data.data.additional_data);
+                    // console.log('[ChatStream] Received meta with additional_data:', data.data.additional_data);
                     setAdditionalData?.(data.data.additional_data);
                   }
                   break;
@@ -98,29 +98,29 @@ export const processStream = async (
                 case 'final':
                   res = data;
                   if (data?.data?.additional_data) {
-                    console.log('[ChatStream] Received final with additional_data:', data.data.additional_data);
+                    // console.log('[ChatStream] Received final with additional_data:', data.data.additional_data);
                     setAdditionalData?.(data.data.additional_data);
                   }
                   break;
 
                 case 'error':
                   if (data.error) {
-                    console.error(`[ChatStream] Stream error: ${data.error}`);
+                    // console.error(`[ChatStream] Stream error: ${data.error}`);
                     handleError(data.error);
                   }
                   break;
 
                 default:
-                  console.warn('[ChatStream] Unknown stream data type:', data.type, data);
+                  // console.warn('[ChatStream] Unknown stream data type:', data.type, data);
               }
             } catch (e) {
-              console.error(`[ChatStream] Error processing stream data: ${e instanceof Error ? e.message : String(e)}`);
-              console.error(`[ChatStream] Problematic data:`, data);
+              // console.error(`[ChatStream] Error processing stream data: ${e instanceof Error ? e.message : String(e)}`);
+              // console.error(`[ChatStream] Problematic data:`, data);
             }
           }
         }
       } catch (readError) {
-        console.error('[ChatStream] Error reading stream:', readError);
+        // console.error('[ChatStream] Error reading stream:', readError);
         // Continue trying to read unless it's a critical error
         if (readError instanceof TypeError || readError instanceof ReferenceError) {
           handleError(`Stream reading error: ${readError.message}`);
@@ -131,7 +131,7 @@ export const processStream = async (
 
     // Process any remaining buffer
     if (buffer.trim()) {
-      console.warn('[ChatStream] Unprocessed buffer:', buffer);
+      // console.warn('[ChatStream] Unprocessed buffer:', buffer);
       try {
         const { results } = processJSONChunks(buffer + '\n');
         for (const data of results) {
@@ -140,11 +140,11 @@ export const processStream = async (
           }
         }
       } catch (e) {
-        console.error('[ChatStream] Error processing final buffer:', e);
+        // console.error('[ChatStream] Error processing final buffer:', e);
       }
     }
   } catch (error) {
-    console.error('[ChatStream] Stream processing error:', error);
+    // console.error('[ChatStream] Stream processing error:', error);
     handleError(error instanceof Error ? error.message : String(error));
   } finally {
     setStreamWorking(false);
@@ -155,7 +155,7 @@ export const processStream = async (
         await reader.cancel();
         reader.releaseLock();
       } catch (e) {
-        console.warn('[ChatStream] Error releasing reader:', e);
+        // console.warn('[ChatStream] Error releasing reader:', e);
       }
     }
   }
@@ -222,7 +222,7 @@ export const processJSONChunks = (text: string): { results: StreamData[]; remain
             }
           }
         } catch (e) {
-          console.warn('[ChatStream] Error parsing SSE data:', e, 'Raw:', trimmedChunk);
+          // console.warn('[ChatStream] Error parsing SSE data:', e, 'Raw:', trimmedChunk);
         }
       } else {
         // Try to parse as raw JSON (fallback for non-SSE format)
@@ -240,7 +240,7 @@ export const processJSONChunks = (text: string): { results: StreamData[]; remain
       }
     }
   } catch (e) {
-    console.error('[ChatStream] Error processing chunks:', e);
+    // console.error('[ChatStream] Error processing chunks:', e);
   }
   
   return { results, remaining };

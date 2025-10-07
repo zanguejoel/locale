@@ -83,7 +83,7 @@ const Page = () => {
     try {
       await downloadAndSaveImage(imgUrl);
     } catch (err) {
-      console.error(err);
+      // console.error(err);
     } finally {
       setProcessLoading(false);
       setImageSaved(true);
@@ -96,7 +96,7 @@ const Page = () => {
     try {
       await shareImage(url as string)
     } catch (err) {
-      console.error(err)
+      // console.error(err)
     } finally {
       setProcessLoading(false);
     }

@@ -16,7 +16,7 @@ export const saveToken = async (token: string): Promise<void> => {
   try {
     await SecureStore.setItemAsync(TOKEN_KEY, token);
   } catch (error) {
-    console.error('Failed to save auth token:', error);
+    // console.error('Failed to save auth token:', error);
     throw new Error('Failed to save authentication token');
   }
 };
@@ -29,7 +29,7 @@ export const getToken = async (): Promise<string | null> => {
   try {
     return await SecureStore.getItemAsync(TOKEN_KEY);
   } catch (error) {
-    console.error('Failed to retrieve auth token:', error);
+    // console.error('Failed to retrieve auth token:', error);
     return null;
   }
 };
@@ -42,7 +42,7 @@ export const deleteToken = async (): Promise<void> => {
   try {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
   } catch (error) {
-    console.error('Failed to delete auth token:', error);
+    // console.error('Failed to delete auth token:', error);
     // Don't throw - cleanup is best effort
   }
 };
@@ -55,7 +55,7 @@ export const saveRefreshToken = async (refreshToken: string): Promise<void> => {
   try {
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
   } catch (error) {
-    console.error('Failed to save refresh token:', error);
+    // console.error('Failed to save refresh token:', error);
     throw new Error('Failed to save refresh token');
   }
 };
@@ -68,7 +68,7 @@ export const getRefreshToken = async (): Promise<string | null> => {
   try {
     return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
   } catch (error) {
-    console.error('Failed to retrieve refresh token:', error);
+    // console.error('Failed to retrieve refresh token:', error);
     return null;
   }
 };
@@ -80,7 +80,7 @@ export const deleteRefreshToken = async (): Promise<void> => {
   try {
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
   } catch (error) {
-    console.error('Failed to delete refresh token:', error);
+    // console.error('Failed to delete refresh token:', error);
   }
 };
 

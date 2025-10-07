@@ -67,7 +67,7 @@ export const RevenueCatProvider = ({ children }: any) => {
     // Cleanup on unmount
     return () => {
       isMounted = false;
-      console.log('[RevenueCat] Component unmounting');
+      // console.log('[RevenueCat] Component unmounting');
     };
   }, []);
 

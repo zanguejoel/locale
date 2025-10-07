@@ -14,6 +14,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { models, Model } from '@/constants/Models';
 import Colors from '@/constants/Colors';
+import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
+import { ModelEvent } from '@/types/mixpanel';
 
 interface ModelSelectorModalProps {
   visible: boolean;
@@ -33,7 +35,18 @@ const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   const [tempSelectedId, setTempSelectedId] = useState(selectedModelId);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    const selectedModel = models.find(m => m.id === tempSelectedId);
+    const previousModel = models.find(m => m.id === selectedModelId);
+    
+    // Track model selection
+    await mixpanelService.trackModel(ModelEvent.MODEL_SELECTED, {
+      model_id: tempSelectedId,
+      model_name: selectedModel?.displayName || tempSelectedId,
+      model_type: 'cloud',
+      previous_model_id: selectedModelId !== tempSelectedId ? selectedModelId : undefined,
+    });
+    
     onSelectModel(tempSelectedId);
     onClose();
   };

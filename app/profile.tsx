@@ -15,6 +15,9 @@ import EditProfileModal from "@/components/modals/EditProfileModal/EditProfileMo
 import { useTheme } from "@/hooks/useTheme";
 import { Theme } from "@/constants/Types";
 import Colors from "@/constants/Colors";
+import { mixpanelService } from "@/utils/mixpanel/MixpanelService";
+import { SettingsEvent } from "@/types/mixpanel";
+import { useEffect } from "react";
 
 // Define profile-specific form data type
 interface ProfileFormData {
@@ -39,6 +42,11 @@ const Profile = () => {
     postalCode: user?.postal_code || '',
     state: user?.state || ''
   });
+
+  // Track profile viewed
+  useEffect(() => {
+    mixpanelService.trackSettings(SettingsEvent.PROFILE_VIEWED);
+  }, []);
 
   const handleInputChange = (field: keyof ProfileFormData, value: string) => {
     setFormData(prev => ({
@@ -83,6 +91,21 @@ const Profile = () => {
       password: '',
       confirmPassword: '',
     };
+    
+    // Determine which fields were updated
+    const updatedFields: string[] = [];
+    if (formData.firstName !== user?.first_name) updatedFields.push('firstName');
+    if (formData.lastName !== user?.last_name) updatedFields.push('lastName');
+    if (formData.address !== user?.address) updatedFields.push('address');
+    if (formData.city !== user?.city) updatedFields.push('city');
+    if (formData.postalCode !== user?.postal_code) updatedFields.push('postalCode');
+    if (formData.state !== user?.state) updatedFields.push('state');
+    
+    // Track profile update
+    await mixpanelService.trackSettings(SettingsEvent.PROFILE_UPDATED, {
+      fields_updated: updatedFields,
+    });
+    
     await updateUser(authFormData, '', {} as any);
     setIsModalVisible(false);
   };

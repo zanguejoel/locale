@@ -14,6 +14,9 @@ import LocalModelSelectorModal from '@/components/modals/LocalModelSelectorModal
 import { DEFAULT_LOCAL_MODEL_ID, getLocalModelById } from '@/constants/LocalModels';
 import { isLocalLLMSupported } from '@/utils/DeviceCapabilities';
 import { GradientBackground } from '@/components/GradientBackground';
+import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
+import { SettingsEvent } from '@/types/mixpanel';
+import { useEffect } from 'react';
 
 const rawPage = [{
   id: 1,
@@ -71,16 +74,41 @@ const Page = () => {
   const [defaultModelId, setDefaultModelId] = useMMKVStorage('default_model_id', DEFAULT_MODEL_ID);
   const [defaultLocalModelId, setDefaultLocalModelId] = useMMKVStorage('default_local_model_id', DEFAULT_LOCAL_MODEL_ID);
 
+  // Track settings opened
+  useEffect(() => {
+    mixpanelService.trackSettings(SettingsEvent.SETTINGS_OPENED);
+  }, []);
+
   const handleSignOut = async () => {
     await createNewConversation()
     signOut()
   }
 
-  const handleModelSelect = (modelId: string) => {
+  const handleModelSelect = async (modelId: string) => {
+    const oldModel = getModelById(defaultModelId);
+    const newModel = getModelById(modelId);
+    
+    // Track default model changed
+    await mixpanelService.trackSettings(SettingsEvent.DEFAULT_MODEL_CHANGED, {
+      setting_name: 'default_cloud_model',
+      old_value: oldModel?.displayName || defaultModelId,
+      new_value: newModel?.displayName || modelId,
+    });
+    
     setDefaultModelId(modelId);
   };
 
-  const handleLocalModelSelect = (modelId: string) => {
+  const handleLocalModelSelect = async (modelId: string) => {
+    const oldModel = getLocalModelById(defaultLocalModelId);
+    const newModel = getLocalModelById(modelId);
+    
+    // Track default local model changed
+    await mixpanelService.trackSettings(SettingsEvent.DEFAULT_MODEL_CHANGED, {
+      setting_name: 'default_local_model',
+      old_value: oldModel?.displayName || defaultLocalModelId,
+      new_value: newModel?.displayName || modelId,
+    });
+    
     setDefaultLocalModelId(modelId);
   };
 
@@ -88,7 +116,12 @@ const Page = () => {
   const selectedLocalModel = getLocalModelById(defaultLocalModelId);
   const modelSize = selectedLocalModel?.size || '~1.2GB';
 
-  const handleInstruction = (type: string) => {
+  const handleInstruction = async (type: string) => {
+    // Track settings section viewed
+    await mixpanelService.trackSettings(SettingsEvent.SETTINGS_SECTION_VIEWED, {
+      section: type,
+    });
+    
     switch (type) {
       case 'profile':
         return router.push('/profile')

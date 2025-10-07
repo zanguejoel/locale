@@ -37,7 +37,7 @@ export class ModelFileManager {
     try {
       const exists = await RNFS.exists(modelsDir);
       if (!exists) {
-        console.log('[ModelFileManager] Models directory does not exist yet');
+        // console.log('[ModelFileManager] Models directory does not exist yet');
         return [];
       }
       
@@ -59,7 +59,7 @@ export class ModelFileManager {
         return b.size - a.size;
       });
     } catch (error) {
-      console.error('[ModelFileManager] Error getting downloaded models:', error);
+      // console.error('[ModelFileManager] Error getting downloaded models:', error);
       return [];
     }
   }
@@ -115,7 +115,7 @@ export class ModelFileManager {
       
       return null;
     } catch (error) {
-      console.error('[ModelFileManager] Error checking model:', model.id, error);
+      // console.error('[ModelFileManager] Error checking model:', model.id, error);
       return null;
     }
   }
@@ -135,7 +135,7 @@ export class ModelFileManager {
       const totalSize = await this.getDirectorySize(modelsDir);
       return totalSize;
     } catch (error) {
-      console.error('[ModelFileManager] Error calculating model storage:', error);
+      // console.error('[ModelFileManager] Error calculating model storage:', error);
       return 0;
     }
   }
@@ -158,7 +158,7 @@ export class ModelFileManager {
       
       return size;
     } catch (error) {
-      console.error('[ModelFileManager] Error calculating directory size:', error);
+      // console.error('[ModelFileManager] Error calculating directory size:', error);
       return 0;
     }
   }
@@ -172,15 +172,15 @@ export class ModelFileManager {
       const exists = await RNFS.exists(modelsDir);
       
       if (!exists) {
-        console.log('[ModelFileManager] No models to delete');
+        // console.log('[ModelFileManager] No models to delete');
         return true;
       }
       
       await RNFS.unlink(modelsDir);
-      console.log('[ModelFileManager] All models deleted successfully');
+      // console.log('[ModelFileManager] All models deleted successfully');
       return true;
     } catch (error) {
-      console.error('[ModelFileManager] Error deleting all models:', error);
+      // console.error('[ModelFileManager] Error deleting all models:', error);
       return false;
     }
   }
@@ -200,10 +200,10 @@ export class ModelFileManager {
       const sizeBefore = await this.getDirectorySize(cacheDir);
       await RNFS.unlink(cacheDir);
       
-      console.log('[ModelFileManager] Cache cleared:', this.formatFileSize(sizeBefore));
+      // console.log('[ModelFileManager] Cache cleared:', this.formatFileSize(sizeBefore));
       return sizeBefore;
     } catch (error) {
-      console.error('[ModelFileManager] Error clearing cache:', error);
+      // console.error('[ModelFileManager] Error clearing cache:', error);
       return 0;
     }
   }
@@ -260,7 +260,7 @@ export class ModelFileManager {
         percentUsed,
       };
     } catch (error) {
-      console.error('[ModelFileManager] Error getting device storage:', error);
+      // console.error('[ModelFileManager] Error getting device storage:', error);
       return {
         totalSpace: 0,
         freeSpace: 0,

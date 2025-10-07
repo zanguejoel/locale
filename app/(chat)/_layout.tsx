@@ -39,7 +39,7 @@ const Layout = () => {
       // Navigate to the new conversation
       router.push(`/(chat)/${newChatId}`);
     } catch (error) {
-      console.error('Error creating new chat:', error);
+      // console.error('Error creating new chat:', error);
       Alert.alert('Error', 'Failed to create a new chat');
 
       // If there's an error, still try to navigate to the new chat route

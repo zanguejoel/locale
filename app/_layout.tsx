@@ -20,6 +20,7 @@ import Colors from "@/constants/Colors";
 import { ChatProvider } from "@/hooks/useChat";
 import { useTheme } from "@/hooks/useTheme";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { MixpanelProvider } from "@/utils/mixpanel/MixpanelProvider";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -236,13 +237,15 @@ function RootLayoutNav() {
     <SafeAreaProvider >
     <AuthProvider>
       <ChatProvider>
-        <ThemeProvider
-          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-        >
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <Layout />
-          </GestureHandlerRootView>
-        </ThemeProvider>
+        <MixpanelProvider>
+          <ThemeProvider
+            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+          >
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <Layout />
+            </GestureHandlerRootView>
+          </ThemeProvider>
+        </MixpanelProvider>
       </ChatProvider>
     </AuthProvider>
     </SafeAreaProvider>

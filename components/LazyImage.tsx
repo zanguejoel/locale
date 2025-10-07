@@ -110,7 +110,7 @@ const LazyImage: React.FC<LazyImageProps> = memo(({
 
   const handleImageError = (error: any) => {
     // Only set error if we're sure it failed
-    console.warn('[LazyImage] Error loading image:', uri, error);
+    // console.warn('[LazyImage] Error loading image:', uri, error);
     setIsLoading(false);
     setHasError(true);
     onError?.(error);

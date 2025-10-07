@@ -44,9 +44,9 @@ export const HeaderModelSelector: React.FC<HeaderModelSelectorProps> = ({
       // Get downloaded model IDs from tracker
       const downloadedIds = DownloadedModelsTracker.getDownloadedModelIds();
       setDownloadedModelIds(new Set(downloadedIds));
-      console.log('[HeaderModelSelector] Downloaded models:', downloadedIds);
+      // console.log('[HeaderModelSelector] Downloaded models:', downloadedIds);
     } catch (error) {
-      console.error('[HeaderModelSelector] Error loading downloaded models:', error);
+      // console.error('[HeaderModelSelector] Error loading downloaded models:', error);
     } finally {
       setLoadingModels(false);
     }

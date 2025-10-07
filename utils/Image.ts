@@ -16,7 +16,7 @@ export const downloadAndSaveImage = async (imageUrl: string): Promise<any> => {
     await saveFile(response.uri);
 
   } catch (error) {
-    console.error('File system error:', error);
+    // console.error('File system error:', error);
   }
 };
 
@@ -44,7 +44,7 @@ export const downloadAndSaveVideo = async (videoUrl?: string) => {
 
     Alert.alert('Success', 'Video downloaded and saved successfully!');
   } catch (error) {
-    console.log('Error downloading video:', error);
+    // console.log('Error downloading video:', error);
   }
 };
 
@@ -66,7 +66,7 @@ const saveFile = async (fileUri: string) => {
         }
       }
     } catch (err) {
-      console.error('Save err: ', err);
+      // console.error('Save err: ', err);
     }
   } else if (status === 'denied') {
     Alert.alert('please allow permissions to download');
@@ -84,7 +84,7 @@ export const copyImageToClipboard = async (imageUrl: string) => {
 
     await Clipboard.setImageAsync(base64);
   } catch (err) {
-    console.error('FS Err: ', err);
+    // console.error('FS Err: ', err);
   }
 };
 
@@ -101,6 +101,6 @@ export const shareImage = async (imageUrl: string) => {
       UTI: 'public.image',
     });
   } catch (error) {
-    console.error('Error sharing image:', error);
+    // console.error('Error sharing image:', error);
   }
 };

@@ -13,6 +13,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '@/constants/Types';
 import { useTheme } from '@/hooks/useTheme';
 import { GradientBackground } from '@/components/GradientBackground';
+import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
+import { SubscriptionEvent } from '@/types/mixpanel';
+import { useEffect } from 'react';
 
 const WEB_PLANS_URL = 'https://www.odysseytech.ai/dashboard/settings?tab=plans';
 
@@ -35,6 +38,13 @@ const Page = () => {
   const theme = useTheme();
   const styles = getStyles(theme);
   const router = useRouter();
+
+  // Track plans page opened
+  useEffect(() => {
+    mixpanelService.trackSubscription(SubscriptionEvent.PLANS_PAGE_OPENED, {
+      source: 'settings',
+    });
+  }, []);
 
   // Define plans for display purposes
   const plans: Plan[] = [
@@ -85,12 +95,17 @@ const Page = () => {
 
   const handleManageSubscription = async () => {
     try {
+      // Track web dashboard opened
+      await mixpanelService.trackSubscription(SubscriptionEvent.WEB_DASHBOARD_OPENED, {
+        source: 'plans_page',
+      });
+      
       const canOpen = await Linking.canOpenURL(WEB_PLANS_URL);
       if (canOpen) {
         await Linking.openURL(WEB_PLANS_URL);
       }
     } catch (error) {
-      console.error('Error opening URL:', error);
+      // console.error('Error opening URL:', error);
     }
   };
 

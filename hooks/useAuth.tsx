@@ -5,6 +5,8 @@ import { User } from '@/constants/Types';
 import { saveToken, getToken, deleteToken } from '@/utils/SecureTokenManager';
 import { createSecureSession, getSecureSession } from '@/utils/SecureSession';
 import { formatAuthHeader } from '@/utils/AuthHelpers';
+import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
+import { AuthEvent } from '@/types/mixpanel';
 
 export interface FormData {
   firstName: string;
@@ -72,6 +74,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   const signIn = async (email: string, password: string) => {
+    // Track login started
+    await mixpanelService.trackAuth(AuthEvent.LOGIN_STARTED, {
+      method: 'email',
+    });
+
     try {
       setIsLoading(true);
       const response = await api.post<{ token: string } | any>('/auth/login', {
@@ -80,9 +87,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       if (!response.ok) {
         const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Login failed';
+        
+        // Track login failed
+        await mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
+          method: 'email',
+          error_message: typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage),
+        });
+        
         throw errorMessage;
       }
       if (!response.data?.token) {
+        // Track login failed
+        await mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
+          method: 'email',
+          error_message: 'No token received',
+        });
+        
         throw { detail: "Error, Try again later." }
       }
       
@@ -92,6 +112,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const userResponse = await api.get<User | any>('/auth/me');
       if (!(userResponse.ok && userResponse.data)) {
+        // Track login failed
+        await mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
+          method: 'email',
+          error_message: 'Failed to fetch user data',
+        });
+        
         throw { detail: "Error, Try again later." }
       }
 
@@ -100,9 +126,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (isMountedRef.current) {
         setUser(newUser);
+        
+        // Identify user in Mixpanel
+        await mixpanelService.identify(newUser.user_id.toString());
+        
+        // Set user profile
+        await mixpanelService.setUserProfile({
+          $email: newUser.email,
+          $name: `${newUser.first_name} ${newUser.last_name}`,
+          $created: newUser.created_at,
+          user_id: newUser.user_id.toString(),
+          account_created_date: newUser.created_at,
+          membership_tier: 'free', // Update if you have subscription info
+          last_login_date: new Date().toISOString(),
+        });
+        
+        // Increment login count
+        await mixpanelService.incrementUserProperty('login_count', 1);
+        
+        // Track login completed
+        await mixpanelService.trackAuth(AuthEvent.LOGIN_COMPLETED, {
+          method: 'email',
+          user_id: newUser.user_id.toString(),
+        });
       }
     } catch (error) {
-      console.error('Sign in error:', JSON.stringify(error));
+      // console.error('Sign in error:', JSON.stringify(error));
       throw error;
     } finally {
       if (isMountedRef.current) {
@@ -119,6 +168,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (response.ok) {
+        // Track email verified
+        await mixpanelService.trackAuth(AuthEvent.EMAIL_VERIFIED, {
+          method: 'email',
+        });
+
         // Create secure session instead of passing password in URL
         const sessionId = await createSecureSession({
           email,
@@ -133,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
     } catch (error) {
-      console.error('Email verification error:', JSON.stringify(error))
+      // console.error('Email verification error:', JSON.stringify(error))
       throw error
     }
   }
@@ -142,6 +196,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const forgotPassword = async (email: string) => {
     // setIsLoading(true);
     try {
+      // Track password reset requested
+      await mixpanelService.trackAuth(AuthEvent.PASSWORD_RESET_REQUESTED, {
+        method: 'email',
+      });
+
       const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${encodeURIComponent(email)}`);
       
      //  alert(JSON.stringify(response.ok ? 'true' : 'false'));
@@ -149,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
     } catch (error) {
-      console.error('Forgot password error:', JSON.stringify(error))
+      // console.error('Forgot password error:', JSON.stringify(error))
     } finally {
       // setIsLoading(false);
     }
@@ -169,13 +228,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
     } catch (error) {
-      console.error('Forgot password error:', JSON.stringify(error))
+      // console.error('Forgot password error:', JSON.stringify(error))
     } finally {
       setIsLoading(false);
     }
   }
 
   const signUp = async (formData: FormData, router: any) => {
+    // Track sign up started
+    await mixpanelService.trackAuth(AuthEvent.SIGN_UP_STARTED, {
+      method: 'email',
+    });
+
     try {
       setIsLoading(true);
 
@@ -194,6 +258,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (response.ok) {
+        // Track sign up completed
+        await mixpanelService.trackAuth(AuthEvent.SIGN_UP_COMPLETED, {
+          method: 'email',
+        });
+
         // Create secure session instead of passing password in URL
         const sessionId = await createSecureSession({
           email: formData.email,
@@ -204,10 +273,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         // Handle error properly when response.data is null or doesn't have detail
         const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Registration failed';
+        
+        // Track sign up failed
+        await mixpanelService.trackAuth(AuthEvent.SIGN_UP_FAILED, {
+          method: 'email',
+          error_message: typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage),
+        });
+        
         throw errorMessage;
       }
     } catch (error) {
-      console.error("Sign up error: ", error);
+      // console.error("Sign up error: ", error);
+      
+      // Track sign up failed if not already tracked
+      await mixpanelService.trackAuth(AuthEvent.SIGN_UP_FAILED, {
+        method: 'email',
+        error_message: error instanceof Error ? error.message : String(error),
+      });
+      
       throw error;
     } finally {
       if (isMountedRef.current) {
@@ -238,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
     } catch (error) {
-      console.error('updateUser error:', error);
+      // console.error('updateUser error:', error);
       throw error;
     } finally {
       if (isMountedRef.current) {
@@ -265,6 +348,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (response.ok) {
+        // Track password changed
+        await mixpanelService.trackAuth(AuthEvent.PASSWORD_CHANGED);
         return response.data;
       } else {
         const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Password change failed';
@@ -272,7 +357,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
     } catch (error) {
-      console.error('changePassword error:', error);
+      // console.error('changePassword error:', error);
       throw error;
     } finally {
       if (isMountedRef.current) {
@@ -299,7 +384,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { data: response.data, status: response.status };
     } catch (error) {
-      console.error('Reset password error:', error);
+      // console.error('Reset password error:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -319,6 +404,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           "Authorization": formatAuthHeader(token)
         }
       });
+      
+      // Track password reset completed on success
+      if (response.ok) {
+        await mixpanelService.trackAuth(AuthEvent.PASSWORD_RESET_COMPLETED);
+      }
       if (response.ok) {
         // Create secure session instead of passing password in URL
         const sessionId = await createSecureSession({
@@ -330,7 +420,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
     } catch (error) {
-      console.error('handleForgotPasswordChange error:', error);
+      // console.error('handleForgotPasswordChange error:', error);
       throw error;
     } finally {
       if (isMountedRef.current) {
@@ -340,6 +430,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    // Track logout
+    await mixpanelService.trackAuth(AuthEvent.LOGOUT);
+    
+    // Reset Mixpanel user
+    await mixpanelService.reset();
+    
     // Delete token from secure storage
     await deleteToken();
     setUser(null);

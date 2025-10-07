@@ -20,13 +20,13 @@ export const useDefaultLocalModel = (): LocalModel => {
       // Initialize storage with default if not set
       if (!storedModelId) {
         storage.set('default_local_model_id', DEFAULT_LOCAL_MODEL_ID);
-        console.log('[DefaultLocalModel] Initialized default local model:', DEFAULT_LOCAL_MODEL_ID);
+        // console.log('[DefaultLocalModel] Initialized default local model:', DEFAULT_LOCAL_MODEL_ID);
       }
       
       // Fall back to recommended or default model
       return getLocalModelById(DEFAULT_LOCAL_MODEL_ID) || getRecommendedLocalModel();
     } catch (error) {
-      console.error('Error reading default local model from storage:', error);
+      // console.error('Error reading default local model from storage:', error);
       return getLocalModelById(DEFAULT_LOCAL_MODEL_ID) || getRecommendedLocalModel();
     }
   });
@@ -40,12 +40,12 @@ export const useDefaultLocalModel = (): LocalModel => {
           if (storedModelId) {
             const newModel = getLocalModelById(storedModelId);
             if (newModel) {
-              console.log('[DefaultLocalModel] Model changed to:', newModel.displayName);
+              // console.log('[DefaultLocalModel] Model changed to:', newModel.displayName);
               setModel(newModel);
             }
           }
         } catch (error) {
-          console.error('Error updating default local model:', error);
+          // console.error('Error updating default local model:', error);
         }
       }
     });
@@ -67,7 +67,7 @@ export const getDefaultLocalModelId = (): string => {
     const storedModelId = storage.getString('default_local_model_id');
     return storedModelId || DEFAULT_LOCAL_MODEL_ID;
   } catch (error) {
-    console.error('Error reading default local model ID:', error);
+    // console.error('Error reading default local model ID:', error);
     return DEFAULT_LOCAL_MODEL_ID;
   }
 };

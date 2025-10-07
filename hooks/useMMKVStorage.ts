@@ -12,7 +12,7 @@ const useMMKVStorage = <T,>(key: string, initialValue: T) => {
         const item = storage.getString(key);
         return item ? JSON.parse(item) : initialValue;
       } catch (error) {
-        console.error('Error reading from MMKV:', error);
+        // console.error('Error reading from MMKV:', error);
         return initialValue;
       }
     });
@@ -23,7 +23,7 @@ const useMMKVStorage = <T,>(key: string, initialValue: T) => {
         setStoredValue(valueToStore);
         storage.set(key, JSON.stringify(valueToStore));
       } catch (error) {
-        console.error('Error writing to MMKV:', error);
+        // console.error('Error writing to MMKV:', error);
       }
     };
   

@@ -9,7 +9,7 @@ PODS:
   - EXAV (15.0.2):
     - ExpoModulesCore
     - ReactCommon/turbomodule/core
-  - EXConstants (17.0.8):
+  - EXConstants (18.0.9):
     - ExpoModulesCore
   - EXImageLoader (5.0.0):
     - ExpoModulesCore
@@ -110,6 +110,12 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
+  - Mixpanel-swift (5.1.0):
+    - Mixpanel-swift/Complete (= 5.1.0)
+  - Mixpanel-swift/Complete (5.1.0)
+  - MixpanelReactNative (3.1.2):
+    - Mixpanel-swift (= 5.1.0)
+    - React-Core
   - MMKV (2.2.4):
     - MMKVCore (~> 2.2.4)
   - MMKVCore (2.2.4)
@@ -2104,7 +2110,7 @@ DEPENDENCIES:
   - "boost (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_f47be5fdff0ef18766e2625a75601bb4/node_modules/react-native/third-party-podspecs/boost.podspec`)"
   - "DoubleConversion (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_f47be5fdff0ef18766e2625a75601bb4/node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)"
   - "EXAV (from `../node_modules/.pnpm/expo-av@15.0.2_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.2_1fe7962afe589923160e93901f2ff2f8/node_modules/expo-av/ios`)"
-  - "EXConstants (from `../node_modules/.pnpm/expo-constants@17.0.8_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+c_fafb1d57591691a877111d89287e9596/node_modules/expo-constants/ios`)"
+  - "EXConstants (from `../node_modules/.pnpm/expo-constants@18.0.9_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+c_367b5ee1d7302781e49f609570d4f854/node_modules/expo-constants/ios`)"
   - "EXImageLoader (from `../node_modules/.pnpm/expo-image-loader@5.0.0_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel_532117f8fa7482293eba8e0239e6d358/node_modules/expo-image-loader/ios`)"
   - "Expo (from `../node_modules/.pnpm/expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@expo+metr_d31424a55080772d957cdc4da25eeb3a/node_modules/expo`)"
   - "ExpoAsset (from `../node_modules/.pnpm/expo-asset@11.0.5_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@_dbf679ab0e7d7fa77012c3d2381890fd/node_modules/expo-asset/ios`)"
@@ -2114,7 +2120,7 @@ DEPENDENCIES:
   - "ExpoFileSystem (from `../node_modules/.pnpm/expo-file-system@18.0.12_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babe_28b745ce15817e892001889b5a5980af/node_modules/expo-file-system/ios`)"
   - "ExpoFont (from `../node_modules/.pnpm/expo-font@13.0.4_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7_b15948efe193d6e174e92cfeebf93786/node_modules/expo-font/ios`)"
   - "ExpoHaptics (from `../node_modules/.pnpm/expo-haptics@14.0.1_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+cor_a6806af10cd310570171ca1153dbe32c/node_modules/expo-haptics/ios`)"
-  - "ExpoHead (from `../node_modules/.pnpm/expo-router@4.0.21_9ecef7ca8e08edf56e7ad2d1f76f6301/node_modules/expo-router/ios`)"
+  - "ExpoHead (from `../node_modules/.pnpm/expo-router@4.0.21_cefdd2766578c8f98814184fd462f0ff/node_modules/expo-router/ios`)"
   - "ExpoImage (from `../node_modules/.pnpm/expo-image@2.0.7_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7_a56826ded87f6d6560837861c47b79f0/node_modules/expo-image/ios`)"
   - "ExpoImageManipulator (from `../node_modules/.pnpm/expo-image-manipulator@13.0.6_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3__bdd9c87c7321c8bf98b6704c719c840a/node_modules/expo-image-manipulator/ios`)"
   - "ExpoImagePicker (from `../node_modules/.pnpm/expo-image-picker@16.0.6_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babe_8d606860c03b9511bca7b9a5c2553f4e/node_modules/expo-image-picker/ios`)"
@@ -2133,6 +2139,7 @@ DEPENDENCIES:
   - "fmt (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_f47be5fdff0ef18766e2625a75601bb4/node_modules/react-native/third-party-podspecs/fmt.podspec`)"
   - "glog (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_f47be5fdff0ef18766e2625a75601bb4/node_modules/react-native/third-party-podspecs/glog.podspec`)"
   - "hermes-engine (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_f47be5fdff0ef18766e2625a75601bb4/node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)"
+  - MixpanelReactNative (from `../node_modules/mixpanel-react-native`)
   - "RCT-Folly (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_f47be5fdff0ef18766e2625a75601bb4/node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)"
   - "RCT-Folly/Fabric (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_f47be5fdff0ef18766e2625a75601bb4/node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)"
   - "RCTDeprecation (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_f47be5fdff0ef18766e2625a75601bb4/node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)"
@@ -2224,6 +2231,7 @@ SPEC REPOS:
     - libavif
     - libdav1d
     - libwebp
+    - Mixpanel-swift
     - MMKV
     - MMKVCore
     - opencv-rne
@@ -2243,7 +2251,7 @@ EXTERNAL SOURCES:
   EXAV:
     :path: "../node_modules/.pnpm/expo-av@15.0.2_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.2_1fe7962afe589923160e93901f2ff2f8/node_modules/expo-av/ios"
   EXConstants:
-    :path: "../node_modules/.pnpm/expo-constants@17.0.8_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+c_fafb1d57591691a877111d89287e9596/node_modules/expo-constants/ios"
+    :path: "../node_modules/.pnpm/expo-constants@18.0.9_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+c_367b5ee1d7302781e49f609570d4f854/node_modules/expo-constants/ios"
   EXImageLoader:
     :path: "../node_modules/.pnpm/expo-image-loader@5.0.0_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel_532117f8fa7482293eba8e0239e6d358/node_modules/expo-image-loader/ios"
   Expo:
@@ -2263,7 +2271,7 @@ EXTERNAL SOURCES:
   ExpoHaptics:
     :path: "../node_modules/.pnpm/expo-haptics@14.0.1_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+cor_a6806af10cd310570171ca1153dbe32c/node_modules/expo-haptics/ios"
   ExpoHead:
-    :path: "../node_modules/.pnpm/expo-router@4.0.21_9ecef7ca8e08edf56e7ad2d1f76f6301/node_modules/expo-router/ios"
+    :path: "../node_modules/.pnpm/expo-router@4.0.21_cefdd2766578c8f98814184fd462f0ff/node_modules/expo-router/ios"
   ExpoImage:
     :path: "../node_modules/.pnpm/expo-image@2.0.7_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7_a56826ded87f6d6560837861c47b79f0/node_modules/expo-image/ios"
   ExpoImageManipulator:
@@ -2301,6 +2309,8 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_f47be5fdff0ef18766e2625a75601bb4/node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-2024-11-12-RNv0.76.2-5b4aa20c719830dcf5684832b89a6edb95ac3d64
+  MixpanelReactNative:
+    :path: "../node_modules/mixpanel-react-native"
   RCT-Folly:
     :podspec: "../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_f47be5fdff0ef18766e2625a75601bb4/node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -2469,7 +2479,7 @@ SPEC CHECKSUMS:
   DGSwiftUtilities: 567f8d5ee618f0b7afb185b17aa45ff356315a0f
   DoubleConversion: f16ae600a246532c4020132d54af21d0ddb2a385
   EXAV: 4c41f0a6ae54a0b96597abc90e37962ab2ee0d85
-  EXConstants: fcfc75800824ac2d5c592b5bc74130bad17b146b
+  EXConstants: a95804601ee4a6aa7800645f9b070d753b1142b3
   EXImageLoader: e5da974e25b13585c196b658a440720c075482d5
   Expo: 1687edb10c76b0c0f135306d6ae245379f50ed54
   ExpoAsset: 48386d40d53a8c1738929b3ed509bcad595b5516
@@ -2501,6 +2511,8 @@ SPEC CHECKSUMS:
   libavif: 84bbb62fb232c3018d6f1bab79beea87e35de7b7
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
+  Mixpanel-swift: 7b26468fc0e2e521104e51d65c4bbf7cab8162f8
+  MixpanelReactNative: cdcfe933b8ce89aadd183f17aad3c8529daccb94
   MMKV: 1a8e7dbce7f9cad02c52e1b1091d07bd843aefaf
   MMKVCore: f2dd4c9befea04277a55e84e7812f930537993df
   opencv-rne: 2305807573b6e29c8c87e3416ab096d09047a7a0

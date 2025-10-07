@@ -75,7 +75,7 @@ const Login = () => {
           setRememberMe(true);
         }
       } catch (error) {
-        console.error("Error loading saved email", error);
+        // console.error("Error loading saved email", error);
       }
     };
 

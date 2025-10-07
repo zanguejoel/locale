@@ -33,12 +33,12 @@ export const createSecureSession = async (data: any): Promise<string> => {
     
     // Schedule cleanup after expiry (best effort - not guaranteed in background)
     setTimeout(() => {
-      clearSecureSession(sessionId).catch(console.error);
+      clearSecureSession(sessionId).catch(() => {/* console.error */});
     }, SESSION_EXPIRY_MS);
     
     return sessionId;
   } catch (error) {
-    console.error('Failed to create secure session:', error);
+    // console.error('Failed to create secure session:', error);
     throw new Error('Failed to create secure session');
   }
 };
@@ -67,7 +67,7 @@ export const getSecureSession = async (sessionId: string): Promise<any> => {
     const { timestamp, ...userData } = sessionData;
     return userData;
   } catch (error) {
-    console.error('Failed to retrieve secure session:', error);
+    // console.error('Failed to retrieve secure session:', error);
     return null;
   }
 };
@@ -80,7 +80,7 @@ export const clearSecureSession = async (sessionId: string): Promise<void> => {
   try {
     await SecureStore.deleteItemAsync(`${SESSION_PREFIX}${sessionId}`);
   } catch (error) {
-    console.error('Failed to clear secure session:', error);
+    // console.error('Failed to clear secure session:', error);
     // Don't throw - cleanup is best effort
   }
 };
@@ -92,6 +92,6 @@ export const clearSecureSession = async (sessionId: string): Promise<void> => {
 export const clearExpiredSessions = async (): Promise<void> => {
   // Note: SecureStore doesn't provide a way to list all keys
   // Individual sessions will be cleared when accessed
-  console.log('Session cleanup runs per-access basis');
+  // console.log('Session cleanup runs per-access basis');
 };
 

@@ -13,6 +13,7 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
@@ -28,6 +29,8 @@ import { LOCAL_MODELS, getLocalModelById } from '@/constants/LocalModels';
 import { useDefaultLocalModel } from '@/hooks/useDefaultLocalModel';
 import * as ChatHooks from '@/hooks/useChat';
 import { storage } from '@/hooks/useMMKVStorage';
+import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
+import { ModelEvent } from '@/types/mixpanel';
 
 const useChat = ChatHooks.useChat;
 
@@ -48,6 +51,8 @@ export default function ModelManagerScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
+    // Track model manager opened
+    mixpanelService.trackModel(ModelEvent.MODEL_MANAGER_OPENED);
     loadModels();
   }, []);
 
@@ -76,7 +81,7 @@ export default function ModelManagerScreen() {
       
       setDownloadedModels(models);
     } catch (error) {
-      console.error('[ModelManager] Error loading models:', error);
+      // console.error('[ModelManager] Error loading models:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -112,12 +117,21 @@ export default function ModelManagerScreen() {
           {
             text: 'Clear All Models',
             style: 'destructive',
-            onPress: () => handleClearAllModels(),
+            onPress: () => {
+              // Track deletion attempt
+              const model = getLocalModelById(modelId);
+              mixpanelService.trackModel(ModelEvent.LOCAL_MODEL_DELETED, {
+                model_id: modelId,
+                model_name: model?.displayName || modelId,
+                model_type: 'local',
+              });
+              handleClearAllModels();
+            },
           },
         ]
       );
     } catch (error) {
-      console.error('[ModelManager] Error deleting model:', error);
+      // console.error('[ModelManager] Error deleting model:', error);
       Alert.alert('Error', 'Failed to delete model');
     }
   };
@@ -165,7 +179,7 @@ export default function ModelManagerScreen() {
                 loadModels();
               }
             } catch (error) {
-              console.error('[ModelManager] Error clearing models:', error);
+              // console.error('[ModelManager] Error clearing models:', error);
               Alert.alert('Error', 'An error occurred while clearing models');
             }
           },
@@ -206,7 +220,7 @@ export default function ModelManagerScreen() {
         ]
       );
     } catch (error) {
-      console.error('[ModelManager] Error clearing cache:', error);
+      // console.error('[ModelManager] Error clearing cache:', error);
     }
   };
 
@@ -251,8 +265,28 @@ export default function ModelManagerScreen() {
         options={{
           title: 'Local Model Manager',
           headerTitleAlign: 'center',
+          headerShown: false,
         }} 
       />
+      
+      {/* Custom Header */}
+      <SafeAreaView style={styles.headerContainer}>
+        <View style={styles.customHeader}>
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons 
+              name="arrow-back" 
+              size={24} 
+              color={theme.colors.text} 
+            />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Local Model Manager</Text>
+          <View style={styles.headerRight} />
+        </View>
+      </SafeAreaView>
 
       <ScrollView
         style={styles.scrollView}
@@ -401,6 +435,33 @@ export default function ModelManagerScreen() {
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerContainer: {
+    backgroundColor: theme.colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.background,
+  },
+  backButton: {
+    padding: 8,
+    width: 40,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: theme.colors.text,
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 40,
   },
   scrollView: {
     flex: 1,

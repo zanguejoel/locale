@@ -70,7 +70,7 @@ const SuccessPage = () => {
         try {
             await signIn(decodeURIComponent(`${email}`), decodeURIComponent(`${password}`));
         } catch (err) {
-            console.error(err)
+            // console.error(err)
         } finally {
             setLoading(false)
         }

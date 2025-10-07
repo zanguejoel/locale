@@ -16,6 +16,8 @@ import { Theme } from '@/constants/Types';
 import { getSupportedLocalModels, LocalModel } from '@/constants/LocalModels';
 import { isLocalLLMSupported } from '@/utils/DeviceCapabilities';
 import { useChat } from '@/hooks/useChat';
+import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
+import { ModelEvent } from '@/types/mixpanel';
 
 interface LocalModelSelectorModalProps {
   visible: boolean;
@@ -49,7 +51,16 @@ const LocalModelSelectorModal: React.FC<LocalModelSelectorModalProps> = ({
     );
   }, [searchQuery, supportedModels]);
 
-  const handleSelectModel = (model: LocalModel) => {
+  const handleSelectModel = async (model: LocalModel) => {
+    // Track model selection
+    await mixpanelService.trackModel(ModelEvent.MODEL_SELECTED, {
+      model_id: model.id,
+      model_name: model.displayName,
+      model_type: 'local',
+      model_size_mb: parseFloat(model.size.replace(/[^0-9.]/g, '')),
+      previous_model_id: selectedModelId !== model.id ? selectedModelId : undefined,
+    });
+    
     // Show confirmation if changing from a downloaded model
     if (selectedModelId !== model.id && isLocalModelReady) {
       Alert.alert(

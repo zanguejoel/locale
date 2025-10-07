@@ -16,7 +16,7 @@ const Page = () => {
       await purchasePackage(pack!);
       router.dismiss();
     } catch (e) {
-      console.error(e);
+      // console.error(e);
     }
   };
 

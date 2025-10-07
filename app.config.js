@@ -12,6 +12,9 @@ export default {
       resizeMode: 'contain',
       backgroundColor: '#ffffff'
     },
+    extra: {
+      mixpanelToken: process.env.EXPO_PUBLIC_MIXPANEL_TOKEN,
+    },
     ios: {
         supportsTablet: true,
         bundleIdentifier: 'com.neptunetech.odyssey',
