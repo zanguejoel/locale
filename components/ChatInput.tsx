@@ -1,25 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { View, StyleSheet, TouchableOpacity, Image, Keyboard, Platform, LayoutAnimation, UIManager, TextInput as RNTextInput } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, Keyboard, Platform, TextInput as RNTextInput } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import Animated, {
-  Extrapolation,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  withSpring,
   useAnimatedKeyboard,
-  useAnimatedReaction,
-  runOnJS,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRef, useState, useEffect } from 'react';
-
-// Enable LayoutAnimation for Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -27,13 +14,13 @@ import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
-import GenerationOptions, { GenerationOptionsState } from './GenerationOptions';
+import { GenerationOptionsState } from './GenerationOptions';
 import { CHAT_INPUT } from '@/constants/ChatConstants';
 import { handleError } from '@/utils/ErrorHandler';
 import KeyboardAccessoryView from './KeyboardAccessoryView';
+import AttachmentsModal from './AttachmentsModal';
 
 
-const ATouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 // Keyboard accessory view ID for iOS
 const INPUT_ACCESSORY_VIEW_ID = 'chatInputAccessory';
@@ -46,16 +33,16 @@ export type Props = {
   isLoading?: boolean
   onRecordingStateChange?: (isRecording: boolean, onCancel: () => void) => void;
   isLocal?: boolean; // To show/hide generation options
-  onExportPress?: () => void; // Export conversation callback
+  messages?: any[]; // For export functionality
+  conversationTitle?: string; // For export functionality
 };
 
-const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading, onRecordingStateChange, isLocal = false, onExportPress }: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImage, isLoading, onRecordingStateChange, isLocal = false, messages = [], conversationTitle }: Props) => {
   const [message, setMessage] = useState('');
   const theme = useTheme();
   const styles = getStyles(theme);
   const insets = useSafeAreaInsets();
 
-  const expanded = useSharedValue(0);
   const inputRef = useRef<TextInput>(null);
   const [inputHeight, setInputHeight] = useState<number>(CHAT_INPUT.MIN_HEIGHT);
   const keyboard = useAnimatedKeyboard();
@@ -64,14 +51,16 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
   const [isRecording, setIsRecording] = useState(false);
 
   // Generation options state
-  const [showGenerationOptions, setShowGenerationOptions] = useState(false);
   const [generationOptions, setGenerationOptions] = useState<GenerationOptionsState>({
     webSearch: false,
     generateImage: 'none',
-    imageProvider: 'stability',
-    imageModel: 'stable-diffusion-xl',
+    imageProvider: 'openai', // Changed from 'stability' to 'openai' (backend supports this)
+    imageModel: 'gpt-image-1', // Changed from 'stable-diffusion-xl' to 'gpt-image-1'
     generateVideo: 'none',
   });
+
+  // Attachments modal state
+  const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
 
   // Notify parent about recording state changes
   useEffect(() => {
@@ -175,56 +164,20 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
     }
   };
 
-  const expandItems = () => {
-    expanded.value = withTiming(1, { duration: CHAT_INPUT.ANIMATION_DURATION });
-  };
 
-  const collapseItems = () => {
-    expanded.value = withTiming(0, { duration: CHAT_INPUT.ANIMATION_DURATION });
-  };
-
-  const expandButtonStyle = useAnimatedStyle(() => {
-    const opacityInterpolation = interpolate(expanded.value, [0, 1], [1, 0], Extrapolation.CLAMP);
-    const widthInterpolation = interpolate(expanded.value, [0, 1], [CHAT_INPUT.BUTTON_WIDTH, 0], Extrapolation.CLAMP);
-
-    return {
-      opacity: opacityInterpolation,
-      width: widthInterpolation,
-    };
-  });
-
-  const buttonViewStyle = useAnimatedStyle(() => {
-    // Adjust width based on buttons shown: camera + gallery + folder + export + (sparkles if cloud)
-    // 4 buttons always (camera, gallery, folder, export) + 1 optional (sparkles if cloud)
-    const buttonCount = onExportPress ? (isLocal ? 4 : 5) : (isLocal ? 3 : 4);
-    const maxWidth = buttonCount * 36; // 24px icon + 12px gap
-    const widthInterpolation = interpolate(expanded.value, [0, 1], [0, maxWidth], Extrapolation.CLAMP);
-    return {
-      width: widthInterpolation,
-      opacity: expanded.value,
-    };
-  }, [onExportPress, isLocal]);
-
-  // Handle multiline input with smooth animations
+  // Handle multiline input - removed LayoutAnimation to prevent callback leaks
   const handleContentSizeChange = (event: any) => {
     const newHeight = Math.min(
       Math.max(CHAT_INPUT.MIN_HEIGHT, event.nativeEvent.contentSize.height),
       CHAT_INPUT.MAX_HEIGHT
     );
     
-    // Smooth animation for height changes
-    LayoutAnimation.configureNext({
-      duration: 150,
-      create: { type: 'linear', property: 'opacity' },
-      update: { type: 'spring', springDamping: 0.7 },
-      delete: { type: 'linear', property: 'opacity' },
-    });
-    
+    // Simple state update without LayoutAnimation
+    // This prevents the "Excessive pending callbacks" error
     setInputHeight(newHeight);
   };
 
   const onChangeText = (text: string) => {
-    collapseItems();
     setMessage(text);
   };
 
@@ -237,6 +190,9 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
     // Prepare generation options for cloud models (skip for local)
     const options = !isLocal ? generationOptions : undefined;
     
+    console.log('[ChatInput] Sending message with options:', JSON.stringify(options, null, 2));
+    console.log('[ChatInput] Generation options state:', JSON.stringify(generationOptions, null, 2));
+    
     if (selectedImage) {
       onShouldSend(selectedImage?.uri, 'image', null, message, options);
       fetchMessages?.()
@@ -247,11 +203,6 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
     setMessage('');
     setInputHeight(CHAT_INPUT.MIN_HEIGHT);
 
-  };
-
-  const handleOpenGenerationOptions = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setShowGenerationOptions(true);
   };
 
   // Check if any generation option is active
@@ -322,99 +273,18 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
     <View style={[styles.container]}>
       <View style={styles.inputContainer}>
         <View style={styles.row}>
-          <ATouchableOpacity 
-            onPress={expandItems} 
-            style={[styles.roundBtn, expandButtonStyle]}
-            accessibilityLabel="Show more options"
+          <TouchableOpacity 
+            onPress={async () => {
+              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowAttachmentsModal(true);
+            }} 
+            style={styles.roundBtn}
+            accessibilityLabel="Show attachments"
             accessibilityRole="button"
-            accessibilityHint="Expands to show camera, gallery, and document options"
+            accessibilityHint="Opens modal to show camera, gallery, and document options"
           >
             <Ionicons name="add" size={24} color={theme.colors.mutedForeground} />
-          </ATouchableOpacity>
-
-          <Animated.View style={[styles.buttonView, buttonViewStyle]}>
-            <TouchableOpacity 
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                takePhoto();
-              }}
-              style={styles.iconButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel="Take photo"
-              accessibilityRole="button"
-              accessibilityHint="Opens camera to take a photo"
-            >
-              <Ionicons name="camera-outline" size={24} color={theme.colors.chatIcons} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                pickImageFromGallery();
-              }}
-              style={styles.iconButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel="Pick image from gallery"
-              accessibilityRole="button"
-              accessibilityHint="Opens photo gallery to select an image"
-            >
-              <Ionicons name="image-outline" size={24} color={theme.colors.chatIcons} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                pickDocument();
-              }}
-              style={styles.iconButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel="Pick document"
-              accessibilityRole="button"
-              accessibilityHint="Opens file picker to select a document"
-            >
-              <Ionicons name="folder-outline" size={24} color={theme.colors.chatIcons} />
-            </TouchableOpacity>
-
-            {/* Export conversation button */}
-            {onExportPress && (
-              <TouchableOpacity 
-                onPress={async () => {
-                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  onExportPress();
-                }}
-                style={styles.iconButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                accessibilityLabel="Export conversation"
-                accessibilityRole="button"
-                accessibilityHint="Export or share conversation"
-              >
-                <Ionicons 
-                  name="share-outline" 
-                  size={24} 
-                  color={theme.colors.chatIcons} 
-                />
-              </TouchableOpacity>
-            )}
-
-            {/* Generation options button - only for cloud models */}
-            {!isLocal && (
-              <TouchableOpacity 
-                onPress={handleOpenGenerationOptions}
-                style={styles.iconButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                accessibilityLabel={hasActiveOptions ? "Generation options active" : "Generation options"}
-                accessibilityRole="button"
-                accessibilityHint="Configure image and video generation options"
-                accessibilityState={{ selected: hasActiveOptions }}
-              >
-                <Ionicons 
-                  name="sparkles" 
-                  size={24} 
-                  color={hasActiveOptions ? theme.colors.primary : theme.colors.chatIcons} 
-                />
-              </TouchableOpacity>
-            )}
-          </Animated.View>
+          </TouchableOpacity>
 
           <TextInput
             // autoFocus
@@ -422,7 +292,6 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             placeholder="Message"
             style={[styles.messageInput, { height: inputHeight }]}
             placeholderTextColor={theme.colors.mutedForeground}
-            onFocus={collapseItems}
             onChangeText={onChangeText}
             value={message}
             multiline={true}
@@ -434,10 +303,9 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_VIEW_ID : undefined}
           />
           {message.length > 0 ? (
-            <ATouchableOpacity 
+            <TouchableOpacity 
               disabled={isLoading} 
               onPress={onSend}
-              style={{ transform: [{ scale: 1 }] }}
               accessibilityLabel="Send message"
               accessibilityRole="button"
               accessibilityHint="Sends your message"
@@ -448,7 +316,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
                 size={30} 
                 color={isLoading ? theme.colors.mutedForeground : theme.colors.primary} 
               />
-            </ATouchableOpacity>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity 
               disabled={isLoading} 
@@ -464,12 +332,18 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
         </View>
       </View>
 
-      {/* Generation Options Modal */}
-      <GenerationOptions
-        visible={showGenerationOptions}
-        onClose={() => setShowGenerationOptions(false)}
-        options={generationOptions}
-        onOptionsChange={setGenerationOptions}
+      {/* Attachments Modal (includes AI Options & Export) */}
+      <AttachmentsModal
+        visible={showAttachmentsModal}
+        onClose={() => setShowAttachmentsModal(false)}
+        onTakePhoto={takePhoto}
+        onPickImage={pickImageFromGallery}
+        onPickDocument={pickDocument}
+        isLocal={isLocal}
+        generationOptions={generationOptions}
+        onGenerationOptionsChange={setGenerationOptions}
+        messages={messages}
+        conversationTitle={conversationTitle}
       />
 
       {/* iOS Keyboard Accessory View */}

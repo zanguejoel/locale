@@ -20,7 +20,9 @@ export enum MessageStatus {
 
 export interface AdditionalData {
   data_type: string; // 'img', 'video', 'voice', 'stock', etc.
-  data: string; // URL or data content
+  data?: string; // URL or data content (legacy format)
+  s3_url?: string; // S3 URL from backend
+  file_path?: string; // S3 file path from backend
 }
 
 export interface MessageReaction {

@@ -5,7 +5,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useChat } from '@/hooks/useChat';
 import ChatMessage from '@/components/ChatMessage';
 import MessageIdeas from '@/components/MessageIdeas';
-import MessageInput from '@/components/ChatInput';
+import ChatInput from '@/components/ChatInput';
 import { defaultStyles } from '@/constants/Styles';
 import { Message, Role, MessageReaction } from '@/utils/Interfaces';
 import Colors from '@/constants/Colors';
@@ -36,7 +36,6 @@ import { useAuth } from '@/hooks/useAuth';
 import MessageReactions from '@/components/MessageReactions';
 import MessageEditModal from '@/components/MessageEditModal';
 import MessageSearchBar from '@/components/MessageSearchBar';
-import ExportConversationModal from '@/components/ExportConversationModal';
 import PinnedMessagesBar from '@/components/PinnedMessagesBar';
 import ThreadReplyIndicator from '@/components/ThreadReplyIndicator';
 import { isLlamaModel } from '@/constants/Models';
@@ -84,7 +83,6 @@ const ChatPage = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredMessages, setFilteredMessages] = useState<Message[]>([]);
-  const [showExportModal, setShowExportModal] = useState(false);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
@@ -462,8 +460,31 @@ const ChatPage = () => {
       item.role === Role.Bot &&
       index === 0;
 
-    const isLoading = isLastBotMessage && isSending && !stream;
-    const isStreaming = isLastBotMessage && isSending && !!stream;
+    // Show loading if:
+    // 1. Last bot message AND sending AND no stream yet (waiting for response)
+    // 2. Last bot message AND sending AND has intermediate state (e.g., "Generating image...")
+    // 3. BUT NOT if message already has content or additional_data (completed)
+    const hasContent = item.content && item.content.length > 0 && item.content !== '...' && item.content.trim() !== '';
+    const hasAdditionalData = item.additional_data && item.additional_data.length > 0;
+    const isComplete = hasContent || hasAdditionalData;
+    
+    // Debug log for the last bot message
+    if (isLastBotMessage && __DEV__) {
+      console.log('[ChatPage] Last bot message state:', {
+        index,
+        isSending,
+        hasStream: !!stream,
+        hasIntermediate: !!intermediate,
+        hasContent,
+        hasAdditionalData,
+        isComplete,
+        content: item.content?.substring(0, 50),
+        additional_data_count: item.additional_data?.length || 0,
+      });
+    }
+    
+    const isLoading = isLastBotMessage && isSending && !isComplete;
+    const isStreaming = isLastBotMessage && isSending && !!stream && !isComplete;
     
     // Show date separator if last message or different day from next (inverted)
     const showDateSeparator = 
@@ -699,7 +720,7 @@ const ChatPage = () => {
           </View>
         )}
         <View style={[styles.inputBlurContainer]}>
-          <MessageInput
+          <ChatInput
             setSelectedImage={handleSetSelectedImage}
             selectedImage={selectedImage}
             fetchMessages={handleFetchMessages}
@@ -715,19 +736,13 @@ const ChatPage = () => {
               setIsRecording(recording);
               setCancelRecording(() => onCancel);
             }}
-            onExportPress={() => setShowExportModal(true)}
+            messages={messages}
+            conversationTitle={id ? `Conversation ${id}` : 'Chat'}
           />
         </View>
       </KeyboardAvoidingView>
 
       {/* Modals */}
-      <ExportConversationModal
-        visible={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        messages={messages}
-        conversationTitle={id ? `Conversation ${id}` : 'Chat'}
-      />
-
       <MessageEditModal
         visible={!!editingMessage}
         originalContent={editingMessage?.content || ''}

@@ -596,6 +596,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ) => {
     // console.log('[Cloud] Starting cloud message send:', { message, messageType, operation, options });
     
+    // Prevent duplicate sends while already sending
+    if (isSending) {
+      console.log('[Cloud] Already sending a message, ignoring duplicate call');
+      return;
+    }
+    
     // Start timing for response
     const responseStartTime = Date.now();
     
@@ -736,31 +742,58 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Add generation options if provided
+    console.log('[Cloud] ════════════════════════════════════');
+    console.log('[Cloud] Generation options:', JSON.stringify(options, null, 2));
+    console.log('[Cloud] - webSearch:', options?.webSearch);
+    console.log('[Cloud] - generateImage:', options?.generateImage);
+    console.log('[Cloud] - generateVideo:', options?.generateVideo);
+    console.log('[Cloud] ════════════════════════════════════');
+    
     if (options?.webSearch) {
       formData.append('web_search', 'true');
+      console.log('[Cloud] Added web_search to request');
     }
     
     if (options?.generateVideo && options.generateVideo !== 'none') {
       formData.append('generate_video', options.generateVideo);
+      console.log('[Cloud] ✅ Added generate_video:', options.generateVideo);
+      console.log('[Cloud] Valid models: aws_nova_reel, google_veo2, google_veo3, google_veo3_audio');
+      
+      // Validate model name
+      const validModels = ['aws_nova_reel', 'google_veo2', 'google_veo3', 'google_veo3_audio'];
+      if (!validModels.includes(options.generateVideo)) {
+        console.warn('[Cloud] ⚠️ INVALID VIDEO MODEL:', options.generateVideo);
+        console.warn('[Cloud] Backend expects one of:', validModels.join(', '));
+      }
+    } else {
+      console.log('[Cloud] No video generation (generateVideo is none or missing)');
     }
     
     if (options?.generateImage && options.generateImage !== 'none') {
       formData.append('generate_image', options.generateImage);
+      console.log('[Cloud] Added generate_image:', options.generateImage);
       if (options.imageProvider) {
         formData.append('image_provider', options.imageProvider);
+        console.log('[Cloud] Added image_provider:', options.imageProvider);
       }
       if (options.imageModel) {
         formData.append('image_model', options.imageModel);
+        console.log('[Cloud] Added image_model:', options.imageModel);
       }
+    } else {
+      console.log('[Cloud] ⚠️ No image generation option set or generateImage is "none"');
     }
 
-    // Abort any previous stream
+    // Abort any previous stream (only if it exists and is different)
     if (streamControllerRef.current) {
+      console.log('[Cloud] Aborting previous stream controller');
       streamControllerRef.current.abort();
       streamControllerRef.current = null;
     }
     
-    streamControllerRef.current = new AbortController();
+    const newController = new AbortController();
+    streamControllerRef.current = newController;
+    console.log('[Cloud] Created new AbortController for request');
     
     try {
       // Get token from secure storage
@@ -781,6 +814,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // console.log('[Cloud] Token length:', token.length);
 
       // console.log('[Cloud] Sending fetch request to:', `${BASE_URL}/chat`);
+      console.log('[Cloud] Making fetch request with options:', {
+        generateImage: options?.generateImage,
+        imageProvider: options?.imageProvider,
+        hasSignal: !!newController.signal,
+      });
+      
       const _response = await fetch(`${BASE_URL}/chat`, {
         method: 'POST',
         headers: {
@@ -793,10 +832,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         reactNative: { 
           textStreaming: true 
         },
-        signal: streamControllerRef.current.signal,
+        signal: newController.signal,
         // Ensure streaming is enabled
         cache: 'no-cache',
       });
+      console.log('[Cloud] Fetch completed with status:', _response.status);
       // console.log('[Cloud] Fetch response status:', _response.status, 'ok:', _response.ok);
       // console.log('[Cloud] Response headers:', Object.fromEntries(_response.headers.entries()));
       // console.log('[Cloud] Response body exists:', !!_response.body);
@@ -824,7 +864,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      // console.log('[Cloud] Starting processStream...');
+      console.log('[Cloud] Starting processStream...');
       const res = await processStream(
         _response.body,
         setStream,
@@ -833,15 +873,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStreamWorking,
         setAdditionalData
       );
-      // console.log('[Cloud] processStream completed, result:', res);
+      console.log('[Cloud] processStream completed successfully');
+      console.log('[Cloud] Final result:', JSON.stringify(res, null, 2));
       
-      // Ensure additional_data is preserved after streaming completes
+      // Handle additional_data after streaming completes
       if (res?.data?.additional_data) {
-        // console.log('[Cloud] Final additional_data from processStream:', res.data.additional_data);
+        console.log('[Cloud] Processing additional_data:', res.data.additional_data);
+        
+        // Update last message with additional_data
+        // DON'T create separate messages for videos - they're already in files[]
         setMessages(prev => updateLastItem(prev, message => ({
           ...message,
           additional_data: res?.data?.additional_data || []
         })));
+      } else {
+        console.log('[Cloud] ⚠️ No additional_data in final result');
       }
       
       // Track successful response
@@ -859,9 +905,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e: any) {
       // Check if request was aborted (user cancelled or switched conversations)
       if (e.name === 'AbortError') {
-        console.log('[Cloud] Request cancelled');
+        console.log('[Cloud] Request cancelled/aborted');
+        console.log('[Cloud] Abort reason:', e.message);
         return;
       }
+      
+      console.error('[Cloud] Unexpected error during message send:', e);
       
       // Track failed response
       const modelId = getDefaultModelId();
@@ -879,9 +928,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsSending(false);
       setInputDisabled(false);
       setChatLoading(false);
+      setIntermediate(''); // Clear intermediate state to stop loading indicator
       
       // Don't reset additionalData here - it needs to persist in the message
-      // console.log('[Cloud] Send message completed, additionalData preserved');
+      console.log('[Cloud] Send message completed, clearing states');
     }
   }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError]);
 

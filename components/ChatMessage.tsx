@@ -38,6 +38,9 @@ import { shadows } from '@/constants/Shadows';
 import { isAudio, isImage } from '@/utils/FileTypeHelpers';
 import { CHAT_MESSAGE } from '@/constants/ChatConstants';
 import { handleErrorSilent } from '@/utils/ErrorHandler';
+import GeneratedImageItem from './GeneratedImageItem';
+import GeneratedVideoItem from './GeneratedVideoItem';
+import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -51,7 +54,12 @@ interface ChatMessageProps extends Message {
   sendingText?: string
   imageData?: string
   intermediate?: string // Add intermediate prop for streaming
-  additional_data?: import('@/utils/Interfaces').AdditionalData[];
+  additional_data?: Array<{
+    data_type: string;
+    data?: string;
+    s3_url?: string;
+    file_path?: string;
+  }>;
 }
 
 const contextItems = [
@@ -408,6 +416,74 @@ const ChatMessage = memo(({
     }
   }
 
+  // Helper function to determine image layout based on count
+  const getImageLayout = (imageCount: number): 'single' | 'double' | 'grid' => {
+    if (imageCount === 1) return 'single';
+    if (imageCount === 2) return 'double';
+    return 'grid';
+  };
+
+  // Handle download action for generated images
+  const handleImageDownload = useCallback(async (imageUrl: string) => {
+    const startTime = Date.now();
+    try {
+      await downloadAndSaveImage(imageUrl);
+      Alert.alert('Success', 'Image saved to gallery');
+      
+      // Track successful download
+      const downloadTime = Date.now() - startTime;
+      mixpanelService.track('Image Downloaded', {
+        source: 'generated_image',
+        image_url: imageUrl,
+        download_time_ms: downloadTime,
+      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
+    } catch (error) {
+      console.error('[ChatMessage] Image download failed:', error);
+      Alert.alert('Error', 'Failed to save image. Please try again.');
+      
+      // Track download failure
+      mixpanelService.track('Image Download Failed', {
+        source: 'generated_image',
+        image_url: imageUrl,
+        error_message: error instanceof Error ? error.message : String(error),
+      }).catch(() => {});
+    }
+  }, []);
+
+  // Handle share action for generated images
+  const handleImageShare = useCallback(async (imageUrl: string) => {
+    try {
+      await shareImage(imageUrl);
+      
+      // Track successful share
+      mixpanelService.track('Image Shared', {
+        source: 'generated_image',
+        image_url: imageUrl,
+        share_method: Platform.OS === 'ios' ? 'ios_sheet' : 'android_dialog',
+      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
+    } catch (error) {
+      console.error('[ChatMessage] Image share failed:', error);
+      Alert.alert('Error', 'Failed to share image. Please try again.');
+      
+      // Track share failure
+      mixpanelService.track('Image Share Failed', {
+        source: 'generated_image',
+        image_url: imageUrl,
+        error_message: error instanceof Error ? error.message : String(error),
+      }).catch(() => {});
+    }
+  }, []);
+
+  // Handle image error
+  const handleGeneratedImageError = useCallback((index: number, error: Error) => {
+    console.error(`[ChatMessage] Generated image ${index} failed:`, error);
+  }, []);
+
+  // Handle video error
+  const handleGeneratedVideoError = useCallback((index: number, error: Error) => {
+    console.error(`[ChatMessage] Generated video ${index} failed:`, error);
+  }, []);
+
   // Render generated images and videos from additional_data
   const renderAdditionalData = () => {
     if (!additional_data || additional_data.length === 0) {
@@ -415,73 +491,96 @@ const ChatMessage = memo(({
       return null;
     }
 
-    // console.log('[ChatMessage] Rendering additional_data:', JSON.stringify(additional_data, null, 2));
-
+    // Check if videos/images are already in files[] - if so, skip rendering from additional_data
+    const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
+    const hasFileImage = files?.[0]?.file_type === 'img';
     
+    // Separate images and videos
+    const images = additional_data.filter(item => item.data_type === 'img');
     const videos = additional_data.filter(item => item.data_type === 'video');
     
+    // Skip videos if already in files[] (prevents duplicates)
+    const videosToRender = hasFileVideo ? [] : videos;
+    const imagesToRender = hasFileImage ? [] : images;
+    
+    console.log('[ChatMessage] renderAdditionalData - hasFileVideo:', hasFileVideo, 'hasFileImage:', hasFileImage);
+    console.log('[ChatMessage] - Videos in additional_data:', videos.length, '→ Rendering:', videosToRender.length);
+    console.log('[ChatMessage] - Images in additional_data:', images.length, '→ Rendering:', imagesToRender.length);
+    
+    // If nothing to render after filtering, return null
+    if (videosToRender.length === 0 && imagesToRender.length === 0) {
+      console.log('[ChatMessage] Nothing to render from additional_data (all media in files[])');
+      return null;
+    }
+    
+    const imageLayout = getImageLayout(imagesToRender.length);
    
     return (
       <View style={styles.additionalDataContainer}>
         {/* Image Grid - Responsive Layout */}
+        {imagesToRender.length > 0 && (
+          <View
+            style={[
+              styles.imageGrid,
+              imageLayout === 'single' && styles.singleImageGrid,
+              imageLayout === 'double' && styles.twoImageGrid,
+              imageLayout === 'grid' && styles.multiImageGrid,
+            ]}
+          >
+            {imagesToRender.map((item, imageIndex) => {
+              // Backend sends either "data" or "s3_url" as the image URL
+              const imageUrl = item.data || item.s3_url || '';
+              
+              if (!imageUrl) {
+                console.warn('[ChatMessage] Image item missing URL:', item);
+                return null;
+              }
+              
+              return (
+                <GeneratedImageItem
+                  key={`generated-image-${imageIndex}`}
+                  imageUrl={imageUrl}
+                  index={imageIndex}
+                  layoutType={imageLayout}
+                  totalImages={imagesToRender.length}
+                  onDownload={handleImageDownload}
+                  onShare={handleImageShare}
+                  onError={handleGeneratedImageError}
+                />
+              );
+            })}
+          </View>
+        )}
        
         {/* Videos - Full Width */}
-        {videos.map((item, videoIndex) => {
-          const progress = videoDownloadProgress[videoIndex] || 0;
-          const isDownloading = progress > 0 && progress < 1;
-
-          return (
-            <View key={`additional-video-${videoIndex}`} style={styles.generatedVideoContainer}>
-              <Video
-                ref={videoRef}
-                source={{ uri: item.data }}
-                style={styles.generatedVideo}
-                useNativeControls
-                isLooping={false}
-              />
-              <TouchableOpacity 
-                style={styles.videoFullscreenButton}
-                onPress={handleFullScreenVideo}
-              >
-                <Ionicons name="expand" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-              <View style={styles.generationBadge}>
-                <Ionicons name="sparkles" size={12} color="#FFFFFF" />
-                <Text style={styles.generationBadgeText}>Generated</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.downloadVideoButton}
-                onPress={() => {
-                  // Simple download without progress for now
-                  // Can be enhanced with FileSystem.createDownloadResumable if needed
-                  downloadAndSaveVideo(item.data);
-                }}
-                disabled={isLoadingDownloadVideo}
-              >
-                {isLoadingDownloadVideo ? (
-                  isDownloading ? (
-                    <View style={styles.downloadProgressContainer}>
-                      <Text style={styles.downloadProgressText}>
-                        {Math.round(progress * 100)}%
-                      </Text>
-                    </View>
-                  ) : (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  )
-                ) : (
-                  <Ionicons name="download" size={20} color="#FFFFFF" />
-                )}
-              </TouchableOpacity>
-            </View>
-          );
-        })}
+        {videosToRender.length > 0 && (
+          <View style={styles.videosContainer}>
+            {videosToRender.map((item, videoIndex) => {
+              // Backend sends either "data" or "s3_url" as the video URL
+              const videoUrl = item.data || item.s3_url || '';
+              
+              if (!videoUrl) {
+                console.warn('[ChatMessage] Video item missing URL:', item);
+                return null;
+              }
+              
+              return (
+                <GeneratedVideoItem
+                  key={`generated-video-${videoIndex}`}
+                  videoUrl={videoUrl}
+                  index={videoIndex}
+                  totalVideos={videosToRender.length}
+                  onError={handleGeneratedVideoError}
+                />
+              );
+            })}
+          </View>
+        )}
       </View>
     );
   };
 
   const renderImageContent = () => {
-
-
     if (imageLoadError && imageAttempts >= maxImageRetryAttempts) {
       return (
         <View style={styles.imageErrorContainer}>
@@ -698,15 +797,49 @@ const ChatMessage = memo(({
           {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
             renderAudio()
           )}
-          {(files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video') && content === '' && (
-            renderVideo()
-          )}
-
-          {/* Render user-uploaded images from files array */}
-          {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '' && (!additional_data || additional_data.length === 0))) && renderImageContent()}
-          
-          {/* Render AI-generated images and videos from additional_data */}
-          {renderAdditionalData()}
+          {/* Render videos and images - prefer files[] over additional_data (better URLs) */}
+          {/* Backend sends media in both places with different signatures */}
+          {/* files[] has longer expiration and better permissions */}
+          {(() => {
+            const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
+            const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+            const hasAdditionalVideo = additional_data && additional_data.some(item => item.data_type === 'video');
+            const hasAdditionalImage = additional_data && additional_data.some(item => item.data_type === 'img');
+            
+            // Render videos first (if any)
+            let videoElement = null;
+            if (hasFileVideo && content === '') {
+              videoElement = renderVideo();
+            } else if (hasAdditionalVideo && !hasFileVideo) {
+              // Videos handled by renderAdditionalData below
+            }
+            
+            // Render images
+            let imageElement = null;
+            if (hasFileImage) {
+              imageElement = renderImageContent();
+            } else if (hasAdditionalImage && !hasFileImage) {
+              // Will be rendered by renderAdditionalData
+            }
+            
+            // If we have files[] media, render them and skip additional_data
+            if (hasFileVideo || hasFileImage) {
+              return (
+                <>
+                  {videoElement}
+                  {imageElement}
+                </>
+              );
+            }
+            
+            // Otherwise, render from additional_data (fallback)
+            if (hasAdditionalVideo || hasAdditionalImage) {
+              return renderAdditionalData();
+            }
+            
+            // No media in either place
+            return null;
+          })()}
         </>
       );
     } else {
@@ -743,15 +876,46 @@ const ChatMessage = memo(({
           {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
             renderAudio()
           )}
-          {(files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video') && content === '' && (
-            renderVideo()
-          )}
           
-          {/* Render user-uploaded images from files array */}
-          {(isImage(imageData) || files?.[0]?.file_type === 'img' || (files?.[0]?.data_type === 'img' && content === '' && (!additional_data || additional_data.length === 0))) && renderImageContent()}
-          
-          {/* Render AI-generated images and videos from additional_data */}
-          {renderAdditionalData()}
+          {/* Render videos and images - prefer files[] over additional_data (better URLs) */}
+          {/* Backend sends media in both places with different signatures */}
+          {/* files[] has longer expiration and better permissions */}
+          {(() => {
+            const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
+            const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+            const hasAdditionalVideo = additional_data && additional_data.some(item => item.data_type === 'video');
+            const hasAdditionalImage = additional_data && additional_data.some(item => item.data_type === 'img');
+            
+            // Render videos first (if any)
+            let videoElement = null;
+            if (hasFileVideo && content === '') {
+              videoElement = renderVideo();
+            }
+            
+            // Render images
+            let imageElement = null;
+            if (hasFileImage) {
+              imageElement = renderImageContent();
+            }
+            
+            // If we have files[] media, render them and skip additional_data
+            if (hasFileVideo || hasFileImage) {
+              return (
+                <>
+                  {videoElement}
+                  {imageElement}
+                </>
+              );
+            }
+            
+            // Otherwise, render from additional_data (fallback)
+            if (hasAdditionalVideo || hasAdditionalImage) {
+              return renderAdditionalData();
+            }
+            
+            // No media in either place
+            return null;
+          })()}
         </>)
     };
   }
@@ -788,8 +952,21 @@ const ChatMessage = memo(({
       {isLoading ? (
         <>
           {intermediate ? (
-
-            <AnimatedText text={intermediate?.toString()} />) : (
+            <View style={styles.intermediateContainer}>
+              <View style={styles.intermediateIconContainer}>
+                {intermediate.toLowerCase().includes('image') || intermediate.toLowerCase().includes('generating') ? (
+                  <Ionicons name="images" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                ) : intermediate.toLowerCase().includes('video') ? (
+                  <Ionicons name="videocam" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                ) : intermediate.toLowerCase().includes('search') ? (
+                  <Ionicons name="search" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                ) : (
+                  <ActivityIndicator size="small" color={theme.colors.primary} style={styles.intermediateIcon} />
+                )}
+              </View>
+              <AnimatedText text={intermediate?.toString()} />
+            </View>
+          ) : (
             <View
               style={[
                 styles.contentContainer,
@@ -1092,15 +1269,24 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 8,
+    width: '100%',
+  },
+  // Videos Container
+  videosContainer: {
+    width: '100%',
+    gap: 8,
   },
   singleImageGrid: {
     width: '100%',
+    flexDirection: 'column', // Stack vertically for single images
   },
   twoImageGrid: {
     justifyContent: 'space-between',
+    flexDirection: 'row',
   },
   multiImageGrid: {
     justifyContent: 'flex-start',
+    flexDirection: 'row',
   },
   // Image Wrapper Sizes - Optimized with aspect ratios
   imageWrapper: {
@@ -1246,6 +1432,24 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '600',
+  },
+  // Intermediate state styles
+  intermediateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.isDark ? 'rgba(138, 43, 226, 0.1)' : 'rgba(138, 43, 226, 0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: CHAT_MESSAGE.MESSAGE_BORDER_RADIUS,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(138, 43, 226, 0.3)' : 'rgba(138, 43, 226, 0.2)',
+    maxWidth: '85%',
+  },
+  intermediateIconContainer: {
+    marginRight: 8,
+  },
+  intermediateIcon: {
+    opacity: 0.8,
   },
 });
 

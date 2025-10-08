@@ -22,7 +22,7 @@ export const processStream = async (
   setStreamWorking: (v: boolean) => void,
   setAdditionalData?: (a: any[]) => void
 ): Promise<StreamData | null> => {
-  // console.log("[ChatStream] processStream called, response exists:", !!response);
+  console.log("[ChatStream] processStream called, response exists:", !!response);
   setStreamWorking(true);
   let res: StreamData | null = null;
   let buffer = '';
@@ -83,6 +83,7 @@ export const processStream = async (
 
                 case 'state':
                   if (data.content) {
+                    console.log('[ChatStream] State update:', data.content);
                     setIntermediate(data.content);
                   }
                   break;
@@ -97,9 +98,15 @@ export const processStream = async (
 
                 case 'final':
                   res = data;
+                  console.log('[ChatStream] Received final response');
+                  console.log('[ChatStream] Final data object:', JSON.stringify(data.data, null, 2));
                   if (data?.data?.additional_data) {
-                    // console.log('[ChatStream] Received final with additional_data:', data.data.additional_data);
+                    console.log('[ChatStream] Final has additional_data:', data.data.additional_data.length, 'items');
+                    console.log('[ChatStream] Additional data content:', JSON.stringify(data.data.additional_data, null, 2));
                     setAdditionalData?.(data.data.additional_data);
+                  } else {
+                    console.log('[ChatStream] ⚠️ No additional_data in final response');
+                    console.log('[ChatStream] Available keys in data:', Object.keys(data?.data || {}));
                   }
                   break;
 

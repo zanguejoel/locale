@@ -9,10 +9,10 @@ import { BlurView } from 'expo-blur';
 
 export interface GenerationOptionsState {
   webSearch: boolean;
-  generateImage: string; // 'none', 'auto', 'always'
-  imageProvider: string; // 'stability', 'dalle', 'midjourney'
-  imageModel: string;
-  generateVideo: string; // 'none', 'auto', 'always'
+  generateImage: string; // 'none', 'enabled'
+  imageProvider: string; // 'openai', 'gemini'
+  imageModel: string; // 'gpt-image-1', 'gemini-2.5-flash-image-preview'
+  generateVideo: string; // 'none', 'aws_nova_reel', 'google_veo2', 'google_veo3', 'google_veo3_audio'
 }
 
 interface GenerationOptionsProps {
@@ -81,7 +81,7 @@ const GenerationOptions: React.FC<GenerationOptionsProps> = ({
       >
         {isSelected ? (
           <LinearGradient
-            colors={[theme.colors.primary, theme.colors.primaryDark || theme.colors.primary]}
+            colors={[theme.colors.primary, theme.colors.primary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.selectedGradient}
@@ -247,7 +247,7 @@ const GenerationOptions: React.FC<GenerationOptionsProps> = ({
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={[theme.colors.primary, theme.colors.primaryDark || theme.colors.primary]}
+                colors={[theme.colors.primary, theme.colors.primary]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.doneButtonGradient}
