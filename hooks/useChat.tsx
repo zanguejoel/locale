@@ -64,6 +64,7 @@ export interface Conversations {
   time_created?: Date;
   time_updated?: Date;
   pinned?: boolean;
+  model_type?: string;
 }
 
 export interface ChatRoom {

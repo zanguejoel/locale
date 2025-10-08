@@ -8,7 +8,7 @@ import { useChat } from '@/hooks/useChat';
 import { Theme } from '@/constants/Types';
 import { useTheme } from '@/hooks/useTheme';
 import useMMKVStorage from '@/hooks/useMMKVStorage';
-import { DEFAULT_MODEL_ID, getModelById } from '@/constants/Models';
+import { DEFAULT_MODEL_ID, getModelById, isLlamaModel } from '@/constants/Models';
 import ModelSelectorModal from '@/components/modals/ModelSelectorModal/ModelSelectorModal';
 import LocalModelSelectorModal from '@/components/modals/LocalModelSelectorModal/LocalModelSelectorModal';
 import { DEFAULT_LOCAL_MODEL_ID, getLocalModelById } from '@/constants/LocalModels';
@@ -67,7 +67,12 @@ const Page = () => {
     isLocalLLMSupported: deviceSupportsLocal,
     clearLocalModel,
     isLocalModelReady,
-    localModelDownloadProgress
+    localModelDownloadProgress,
+    messages,
+    isLocal,
+    conversations,
+    currentConversationId,
+    resetChat
   } = useChat();
   const [isModelSelectorVisible, setIsModelSelectorVisible] = useState(false);
   const [isLocalModelSelectorVisible, setIsLocalModelSelectorVisible] = useState(false);
@@ -95,7 +100,50 @@ const Page = () => {
       new_value: newModel?.displayName || modelId,
     });
     
+    // Get the current conversation to check its model_type
+    const currentConversation = conversations.find(c => c.id === currentConversationId);
+    const currentConversationModelType = currentConversation?.model_type;
+    
+    // Get current model type - use conversation's model_type if available,
+    // otherwise fall back to the current default model
+    const currentDefaultModel = getModelById(defaultModelId);
+    const currentModelType = currentConversationModelType || currentDefaultModel?.id;
+    
+    // Check if switching between Llama and non-Llama models
+    const currentIsLlama = currentModelType ? isLlamaModel(currentModelType) : false;
+    const newIsLlama = isLlamaModel(modelId);
+    
+    // Only consider cloud model switches (not local mode)
+    // And only if:
+    // 1. We're not in local mode
+    // 2. We have a model to compare against (conversation or default)
+    // 3. We're actually switching between Llama and non-Llama
+    // 4. The current conversation has at least one message
+    const isSwitchingBetweenLlamaTypes = !isLocal && 
+                                         currentModelType && 
+                                         currentIsLlama !== newIsLlama;
+    const hasMessages = messages && messages.length > 0;
+    
+    // Update the default model
     setDefaultModelId(modelId);
+    
+    // If switching between Llama and non-Llama cloud models and there are messages, create new chat
+    if (isSwitchingBetweenLlamaTypes && hasMessages) {
+      try {
+        // Clear current messages from UI
+        resetChat();
+        
+        // Create a new conversation to start fresh
+        const newConvId = await createNewConversation();
+        if (newConvId) {
+          // Navigate to the new conversation
+          router.push(`/(chat)/${newConvId}`);
+        }
+      } catch (error) {
+        // console.error('Error creating new conversation after model switch:', error);
+        // Continue anyway - the model change has been saved
+      }
+    }
   };
 
   const handleLocalModelSelect = async (modelId: string) => {

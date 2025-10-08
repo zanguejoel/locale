@@ -438,3 +438,14 @@ export const getModelsByCategory = (category: Model['category']): Model[] => {
   return models.filter(model => model.category === category);
 };
 
+// Helper function to check if a model is a Llama model
+export const isLlamaModel = (modelId: string): boolean => {
+  const model = getModelById(modelId);
+  if (!model) return false;
+  
+  // Check if model name or ID contains "llama" (case insensitive)
+  return model.name.toLowerCase().includes('llama') || 
+         model.id.toLowerCase().includes('llama') ||
+         model.displayName.toLowerCase().includes('llama');
+};
+

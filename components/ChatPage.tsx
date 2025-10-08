@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard, Clipboard, Alert } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useChat } from '@/hooks/useChat';
 import ChatMessage from '@/components/ChatMessage';
 import MessageIdeas from '@/components/MessageIdeas';
@@ -39,6 +39,10 @@ import MessageSearchBar from '@/components/MessageSearchBar';
 import ExportConversationModal from '@/components/ExportConversationModal';
 import PinnedMessagesBar from '@/components/PinnedMessagesBar';
 import ThreadReplyIndicator from '@/components/ThreadReplyIndicator';
+import { isLlamaModel } from '@/constants/Models';
+import SkeletonLoader from '@/components/SkeletonLoader';
+import ErrorBanner from '@/components/ErrorBanner';
+import EnhancedEmptyState from '@/components/EnhancedEmptyState';
 
 // Helper function to get time-based greeting
 const getGreeting = (firstName: string = 'there') => {
@@ -58,6 +62,7 @@ const ChatPage = () => {
 
   const { params } = useRoute();
   const { user } = useAuth();
+  const router = useRouter();
 
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -83,6 +88,8 @@ const ChatPage = () => {
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [errorState, setErrorState] = useState<{ show: boolean; type: 'network' | 'api' | 'permission' | 'model' | 'generic'; message: string } | null>(null);
 
 
   // Animation values
@@ -110,7 +117,10 @@ const ChatPage = () => {
     isLocalModelReady,
     setIsLocal,
     isLocalLLMSupported,
-    resetChat
+    resetChat,
+    conversations,
+    currentConversationId,
+    createNewConversation
   } = chat;
 
 
@@ -166,6 +176,19 @@ const ChatPage = () => {
     if (id) {
       setCurrentRoom(id);
       setUserHasScrolledUp(false);
+      
+      // Update model selection to match the conversation's model_type
+      const currentConversation = conversations.find(c => c.id === id);
+      const conversationModelType = currentConversation?.model_type;
+      
+      if (conversationModelType) {
+        try {
+          // Update the default cloud model to match this conversation's model
+          storage.set('default_model_id', conversationModelType);
+        } catch (error) {
+          // console.error('Error updating model selection for conversation:', error);
+        }
+      }
     }
     // Entrance animation
     Animated.timing(fadeAnim, {
@@ -174,7 +197,7 @@ const ChatPage = () => {
       useNativeDriver: true,
       easing: Easing.out(Easing.quad),
     }).start();
-  }, [id]);
+  }, [id, conversations]);
 
   // Handle logo animation based on messages
   useEffect(() => {
@@ -228,7 +251,8 @@ const ChatPage = () => {
     }
   };
 
-  const scrollToBottom = () => {
+  const scrollToBottom = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (messageListRef.current) {
       try {
         messageListRef.current.scrollToOffset({ offset: 0, animated: true });
@@ -240,20 +264,71 @@ const ChatPage = () => {
   };
   const onRefresh = async () => {
     setRefreshing(true);
-    if (id) {
-      await fetchMessages(id);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      if (id) {
+        await fetchMessages(id);
+      }
+    } catch (error) {
+      setErrorState({
+        show: true,
+        type: 'network',
+        message: 'Unable to refresh messages. Check your connection.'
+      });
+    } finally {
+      setRefreshing(false);
     }
-    setRefreshing(false);
   };
 
   // Handle model selection from header
-  const handleModelSelect = (modelId: string) => {
+  const handleModelSelect = async (modelId: string) => {
     try {
-      // Update model preference in storage for current mode
+      // For local mode, just update storage (no auto-switch needed)
       if (isLocal) {
         storage.set('default_local_model_id', modelId);
-      } else {
-        storage.set('default_model_id', modelId);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        return;
+      }
+
+      // For cloud mode, check if we need to auto-switch between Llama and non-Llama models
+      const currentConversation = conversations.find(c => c.id === currentConversationId);
+      const currentConversationModelType = currentConversation?.model_type;
+      
+      // Get current model type - use conversation's model_type if available, 
+      // otherwise fall back to the current default model
+      const currentModelType = currentConversationModelType || selectedCloudModel?.id;
+      
+      // Check if switching between Llama and non-Llama models
+      const currentIsLlama = currentModelType ? isLlamaModel(currentModelType) : false;
+      const newIsLlama = isLlamaModel(modelId);
+      
+      // Only trigger auto-switch if:
+      // 1. We have a model to compare against (conversation or default)
+      // 2. We're switching between Llama and non-Llama
+      // 3. The current conversation has at least one message
+      const isSwitchingBetweenLlamaTypes = currentModelType && 
+                                           currentIsLlama !== newIsLlama;
+      const hasMessages = messages && messages.length > 0;
+
+      // Update model preference in storage
+      storage.set('default_model_id', modelId);
+
+      // If switching between Llama and non-Llama cloud models and there are messages, create new chat
+      if (isSwitchingBetweenLlamaTypes && hasMessages) {
+        try {
+          // Clear current messages from UI
+          resetChat();
+          
+          // Create a new conversation to start fresh
+          const newConvId = await createNewConversation();
+          if (newConvId) {
+            // Navigate to the new conversation
+            router.push(`/(chat)/${newConvId}`);
+          }
+        } catch (error) {
+          // console.error('Error creating new conversation after model switch:', error);
+          Alert.alert('Error', 'Failed to create new conversation, but model switched successfully');
+        }
       }
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -264,24 +339,29 @@ const ChatPage = () => {
   };
 
   // Swipe action handlers
-  const handleCopyMessage = (content: string) => {
+  const handleCopyMessage = async (content: string) => {
     Clipboard.setString(content);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // Could show a toast here
   };
 
-  const handleDeleteMessage = (messageId: string) => {
+  const handleDeleteMessage = async (messageId: string) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
       'Delete Message',
       'Are you sure you want to delete this message?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             // TODO: Implement delete message logic in useChat hook
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           },
         },
       ]
@@ -468,6 +548,24 @@ const ChatPage = () => {
 
   return (
     <GradientBackground variant="background" style={styles.pageContainer}>
+      {/* Error Banner */}
+      {errorState?.show && (
+        <ErrorBanner
+          type={errorState.type}
+          message={errorState.message}
+          onDismiss={() => setErrorState(null)}
+          autoHide={true}
+          autoHideDuration={5000}
+          action={{
+            text: 'Retry',
+            onPress: () => {
+              setErrorState(null);
+              if (id) fetchMessages(id);
+            }
+          }}
+        />
+      )}
+      
       <OfflineBanner isLocal={isLocal} />
       {showSearch && (
         <MessageSearchBar
@@ -516,29 +614,28 @@ const ChatPage = () => {
           />
         )}
         <View style={styles.page} onLayout={onLayout}>
-          {messages.length === 0 && (
+          {/* Enhanced Empty State */}
+          {messages.length === 0 && !isLoadingMessages && (
             <Animated.View
               style={[
-                styles.logoContainer,
-                {
-                  marginTop: height / 2 - 100,
-                  opacity: logoAnimation,
-                  transform: [
-                    { scale: logoAnimation },
-                    {
-                      translateY: logoAnimation.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [20, 0]
-                      })
-                    }
-                  ]
-                }
+                { flex: 1, opacity: fadeAnim }
               ]}
             >
-             <Text style={styles.logoText}>{getGreeting(user?.first_name)}</Text>
-              <Text style={styles.welcomeText}>How can I assist you today?</Text>
+              <EnhancedEmptyState
+                firstName={user?.first_name}
+                modelName={isLocal ? selectedLocalModel?.displayName : selectedCloudModel?.displayName}
+                isLocal={isLocal}
+              />
             </Animated.View>
           )}
+
+          {/* Skeleton Loaders when loading messages */}
+          {isLoadingMessages && messages.length === 0 && (
+            <View style={{ flex: 1, paddingTop: 20 }}>
+              <SkeletonLoader variant="message" count={5} />
+            </View>
+          )}
+
           <CustomView style={{ flex: 1 }}>
             <FlashList
               contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}
@@ -569,7 +666,7 @@ const ChatPage = () => {
           </CustomView>
           {showScrollButton && messages.length > 0 && (
             <TouchableOpacity
-              style={styles.scrollButton}
+              style={[styles.scrollButton, styles.touchTarget]}
               onPress={scrollToBottom}
               accessibilityLabel="Scroll to bottom"
               accessibilityRole="button"
@@ -746,6 +843,13 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     backgroundColor: theme.colors.background,
     borderTopWidth: 1,
     borderTopColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
+  },
+  // Touch target improvements (minimum 44px as per iOS HIG)
+  touchTarget: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
 });

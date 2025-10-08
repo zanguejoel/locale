@@ -29,6 +29,8 @@ import { Theme } from '@/constants/Types';
 import ModelToggle from './ModelToggle';
 import { getLocalModelById } from '@/constants/LocalModels';
 import { getDefaultLocalModelId } from '@/hooks/useDefaultLocalModel';
+import { storage } from '@/hooks/useMMKVStorage';
+import { isLlamaModel } from '@/constants/Models';
 
 
 export const CustomDrawerContent = (props: any) => {
@@ -344,10 +346,31 @@ export const CustomDrawerContent = (props: any) => {
     );
 
     const handleConversationSelect = useCallback((chatId: string) => {
-        // Switch to Odyssey mode when selecting a conversation
-        setIsLocal(false);
+        // Find the selected conversation
+        const selectedConversation = conversations.find(c => c.id === chatId);
+        const conversationModelType = selectedConversation?.model_type;
+        
+        if (conversationModelType) {
+            // Check if this is a Llama model to determine if we should be in local mode
+            const isLlamaModelType = isLlamaModel(conversationModelType);
+            
+            // For now, all conversations are cloud-based, so set to false
+            // But update the default model to match the conversation's model
+            setIsLocal(false);
+            
+            // Update the default cloud model to match this conversation's model
+            try {
+                storage.set('default_model_id', conversationModelType);
+            } catch (error) {
+                // console.error('Error updating model selection:', error);
+            }
+        } else {
+            // If no model_type, just switch to cloud mode
+            setIsLocal(false);
+        }
+        
         router.push(`/(chat)/${chatId}`);
-    }, [router, setIsLocal]);
+    }, [router, setIsLocal, conversations]);
 
     const renderItem = useCallback(({ item }: { item: Conversations }) => {
         const chatId = item?.id || '';

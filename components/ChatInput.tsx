@@ -334,7 +334,12 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
 
           <Animated.View style={[styles.buttonView, buttonViewStyle]}>
             <TouchableOpacity 
-              onPress={takePhoto}
+              onPress={async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                takePhoto();
+              }}
+              style={styles.iconButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityLabel="Take photo"
               accessibilityRole="button"
               accessibilityHint="Opens camera to take a photo"
@@ -343,7 +348,12 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             </TouchableOpacity>
 
             <TouchableOpacity 
-              onPress={pickImageFromGallery}
+              onPress={async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                pickImageFromGallery();
+              }}
+              style={styles.iconButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityLabel="Pick image from gallery"
               accessibilityRole="button"
               accessibilityHint="Opens photo gallery to select an image"
@@ -352,7 +362,12 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             </TouchableOpacity>
 
             <TouchableOpacity 
-              onPress={pickDocument}
+              onPress={async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                pickDocument();
+              }}
+              style={styles.iconButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityLabel="Pick document"
               accessibilityRole="button"
               accessibilityHint="Opens file picker to select a document"
@@ -363,7 +378,12 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             {/* Export conversation button */}
             {onExportPress && (
               <TouchableOpacity 
-                onPress={onExportPress}
+                onPress={async () => {
+                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onExportPress();
+                }}
+                style={styles.iconButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 accessibilityLabel="Export conversation"
                 accessibilityRole="button"
                 accessibilityHint="Export or share conversation"
@@ -380,6 +400,8 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
             {!isLocal && (
               <TouchableOpacity 
                 onPress={handleOpenGenerationOptions}
+                style={styles.iconButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 accessibilityLabel={hasActiveOptions ? "Generation options active" : "Generation options"}
                 accessibilityRole="button"
                 accessibilityHint="Configure image and video generation options"
@@ -520,6 +542,13 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     left: 33,
     top: 2,
     zIndex: 1000
+  },
+  // Touch target improvements (minimum 44px)
+  iconButton: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 export default ChatInput;
