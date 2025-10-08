@@ -18,6 +18,18 @@ const ModelToggle: React.FC<ModelToggleProps> = ({
   const [isLocal, setIsLocal] = useState<boolean>(initialState);
   const [animation] = useState<Animated.Value>(new Animated.Value(initialState ? 0 : 1));
 
+  // Sync local state with prop changes
+  React.useEffect(() => {
+    if (initialState !== isLocal) {
+      setIsLocal(initialState);
+      Animated.timing(animation, {
+        toValue: initialState ? 0 : 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [initialState]);
+
   const handleToggle = (local: boolean): void => {
     setIsLocal(local);
     onSelectModel(local ? 'local' : 'Odyssey');

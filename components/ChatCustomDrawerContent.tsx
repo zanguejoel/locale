@@ -211,37 +211,55 @@ export const CustomDrawerContent = (props: any) => {
             return;
         }
         
-        // Check if the model type has changed
-        if (newIsLocal !== isLocal) {
-            try {
-                setLocalLoading(true);
-                setIsLocal(newIsLocal);
+        try {
+            setLocalLoading(true);
+            
+            if (newIsLocal) {
+                // For local mode, ALWAYS navigate to a new conversation
+                // even if user is already in local mode
+                const wasAlreadyLocal = isLocal;
                 
-                if (newIsLocal) {
-                    // Show info about local model download
-                    const selectedModel = getLocalModelById(getDefaultLocalModelId());
-                    Alert.alert(
-                        'Switching to Local Mode',
-                        `Using ${selectedModel?.displayName || 'Llama 3.2 1B'} (${selectedModel?.size || '~1.2GB'}).\n\nThe model will download on first use and run completely offline. Download time depends on your connection speed.`,
-                        [{ text: 'Got it' }]
-                    );
-                    
-                    // For local mode, just reset the chat (no server-side conversation needed)
+                // Update state to local mode
+                setIsLocal(true);
+                
+                // Reset the chat (no server-side conversation needed)
+                resetChat();
+                
+                // Always navigate to a fresh conversation
+                router.push('/(chat)/new');
+                
+                // Show info about local model only if switching FROM cloud mode
+                if (!wasAlreadyLocal) {
+                    setTimeout(() => {
+                        const selectedModel = getLocalModelById(getDefaultLocalModelId());
+                        Alert.alert(
+                            'Switched to Local Mode',
+                            `Using ${selectedModel?.displayName || 'Llama 3.2 1B'} (${selectedModel?.size || '~1.2GB'}).\n\nThe model will download on first use and run completely offline.`,
+                            [{ text: 'Got it' }]
+                        );
+                    }, 300);
+                }
+            } else if (newIsLocal !== isLocal) {
+                // For cloud mode, only create new conversation if switching FROM local mode
+                setIsLocal(false);
+                
+                // Create a new server-side conversation
+                const newConvId = await createNewConversation();
+                if (newConvId) {
+                    router.push(`/(chat)/${newConvId}`);
+                } else {
+                    // Fallback if creation fails
                     resetChat();
                     router.push('/(chat)/new');
-                } else {
-                    // For non-local mode, create a new server-side conversation
-                    const newConvId = await createNewConversation();
-                    if (newConvId) {
-                        router.push(`/(chat)/${newConvId}`);
-                    }
                 }
-            } catch (error) {
-                // console.error('Error handling model switch:', error);
-                Alert.alert('Error', 'Failed to switch model');
-            } finally {
-                setLocalLoading(false);
             }
+        } catch (error) {
+            // console.error('Error handling model switch:', error);
+            Alert.alert('Error', 'Failed to switch model');
+            // Revert state on error
+            setIsLocal(!newIsLocal);
+        } finally {
+            setLocalLoading(false);
         }
     };
 
@@ -351,27 +369,24 @@ export const CustomDrawerContent = (props: any) => {
         const selectedConversation = conversations.find(c => c.id === chatId);
         const conversationModelType = selectedConversation?.model_type;
         
-        if (conversationModelType) {
-            // Check if this is a Llama model to determine if we should be in local mode
-            const isLlamaModelType = isLlamaModel(conversationModelType);
-            
-            // For now, all conversations are cloud-based, so set to false
-            // But update the default model to match the conversation's model
+        // All stored conversations are cloud-based, so we need to switch out of local mode
+        if (isLocal) {
+            // User is currently in local mode but selecting a cloud conversation
+            // Switch to cloud mode
             setIsLocal(false);
-            
+        }
+        
+        if (conversationModelType) {
             // Update the default cloud model to match this conversation's model
             try {
                 storage.set('default_model_id', conversationModelType);
             } catch (error) {
                 // console.error('Error updating model selection:', error);
             }
-        } else {
-            // If no model_type, just switch to cloud mode
-            setIsLocal(false);
         }
         
         router.push(`/(chat)/${chatId}`);
-    }, [router, setIsLocal, conversations]);
+    }, [router, setIsLocal, conversations, isLocal]);
 
     const renderItem = useCallback(({ item }: { item: Conversations }) => {
         const chatId = item?.id || '';
@@ -561,34 +576,63 @@ export const CustomDrawerContent = (props: any) => {
            
                 <ModelToggle onSelectModel={handleModelSwitch} initialState={isLocal} disableLocal={!isLocalLLMSupported} />
         
-                <View style={styles.searchContainer}>
-                    <View style={styles.searchSection}>
-
-                        <Ionicons style={styles.searchIcon} name="search" size={20} color={theme.colors.greyLight} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Search conversations"
-                            placeholderTextColor={theme.colors.greyLight}
-                            underlineColorAndroid="transparent"
-                            onChangeText={(value) => setQuery(value)}
-                            value={query}
-                        />
-                        {query ? (
-                            <TouchableOpacity onPress={() => setQuery('')}>
-                                <Ionicons name="close-circle" size={18} color={theme.colors.greyLight} />
-                            </TouchableOpacity>
-                        ) : null}
-                    </View>
-                </View>
-                <Text style={styles.historyTitle}>Chat History</Text>
+                {/* Only show search and history title for cloud mode */}
+                {!isLocal && (
+                    <>
+                        <View style={styles.searchContainer}>
+                            <View style={styles.searchSection}>
+                                <Ionicons style={styles.searchIcon} name="search" size={20} color={theme.colors.greyLight} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Search conversations"
+                                    placeholderTextColor={theme.colors.greyLight}
+                                    underlineColorAndroid="transparent"
+                                    onChangeText={(value) => setQuery(value)}
+                                    value={query}
+                                />
+                                {query ? (
+                                    <TouchableOpacity onPress={() => setQuery('')}>
+                                        <Ionicons name="close-circle" size={18} color={theme.colors.greyLight} />
+                                    </TouchableOpacity>
+                                ) : null}
+                            </View>
+                        </View>
+                        <Text style={styles.historyTitle}>Chat History</Text>
+                    </>
+                )}
             </View>
             
             {/* New Chat Button */}
             <TouchableOpacity 
                 style={styles.newChatButton}
-                onPress={() => {
-                    router.push('/(chat)/new');
-                    resetChat();
+                onPress={async () => {
+                    try {
+                        setLocalLoading(true);
+                        
+                        if (isLocal) {
+                            // For local mode, just reset the chat and navigate to new
+                            resetChat();
+                            router.push('/(chat)/new');
+                        } else {
+                            // For cloud mode, create a new server-side conversation
+                            const newConvId = await createNewConversation();
+                            if (newConvId) {
+                                router.push(`/(chat)/${newConvId}`);
+                            } else {
+                                // Fallback to new chat route if creation fails
+                                resetChat();
+                                router.push('/(chat)/new');
+                            }
+                        }
+                    } catch (error) {
+                        // console.error('Error creating new chat:', error);
+                        // Fallback: just reset and navigate to new chat
+                        resetChat();
+                        router.push('/(chat)/new');
+                        Alert.alert('Note', 'Started a new chat session');
+                    } finally {
+                        setLocalLoading(false);
+                    }
                 }}
                 activeOpacity={0.7}
             >
@@ -598,31 +642,48 @@ export const CustomDrawerContent = (props: any) => {
 
             {!isShowData ? <></> :
                 <View style={{ flex: 1 }}>
-                    {filteredConversations.length === 0 ? (
-                        <View style={styles.emptyStateContainer}>
-                            <Ionicons name="chatbubble-outline" size={50} color={Colors.common.greyLight} />
-                            <Text style={styles.emptyStateText}>No conversations found</Text>
-                            <Text style={styles.emptyStateSubText}>
-                                {query ? 'Try a different search term' : 'Start a new chat to begin'}
+                    {isLocal ? (
+                        // Local mode - show info message instead of conversation list
+                        <View style={styles.localModeInfoContainer}>
+                            <Ionicons name="phone-portrait-outline" size={60} color={theme.colors.primary} />
+                            <Text style={styles.localModeTitle}>Local Mode</Text>
+                            <Text style={styles.localModeText}>
+                                You're using local models that run completely offline on your device.
+                            </Text>
+                            <Text style={styles.localModeSubText}>
+                                Local conversations are not saved to the cloud. Start a new chat to begin!
                             </Text>
                         </View>
                     ) : (
-                        <FlashList
-                            data={filteredConversations}
-                            keyExtractor={keyExtractor}
-                            renderItem={renderItem}
-                            onScroll={handleScroll}
-                            scrollEventThrottle={16}
-                            refreshControl={
-                                <RefreshControl
-                                    refreshing={isRefreshing}
-                                    onRefresh={onRefresh}
+                        // Cloud mode - show conversation list
+                        <>
+                            {filteredConversations.length === 0 ? (
+                                <View style={styles.emptyStateContainer}>
+                                    <Ionicons name="chatbubble-outline" size={50} color={Colors.common.greyLight} />
+                                    <Text style={styles.emptyStateText}>No conversations found</Text>
+                                    <Text style={styles.emptyStateSubText}>
+                                        {query ? 'Try a different search term' : 'Start a new chat to begin'}
+                                    </Text>
+                                </View>
+                            ) : (
+                                <FlashList
+                                    data={filteredConversations}
+                                    keyExtractor={keyExtractor}
+                                    renderItem={renderItem}
+                                    onScroll={handleScroll}
+                                    scrollEventThrottle={16}
+                                    refreshControl={
+                                        <RefreshControl
+                                            refreshing={isRefreshing}
+                                            onRefresh={onRefresh}
+                                        />
+                                    }
+                                    onEndReached={loadMoreConversations}
+                                    onEndReachedThreshold={0.5}
+                                    contentContainerStyle={styles.scrollViewContent}
                                 />
-                            }
-                            onEndReached={loadMoreConversations}
-                            onEndReachedThreshold={0.5}
-                            contentContainerStyle={styles.scrollViewContent}
-                        />
+                            )}
+                        </>
                     )}
                 </View>
             }
@@ -728,6 +789,35 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         color: Colors.common.greyLight,
         marginTop: 8,
         textAlign: 'center',
+    },
+    localModeInfoContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 32,
+        paddingVertical: 40,
+    },
+    localModeTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: theme.colors.text,
+        marginTop: 20,
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    localModeText: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: theme.colors.text,
+        textAlign: 'center',
+        lineHeight: 22,
+        marginBottom: 12,
+    },
+    localModeSubText: {
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
+        lineHeight: 20,
     },
     chatItem: {
         borderRadius: 12,
