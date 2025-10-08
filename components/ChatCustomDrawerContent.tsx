@@ -31,6 +31,7 @@ import { getLocalModelById } from '@/constants/LocalModels';
 import { getDefaultLocalModelId } from '@/hooks/useDefaultLocalModel';
 import { storage } from '@/hooks/useMMKVStorage';
 import { isLlamaModel } from '@/constants/Models';
+import { LinearGradient } from 'expo-linear-gradient';
 
 
 export const CustomDrawerContent = (props: any) => {
@@ -392,41 +393,89 @@ export const CustomDrawerContent = (props: any) => {
             >
                 <ContextMenu.Root>
                     <ContextMenu.Trigger>
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.chatItem,
-                                chatId.toString() === currentConversationId?.toString() && styles.activeChatItem,
-                                pressed && styles.pressedChatItem,
-                            ]}
-                            onPress={() => handleConversationSelect(chatId)}
-                        >
-                            <View style={styles.chatItemContent}>
-                                <View style={styles.chatIconContainer}>
-                                    <Ionicons name="chatbubble" size={18} color={theme.colors.primary} />
-                                </View>
-                                <View style={styles.chatDetails}>
-                                    <View style={styles.chatTitleRow}>
-                                        <Text style={styles.chatTitle} numberOfLines={1}>
-                                            {chatTitle}
-                                        </Text>
-                                        {pinnedChats.has(chatId) && (
-                                            <Ionicons name="pin" size={14} color={theme.colors.primary} style={styles.pinIcon} />
-                                        )}
+                        {chatId.toString() === currentConversationId?.toString() ? (
+                            // Active chat with gradient
+                            <LinearGradient
+                                colors={theme.isDark 
+                                    ? ['#1e3a8a', '#1e40af']
+                                    : ['#3b82f6', '#2563eb']
+                                }
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={[styles.chatItem, styles.activeChatItemGradient]}
+                            >
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.chatItemContentTransparent,
+                                        pressed && styles.pressedChatItem,
+                                    ]}
+                                    onPress={() => handleConversationSelect(chatId)}
+                                >
+                                    <View style={styles.chatItemContent}>
+                                        <View style={[styles.chatIconContainer, styles.activeChatIconContainer]}>
+                                            <Ionicons name="chatbubble" size={18} color="#FFFFFF" />
+                                        </View>
+                                        <View style={styles.chatDetails}>
+                                            <View style={styles.chatTitleRow}>
+                                                <Text style={[styles.chatTitle, styles.activeChatText]} numberOfLines={1}>
+                                                    {chatTitle}
+                                                </Text>
+                                                {pinnedChats.has(chatId) && (
+                                                    <Ionicons name="pin" size={14} color="#FFFFFF" style={styles.pinIcon} />
+                                                )}
+                                            </View>
+                                            <Text style={[styles.chatTimestamp, styles.activeChatTimestamp]} numberOfLines={1}>
+                                                {new Date().toLocaleDateString()}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.chatActions}>
+                                            <Pressable
+                                                style={styles.actionButton}
+                                                onPress={() => onRenameChat(chatId, chatTitle)}
+                                            >
+                                                <Ionicons name="pencil" size={16} color="#FFFFFF" />
+                                            </Pressable>
+                                        </View>
                                     </View>
-                                    <Text style={styles.chatTimestamp} numberOfLines={1}>
-                                        {new Date().toLocaleDateString()}
-                                    </Text>
+                                </Pressable>
+                            </LinearGradient>
+                        ) : (
+                            // Non-active chat without gradient
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.chatItem,
+                                    pressed && styles.pressedChatItem,
+                                ]}
+                                onPress={() => handleConversationSelect(chatId)}
+                            >
+                                <View style={styles.chatItemContent}>
+                                    <View style={styles.chatIconContainer}>
+                                        <Ionicons name="chatbubble" size={18} color={theme.colors.primary} />
+                                    </View>
+                                    <View style={styles.chatDetails}>
+                                        <View style={styles.chatTitleRow}>
+                                            <Text style={styles.chatTitle} numberOfLines={1}>
+                                                {chatTitle}
+                                            </Text>
+                                            {pinnedChats.has(chatId) && (
+                                                <Ionicons name="pin" size={14} color={theme.colors.primary} style={styles.pinIcon} />
+                                            )}
+                                        </View>
+                                        <Text style={styles.chatTimestamp} numberOfLines={1}>
+                                            {new Date().toLocaleDateString()}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.chatActions}>
+                                        <Pressable
+                                            style={styles.actionButton}
+                                            onPress={() => onRenameChat(chatId, chatTitle)}
+                                        >
+                                            <Ionicons name="pencil" size={16} color={theme.colors.greyLight} />
+                                        </Pressable>
+                                    </View>
                                 </View>
-                                <View style={styles.chatActions}>
-                                    <Pressable
-                                        style={styles.actionButton}
-                                        onPress={() => onRenameChat(chatId, chatTitle)}
-                                    >
-                                        <Ionicons name="pencil" size={16} color={theme.colors.greyLight} />
-                                    </Pressable>
-                                </View>
-                            </View>
-                        </Pressable>
+                            </Pressable>
+                        )}
                     </ContextMenu.Trigger>
 
                     <ContextMenu.Content>
@@ -689,6 +738,14 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     activeChatItem: {
         backgroundColor: theme.colors.activeChatItem,
     },
+    activeChatItemGradient: {
+        // No background color - gradient handles it
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
+    },
     pressedChatItem: {
         opacity: 0.7,
     },
@@ -696,6 +753,16 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 12,
+    },
+    chatItemContentTransparent: {
+        backgroundColor: 'transparent',
+    },
+    activeChatText: {
+        color: '#FFFFFF',
+        fontWeight: '600',
+    },
+    activeChatTimestamp: {
+        color: 'rgba(255, 255, 255, 0.8)',
     },
     chatIconContainer: {
         width: 36,
@@ -705,6 +772,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
+    },
+    activeChatIconContainer: {
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
     },
     chatDetails: {
         flex: 1,

@@ -127,11 +127,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   subtitle: {
     fontSize: 12,
-    color: theme.colors.grey,
+    color: theme.isDark ? theme.colors.greyLight : theme.colors.grey,
   },
   progressBarContainer: {
     height: 4,
-    backgroundColor: theme.colors.greyLight,
+    backgroundColor: theme.isDark ? theme.colors.grey : theme.colors.greyLight,
     borderRadius: 2,
     overflow: 'hidden',
   },

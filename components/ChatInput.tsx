@@ -268,7 +268,6 @@ const ChatInput = ({ onShouldSend, fetchMessages, selectedImage, setSelectedImag
     }
   };
 
-
   return (
     <View style={[styles.container]}>
       <View style={styles.inputContainer}>

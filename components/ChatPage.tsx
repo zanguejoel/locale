@@ -496,6 +496,14 @@ const ChatPage = () => {
     
     // Check if message is pinned
     const isPinned = pinnedMessages.some(m => m.id === item.id);
+    
+    // Message grouping logic
+    const previousMessage = reversedMessages[index - 1];
+    const nextMessage = reversedMessages[index + 1];
+    
+    const isFirstInGroup = !previousMessage || previousMessage.role !== item.role;
+    const isLastInGroup = !nextMessage || nextMessage.role !== item.role;
+    const isOnlyInGroup = isFirstInGroup && isLastInGroup;
 
     return (
       <>
@@ -526,6 +534,9 @@ const ChatPage = () => {
               intermediate={intermediate}
               loading={isLoading}
               streamingContent={isStreaming}
+              isFirstInGroup={isFirstInGroup}
+              isLastInGroup={isLastInGroup}
+              isOnlyInGroup={isOnlyInGroup}
             />
             {item.reactions && item.reactions.length > 0 && (
               <MessageReactions

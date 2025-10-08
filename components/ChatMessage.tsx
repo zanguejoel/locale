@@ -60,6 +60,10 @@ interface ChatMessageProps extends Message {
     s3_url?: string;
     file_path?: string;
   }>;
+  // Message grouping props
+  isFirstInGroup?: boolean;
+  isLastInGroup?: boolean;
+  isOnlyInGroup?: boolean;
 }
 
 const contextItems = [
@@ -192,7 +196,10 @@ const ChatMessage = memo(({
   intermediate,
   timestamp,
   status,
-  additional_data
+  additional_data,
+  isFirstInGroup = false,
+  isLastInGroup = false,
+  isOnlyInGroup = false
 }: ChatMessageProps) => {
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -746,30 +753,128 @@ const ChatMessage = memo(({
           {(!isAudio(content)) && (
             <ContextMenu.Root>
               <ContextMenu.Trigger>
-                <Pressable
-                  onLongPress={showTextContextMenu}
-                  onPress={handlePress}
-                  style={[
-                    styles.contentContainer,
-                    role === Role.Bot ? styles.botContent : styles.userContent,
-
-                    streamingContent && styles.streamingContent,
-                  ]}
-                  accessible={true}
-                  accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
-                  accessibilityRole="text"
-                  testID="markdown-container"
-                >
-                  <Animated.View
+                {role === Role.User ? (
+                  // User message with gradient - includes text and media
+                  <LinearGradient
+                    colors={theme.isDark 
+                      ? ['#1e3a8a', '#1e40af'] // Dark blue gradient for dark mode
+                      : ['#3b82f6', '#2563eb'] // Light to darker blue gradient
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
                     style={[
-                      styles.markdownContainer,
-                      streamingContent && { transform: [] },
-                      streamingContent && { backgroundColor: `transparent` },
+                      styles.contentContainer,
+                      styles.userContent,
+                      streamingContent && styles.streamingContent,
                     ]}
                   >
-                    <MarkdownDisplay>{content}</MarkdownDisplay>
-                  </Animated.View>
-                </Pressable>
+                    <Pressable
+                      onLongPress={showTextContextMenu}
+                      onPress={handlePress}
+                      accessible={true}
+                      accessibilityLabel={`Your message: ${content}`}
+                      accessibilityRole="text"
+                      testID="markdown-container"
+                    >
+                      {/* Render media first for user messages */}
+                      {(() => {
+                        const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
+                        const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+                        
+                        return (
+                          <>
+                            {hasFileImage && (
+                              <View style={styles.mediaInMessage}>
+                                {renderImageContent()}
+                              </View>
+                            )}
+                            {hasFileVideo && content === '' && (
+                              <View style={styles.mediaInMessage}>
+                                {renderVideo()}
+                              </View>
+                            )}
+                          </>
+                        );
+                      })()}
+                      
+                      {/* Text content */}
+                      {content && (
+                        <Animated.View
+                          style={[
+                            styles.markdownContainer,
+                            streamingContent && { transform: [] },
+                            streamingContent && { backgroundColor: `transparent` },
+                          ]}
+                        >
+                          <View style={styles.userTextWrapper}>
+                            <MarkdownDisplay additionalStyles={{
+                              body: { color: '#FFFFFF' },
+                              heading1: { color: '#FFFFFF' },
+                              heading2: { color: '#FFFFFF' },
+                              heading3: { color: '#FFFFFF' },
+                              heading4: { color: '#FFFFFF' },
+                              heading5: { color: '#FFFFFF' },
+                              heading6: { color: '#FFFFFF' },
+                              paragraph: { color: '#FFFFFF' },
+                              text: { color: '#FFFFFF' },
+                            }}>
+                              {content}
+                            </MarkdownDisplay>
+                          </View>
+                        </Animated.View>
+                      )}
+                    </Pressable>
+                  </LinearGradient>
+                ) : (
+                  // Bot message without gradient - includes text and media
+                  <Pressable
+                    onLongPress={showTextContextMenu}
+                    onPress={handlePress}
+                    style={[
+                      styles.contentContainer,
+                      styles.botContent,
+                      streamingContent && styles.streamingContent,
+                    ]}
+                    accessible={true}
+                    accessibilityLabel={`Assistant message: ${content}`}
+                    accessibilityRole="text"
+                    testID="markdown-container"
+                  >
+                    {/* Text content first for bot */}
+                    {content && (
+                      <Animated.View
+                        style={[
+                          styles.markdownContainer,
+                          streamingContent && { transform: [] },
+                          streamingContent && { backgroundColor: `transparent` },
+                        ]}
+                      >
+                        <MarkdownDisplay>{content}</MarkdownDisplay>
+                      </Animated.View>
+                    )}
+                    
+                    {/* Render media after text for bot messages */}
+                    {(() => {
+                      const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
+                      const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+                      
+                      return (
+                        <>
+                          {hasFileImage && (
+                            <View style={styles.mediaInMessage}>
+                              {renderImageContent()}
+                            </View>
+                          )}
+                          {hasFileVideo && content === '' && (
+                            <View style={styles.mediaInMessage}>
+                              {renderVideo()}
+                            </View>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </Pressable>
+                )}
               </ContextMenu.Trigger>
               <ContextMenu.Content>
                 <ContextMenu.Item key='copy-text' onSelect={handleCopyText}>
@@ -794,50 +899,24 @@ const ChatMessage = memo(({
             </ContextMenu.Root>
           )}
 
+          {/* Audio rendering (not grouped in bubble) */}
           {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
             renderAudio()
           )}
-          {/* Render videos and images - prefer files[] over additional_data (better URLs) */}
-          {/* Backend sends media in both places with different signatures */}
-          {/* files[] has longer expiration and better permissions */}
+          
+          {/* Render AI-generated content (additional_data) - shown outside message bubble */}
           {(() => {
             const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
             const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
             const hasAdditionalVideo = additional_data && additional_data.some(item => item.data_type === 'video');
             const hasAdditionalImage = additional_data && additional_data.some(item => item.data_type === 'img');
             
-            // Render videos first (if any)
-            let videoElement = null;
-            if (hasFileVideo && content === '') {
-              videoElement = renderVideo();
-            } else if (hasAdditionalVideo && !hasFileVideo) {
-              // Videos handled by renderAdditionalData below
-            }
-            
-            // Render images
-            let imageElement = null;
-            if (hasFileImage) {
-              imageElement = renderImageContent();
-            } else if (hasAdditionalImage && !hasFileImage) {
-              // Will be rendered by renderAdditionalData
-            }
-            
-            // If we have files[] media, render them and skip additional_data
-            if (hasFileVideo || hasFileImage) {
-              return (
-                <>
-                  {videoElement}
-                  {imageElement}
-                </>
-              );
-            }
-            
-            // Otherwise, render from additional_data (fallback)
-            if (hasAdditionalVideo || hasAdditionalImage) {
+            // Only render additional_data if no files[] media (prevents duplicates)
+            // AI-generated content shown separately below message
+            if (!hasFileVideo && !hasFileImage && (hasAdditionalVideo || hasAdditionalImage)) {
               return renderAdditionalData();
             }
             
-            // No media in either place
             return null;
           })()}
         </>
@@ -846,74 +925,146 @@ const ChatMessage = memo(({
       // Fallback for devices without ContextMenu support
       return (
         <>
-          <Pressable
-            onLongPress={showTextContextMenu}
-            onPress={handlePress}
-            style={[
-              styles.contentContainer,
-              role === Role.Bot ? styles.botContent : styles.userContent,
-              theme.isDark && {
-                borderColor: theme.colors.light,
-                borderWidth: 0.7,
-              },
-              streamingContent && styles.streamingContent,
-            ]}
-            accessible={true}
-            accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} message: ${content}`}
-            accessibilityRole="text"
-            testID="markdown-container"
-          >
-            <Animated.View
+          {role === Role.User ? (
+            // User message with gradient - includes text and media
+            <LinearGradient
+              colors={theme.isDark 
+                ? ['#1e3a8a', '#1e40af'] // Dark blue gradient for dark mode
+                : ['#3b82f6', '#2563eb'] // Light to darker blue gradient
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={[
-                styles.markdownContainer,
-                streamingContent && { transform: [] },
-                streamingContent && { backgroundColor: `transparent` },
+                styles.contentContainer,
+                styles.userContent,
+                streamingContent && styles.streamingContent,
               ]}
             >
-              <MarkdownDisplay>{content}</MarkdownDisplay>
-            </Animated.View>
-          </Pressable>
+              <Pressable
+                onLongPress={showTextContextMenu}
+                onPress={handlePress}
+                accessible={true}
+                accessibilityLabel={`Your message: ${content}`}
+                accessibilityRole="text"
+                testID="markdown-container"
+              >
+                {/* Render media first for user messages */}
+                {(() => {
+                  const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
+                  const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+                  
+                  return (
+                    <>
+                      {hasFileImage && (
+                        <View style={styles.mediaInMessage}>
+                          {renderImageContent()}
+                        </View>
+                      )}
+                      {hasFileVideo && content === '' && (
+                        <View style={styles.mediaInMessage}>
+                          {renderVideo()}
+                        </View>
+                      )}
+                    </>
+                  );
+                })()}
+                
+                {/* Text content */}
+                {content && (
+                  <Animated.View
+                    style={[
+                      styles.markdownContainer,
+                      streamingContent && { transform: [] },
+                      streamingContent && { backgroundColor: `transparent` },
+                    ]}
+                  >
+                    <View style={styles.userTextWrapper}>
+                      <MarkdownDisplay additionalStyles={{
+                        body: { color: '#FFFFFF' },
+                        heading1: { color: '#FFFFFF' },
+                        heading2: { color: '#FFFFFF' },
+                        heading3: { color: '#FFFFFF' },
+                        heading4: { color: '#FFFFFF' },
+                        heading5: { color: '#FFFFFF' },
+                        heading6: { color: '#FFFFFF' },
+                        paragraph: { color: '#FFFFFF' },
+                        text: { color: '#FFFFFF' },
+                      }}>
+                        {content}
+                      </MarkdownDisplay>
+                    </View>
+                  </Animated.View>
+                )}
+              </Pressable>
+            </LinearGradient>
+          ) : (
+            // Bot message without gradient - includes text and media
+            <Pressable
+              onLongPress={showTextContextMenu}
+              onPress={handlePress}
+              style={[
+                styles.contentContainer,
+                styles.botContent,
+                streamingContent && styles.streamingContent,
+              ]}
+              accessible={true}
+              accessibilityLabel={`Assistant message: ${content}`}
+              accessibilityRole="text"
+              testID="markdown-container"
+            >
+              {/* Text content first for bot */}
+              {content && (
+                <Animated.View
+                  style={[
+                    styles.markdownContainer,
+                    streamingContent && { transform: [] },
+                    streamingContent && { backgroundColor: `transparent` },
+                  ]}
+                >
+                  <MarkdownDisplay>{content}</MarkdownDisplay>
+                </Animated.View>
+              )}
+              
+              {/* Render media after text for bot messages */}
+              {(() => {
+                const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
+                const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+                
+                return (
+                  <>
+                    {hasFileImage && (
+                      <View style={styles.mediaInMessage}>
+                        {renderImageContent()}
+                      </View>
+                    )}
+                    {hasFileVideo && content === '' && (
+                      <View style={styles.mediaInMessage}>
+                        {renderVideo()}
+                      </View>
+                    )}
+                  </>
+                );
+              })()}
+            </Pressable>
+          )}
+          
+          {/* Audio rendering (not grouped in bubble) */}
           {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
             renderAudio()
           )}
           
-          {/* Render videos and images - prefer files[] over additional_data (better URLs) */}
-          {/* Backend sends media in both places with different signatures */}
-          {/* files[] has longer expiration and better permissions */}
+          {/* Render AI-generated content (additional_data) - shown outside message bubble */}
           {(() => {
             const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
             const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
             const hasAdditionalVideo = additional_data && additional_data.some(item => item.data_type === 'video');
             const hasAdditionalImage = additional_data && additional_data.some(item => item.data_type === 'img');
             
-            // Render videos first (if any)
-            let videoElement = null;
-            if (hasFileVideo && content === '') {
-              videoElement = renderVideo();
-            }
-            
-            // Render images
-            let imageElement = null;
-            if (hasFileImage) {
-              imageElement = renderImageContent();
-            }
-            
-            // If we have files[] media, render them and skip additional_data
-            if (hasFileVideo || hasFileImage) {
-              return (
-                <>
-                  {videoElement}
-                  {imageElement}
-                </>
-              );
-            }
-            
-            // Otherwise, render from additional_data (fallback)
-            if (hasAdditionalVideo || hasAdditionalImage) {
+            // Only render additional_data if no files[] media (prevents duplicates)
+            if (!hasFileVideo && !hasFileImage && (hasAdditionalVideo || hasAdditionalImage)) {
               return renderAdditionalData();
             }
             
-            // No media in either place
             return null;
           })()}
         </>)
@@ -941,12 +1092,18 @@ const ChatMessage = memo(({
     return getStatusIcon();
   };
 
+  // Apply grouping styles
+  const containerStyle = [
+    styles.container,
+    role === Role.Bot ? styles.botContainer : styles.userContainer,
+    // Reduce spacing for grouped messages
+    !isOnlyInGroup && !isFirstInGroup && styles.groupedMessage,
+    isLastInGroup && styles.lastInGroup,
+  ];
+
   return (
     <Animated.View
-      style={[
-        styles.container,
-        role === Role.Bot ? styles.botContainer : styles.userContainer,
-      ]}
+      style={containerStyle}
       testID={`message-${role === Role.Bot ? 'bot' : 'user'}`}
     >
       {isLoading ? (
@@ -989,7 +1146,8 @@ const ChatMessage = memo(({
           <View style={styles.messageContent} testID="message-content">
             {renderContent()}
           </View>
-          {(timestamp || status) && (
+          {/* Only show timestamp on last message in group or standalone messages */}
+          {(timestamp || status) && (isLastInGroup || isOnlyInGroup) && (
             <View style={[styles.metaContainer, role === Role.User ? styles.metaUser : styles.metaBot]}>
               {timestamp && (
                 <Text style={styles.timestamp}>
@@ -1008,8 +1166,14 @@ const ChatMessage = memo(({
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
-    marginVertical: 6,
+    marginVertical: 8,
     paddingHorizontal: 16,
+  },
+  groupedMessage: {
+    marginTop: 2, // Reduced spacing for grouped messages
+  },
+  lastInGroup: {
+    marginBottom: 12, // Extra space after group ends
   },
   audioPlayer: {
     flexDirection: 'row',
@@ -1022,12 +1186,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   botContainer: {
     alignSelf: 'flex-start',
-    maxWidth: '100%', // Full width for bot messages
+    width: '100%', // Full width for bot messages (padding is on parent)
   },
   userContainer: {
     alignSelf: 'flex-end',
     flexDirection: 'row-reverse',
-    maxWidth: '85%', // Constrain user messages for better readability
+    maxWidth: '80%', // Better readability constraint
   },
   avatarContainer: {
     marginRight: 8,
@@ -1061,9 +1225,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   contentContainer: {
     borderRadius: CHAT_MESSAGE.MESSAGE_BORDER_RADIUS,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     maxWidth: '100%',
-    ...shadows.sm, // Use consistent shadow system
   },
   streamingContent: {
     opacity: 0.95,
@@ -1072,15 +1235,31 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     width: '100%',
     alignSelf: 'flex-start',
   },
+  mediaInMessage: {
+    marginBottom: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  userTextWrapper: {
+    width: '100%',
+  },
   botContent: {
-    backgroundColor: 'transparent',
-    borderBottomLeftRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS, // Tail effect
+    backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    borderBottomLeftRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+    ...shadows.sm,
   },
   userContent: {
-    backgroundColor: theme.colors.primary,
-    borderBottomRightRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS, // Tail effect
-    ...shadows.md, // User messages have more elevation
-    paddingVertical: 6, // Reduced padding for user messages
+    // backgroundColor removed - using LinearGradient instead
+    borderBottomRightRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS,
+    // Enhanced shadow for user messages with primary color tint
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+    paddingVertical: 12,
   },
   text: {
     fontSize: 16,
@@ -1237,19 +1416,22 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 4,
+    marginTop: 6,
     paddingHorizontal: 4,
   },
   metaUser: {
     alignSelf: 'flex-end',
+    justifyContent: 'flex-end',
   },
   metaBot: {
     alignSelf: 'flex-start',
+    justifyContent: 'flex-start',
   },
   timestamp: {
     fontSize: 11,
+    fontWeight: '500',
     color: theme.colors.textSecondary,
-    opacity: 0.7,
+    opacity: 0.8,
   },
   statusDotEmpty: {
     width: 10,
