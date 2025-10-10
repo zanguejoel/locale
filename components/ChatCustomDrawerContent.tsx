@@ -682,6 +682,7 @@ export const CustomDrawerContent = (props: any) => {
                                     renderItem={renderItem}
                                     onScroll={handleScroll}
                                     scrollEventThrottle={16}
+                                    estimatedItemSize={68}
                                     refreshControl={
                                         <RefreshControl
                                             refreshing={isRefreshing}
@@ -727,7 +728,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     headerContainer: {
         backgroundColor: theme.colors.background,
         paddingBottom: 12,
-        borderBottomWidth: 1,
+        borderBottomWidth: theme.isDark ? 0.4 : 1,
         borderBottomColor: theme.colors.greyLight,
         marginTop: 50,
     },
@@ -763,6 +764,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: theme.colors.backgroundLight,
+        borderWidth: theme.isDark ? 0.4 : 1,
+        borderColor: theme.colors.greyLight,
         borderRadius: 12,
         height: 40,
         paddingHorizontal: 12,
@@ -917,7 +920,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     footerContainer: {
         padding: 16,
-        borderTopWidth: 1,
+        borderTopWidth: theme.isDark ? 0.4 : 1,
         borderTopColor: '#F0F0F0',
         backgroundColor: theme.colors.background,
     },
