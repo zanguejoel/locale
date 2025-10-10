@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import { Theme } from '@/constants/Types';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { GenerationOptionsState } from './GenerationOptions';
-import { LinearGradient } from 'expo-linear-gradient';
 
 interface AttachmentsModalProps {
   visible: boolean;
@@ -27,8 +26,6 @@ interface AttachmentsModalProps {
   generationOptions?: GenerationOptionsState;
   onGenerationOptionsChange?: (options: GenerationOptionsState) => void;
 }
-
-type ViewType = 'attachments' | 'ai-options';
 
 const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
   visible,
@@ -42,38 +39,12 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
 }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
-  const [currentView, setCurrentView] = useState<ViewType>('attachments');
-
-  // Reset to attachments view when modal closes
-  React.useEffect(() => {
-    if (!visible) {
-      setCurrentView('attachments');
-    }
-  }, [visible]);
 
   const handleOptionPress = async (action: () => void) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
     setTimeout(() => action(), 100);
   };
-
-  const handleAIOptionsPress = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCurrentView('ai-options');
-  };
-
-  const handleBackToAttachments = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCurrentView('attachments');
-  };
-
-  // Check if any generation option is active
-  const hasActiveOptions = generationOptions
-    ? generationOptions.webSearch || 
-      generationOptions.generateImage !== 'none' || 
-      (generationOptions.generateVideo !== 'none' && 
-       ['aws_nova_reel', 'google_veo2', 'google_veo3', 'google_veo3_audio'].includes(generationOptions.generateVideo))
-    : false;
 
   // Generation options handlers
   const handleToggleWebSearch = () => {
@@ -105,50 +76,11 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
     onGenerationOptionsChange({ ...generationOptions, imageProvider: provider });
   };
 
-  const renderOptionButton = (
-    label: string,
-    currentValue: string,
-    option: string,
-    onPress: (value: string) => void,
-    icon?: keyof typeof Ionicons.glyphMap
-  ) => {
-    const isSelected = currentValue === option;
-    return (
-      <TouchableOpacity
-        style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
-        onPress={() => onPress(option)}
-        activeOpacity={0.7}
-      >
-        {isSelected ? (
-          <LinearGradient
-            colors={[theme.colors.primary, theme.colors.primary]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.selectedGradient}
-          >
-            {icon && <Ionicons name={icon} size={16} color="#FFFFFF" style={styles.optionIconSmall} />}
-            <Text style={[styles.optionButtonText, styles.optionButtonTextSelected]}>
-              {label}
-            </Text>
-            <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-          </LinearGradient>
-        ) : (
-          <View style={styles.optionButtonContent}>
-            {icon && <Ionicons name={icon} size={16} color={theme.colors.textSecondary} style={styles.optionIconSmall} />}
-            <Text style={styles.optionButtonText}>
-              {label}
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  };
-
-  // Render attachments view
-  const renderAttachmentsView = () => (
+  // Unified view with both attachments and AI options
+  const renderUnifiedView = () => (
     <>
       <View style={styles.header}>
-        <Text style={styles.title}>Attachments</Text>
+        <Text style={styles.title}>Attachments & AI</Text>
         <TouchableOpacity
           onPress={onClose}
           style={styles.closeButton}
@@ -159,195 +91,250 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
         </TouchableOpacity>
       </View>
 
-      <View style={styles.optionsContainer}>
-        <TouchableOpacity
-          style={styles.option}
-          onPress={() => handleOptionPress(onTakePhoto)}
-          accessibilityLabel="Take photo"
-          accessibilityRole="button"
-        >
-          <View style={[styles.optionIcon, { backgroundColor: theme.colors.primary + '20' }]}>
-            <Ionicons name="camera" size={28} color={theme.colors.primary} />
-          </View>
-          <Text style={styles.optionText}>Camera</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.option}
-          onPress={() => handleOptionPress(onPickImage)}
-          accessibilityLabel="Pick from gallery"
-          accessibilityRole="button"
-        >
-          <View style={[styles.optionIcon, { backgroundColor: theme.colors.orange + '20' }]}>
-            <Ionicons name="images" size={28} color={theme.colors.orange} />
-          </View>
-          <Text style={styles.optionText}>Gallery</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.option}
-          onPress={() => handleOptionPress(onPickDocument)}
-          accessibilityLabel="Pick document"
-          accessibilityRole="button"
-        >
-          <View style={[styles.optionIcon, { backgroundColor: theme.colors.blue + '20' }]}>
-            <Ionicons name="document-text" size={28} color={theme.colors.blue} />
-          </View>
-          <Text style={styles.optionText}>Document</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* AI Options Button (Cloud mode only) */}
-      {!isLocal && onGenerationOptionsChange && (
-        <View style={styles.aiOptionsRow}>
+      <ScrollView 
+        style={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContentContainer}
+      >
+        {/* Attachments Section */}
+        <View style={styles.optionsContainer}>
           <TouchableOpacity
-            style={[
-              styles.aiOptionsButton,
-              hasActiveOptions && styles.aiOptionsButtonActive
-            ]}
-            onPress={handleAIOptionsPress}
-            accessibilityLabel="AI Options"
+            style={styles.option}
+            onPress={() => handleOptionPress(onTakePhoto)}
+            accessibilityLabel="Take photo"
             accessibilityRole="button"
-            accessibilityState={{ selected: hasActiveOptions }}
           >
-            <Ionicons 
-              name="sparkles" 
-              size={20} 
-              color={hasActiveOptions ? theme.colors.primary : theme.colors.text} 
-            />
-            <Text style={[
-              styles.aiOptionsButtonText,
-              hasActiveOptions && { color: theme.colors.primary }
-            ]}>
-              AI Options
-            </Text>
-            {hasActiveOptions && (
-              <View style={styles.activeBadge}>
-                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+            <View style={[styles.optionIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Ionicons name="camera" size={28} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.optionText}>Camera</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.option}
+            onPress={() => handleOptionPress(onPickImage)}
+            accessibilityLabel="Pick from gallery"
+            accessibilityRole="button"
+          >
+            <View style={[styles.optionIcon, { backgroundColor: theme.colors.orange + '20' }]}>
+              <Ionicons name="images" size={28} color={theme.colors.orange} />
+            </View>
+            <Text style={styles.optionText}>Gallery</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.option}
+            onPress={() => handleOptionPress(onPickDocument)}
+            accessibilityLabel="Pick document"
+            accessibilityRole="button"
+          >
+            <View style={[styles.optionIcon, { backgroundColor: theme.colors.blue + '20' }]}>
+              <Ionicons name="document-text" size={28} color={theme.colors.blue} />
+            </View>
+            <Text style={styles.optionText}>Document</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* AI Options Section (Cloud mode only) */}
+        {!isLocal && generationOptions && onGenerationOptionsChange && (
+          <>
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* Compact AI Options Cards */}
+            <View style={styles.aiOptionsGrid}>
+              {/* Web Search Toggle */}
+              <TouchableOpacity
+                style={[
+                  styles.compactCard,
+                  generationOptions.webSearch && styles.compactCardActive
+                ]}
+                onPress={handleToggleWebSearch}
+                activeOpacity={0.7}
+                accessibilityLabel="Toggle web search"
+                accessibilityRole="switch"
+                accessibilityState={{ checked: generationOptions.webSearch }}
+              >
+                <View style={styles.compactCardHeader}>
+                  <View style={[styles.compactIconBadge, { backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)' }]}>
+                    <Ionicons name="search" size={18} color={theme.colors.primary} />
+                  </View>
+                  <Switch
+                    value={generationOptions.webSearch}
+                    onValueChange={handleToggleWebSearch}
+                    trackColor={{ 
+                      false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
+                      true: theme.colors.primary 
+                    }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor={theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
+                  />
+                </View>
+                <Text style={styles.compactCardTitle}>Web Search</Text>
+                <Text style={styles.compactCardDescription}>Real-time information</Text>
+              </TouchableOpacity>
+
+              {/* Image Generation Toggle */}
+              <TouchableOpacity
+                style={[
+                  styles.compactCard,
+                  generationOptions.generateImage !== 'none' && styles.compactCardActive
+                ]}
+                onPress={() => {
+                  const nextValue = generationOptions.generateImage === 'none' ? 'auto' : 'none';
+                  handleImageGenerationChange(nextValue);
+                }}
+                activeOpacity={0.7}
+                accessibilityLabel="Toggle image generation"
+                accessibilityRole="switch"
+                accessibilityState={{ checked: generationOptions.generateImage !== 'none' }}
+              >
+                <View style={styles.compactCardHeader}>
+                  <View style={[styles.compactIconBadge, { backgroundColor: theme.isDark ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.15)' }]}>
+                    <Ionicons name="image" size={18} color="#a855f7" />
+                  </View>
+                  <Switch
+                    value={generationOptions.generateImage !== 'none'}
+                    onValueChange={(value) => {
+                      handleImageGenerationChange(value ? 'auto' : 'none');
+                    }}
+                    trackColor={{ 
+                      false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
+                      true: '#a855f7' 
+                    }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor={theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
+                  />
+                </View>
+                <Text style={styles.compactCardTitle}>Image Generation</Text>
+                <Text style={styles.compactCardDescription}>
+                  {generationOptions.generateImage === 'none' ? 'Off' : 
+                   generationOptions.generateImage === 'auto' ? 'Auto' : 'Always'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Image Generation Options (when enabled) */}
+            {generationOptions.generateImage !== 'none' && (
+              <View style={styles.expandedSection}>
+                <View style={styles.optionRow}>
+                  <Text style={styles.optionRowLabel}>Mode</Text>
+                  <View style={styles.inlineButtonGroup}>
+                    <TouchableOpacity
+                      style={[
+                        styles.inlineButton,
+                        generationOptions.generateImage === 'auto' && styles.inlineButtonActive
+                      ]}
+                      onPress={() => handleImageGenerationChange('auto')}
+                    >
+                      <Text style={[
+                        styles.inlineButtonText,
+                        generationOptions.generateImage === 'auto' && styles.inlineButtonTextActive
+                      ]}>Auto</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.inlineButton,
+                        generationOptions.generateImage === 'always' && styles.inlineButtonActive
+                      ]}
+                      onPress={() => handleImageGenerationChange('always')}
+                    >
+                      <Text style={[
+                        styles.inlineButtonText,
+                        generationOptions.generateImage === 'always' && styles.inlineButtonTextActive
+                      ]}>Always</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.optionRow}>
+                  <Text style={styles.optionRowLabel}>Provider</Text>
+                  <View style={styles.inlineButtonGroup}>
+                    <TouchableOpacity
+                      style={[
+                        styles.inlineButton,
+                        generationOptions.imageProvider === 'openai' && styles.inlineButtonActive
+                      ]}
+                      onPress={() => handleImageProviderChange('openai')}
+                    >
+                      <Ionicons 
+                        name="aperture-outline" 
+                        size={14} 
+                        color={generationOptions.imageProvider === 'openai' ? '#FFFFFF' : theme.colors.textSecondary} 
+                      />
+                      <Text style={[
+                        styles.inlineButtonText,
+                        generationOptions.imageProvider === 'openai' && styles.inlineButtonTextActive
+                      ]}>OpenAI</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.inlineButton,
+                        generationOptions.imageProvider === 'gemini' && styles.inlineButtonActive
+                      ]}
+                      onPress={() => handleImageProviderChange('gemini')}
+                    >
+                      <Ionicons 
+                        name="sparkles-outline" 
+                        size={14} 
+                        color={generationOptions.imageProvider === 'gemini' ? '#FFFFFF' : theme.colors.textSecondary} 
+                      />
+                      <Text style={[
+                        styles.inlineButtonText,
+                        generationOptions.imageProvider === 'gemini' && styles.inlineButtonTextActive
+                      ]}>Gemini</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             )}
-          </TouchableOpacity>
-        </View>
-      )}
-    </>
-  );
 
-  // Render AI options view
-  const renderAIOptionsView = () => {
-    if (!generationOptions) return null;
-
-    return (
-      <>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity
-              onPress={handleBackToAttachments}
-              style={styles.backButton}
-              accessibilityLabel="Back to attachments"
-              accessibilityRole="button"
-            >
-              <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.title}>AI Options</Text>
-          </View>
-          <TouchableOpacity
-            onPress={onClose}
-            style={styles.closeButton}
-            accessibilityLabel="Close"
-            accessibilityRole="button"
-          >
-            <Ionicons name="close" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView 
-          style={styles.scrollContent} 
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContentContainer}
-        >
-          {/* Web Search */}
-          <View style={styles.section}>
-            <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitleContainer}>
-                  <View style={[styles.iconBadge, { backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
-                    <Ionicons name="search" size={20} color={theme.colors.primary} />
-                  </View>
-                  <View style={styles.titleTextContainer}>
-                    <Text style={styles.sectionTitle}>Web Search</Text>
-                    <Text style={styles.sectionDescription}>
-                      Real-time web information
-                    </Text>
-                  </View>
+            {/* Video Generation */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={[styles.compactIconBadge, { backgroundColor: theme.isDark ? 'rgba(236, 72, 153, 0.2)' : 'rgba(236, 72, 153, 0.15)' }]}>
+                  <Ionicons name="videocam" size={18} color="#ec4899" />
                 </View>
-                <Switch
-                  value={generationOptions.webSearch}
-                  onValueChange={handleToggleWebSearch}
-                  trackColor={{ 
-                    false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
-                    true: theme.colors.primary 
-                  }}
-                  thumbColor="#FFFFFF"
-                  ios_backgroundColor={theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Image Generation */}
-          <View style={styles.section}>
-            <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitleContainer}>
-                  <View style={[styles.iconBadge, { backgroundColor: theme.isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.1)' }]}>
-                    <Ionicons name="image" size={20} color="#a855f7" />
-                  </View>
-                  <View style={styles.titleTextContainer}>
-                    <Text style={styles.sectionTitle}>Image Generation</Text>
-                    <Text style={styles.sectionDescription}>
-                      AI-powered image creation
-                    </Text>
-                  </View>
+                <View>
+                  <Text style={styles.sectionHeaderTitle}>Video Generation</Text>
+                  <Text style={styles.sectionHeaderSubtitle}>
+                    {generationOptions.generateVideo === 'none' ? 'Off' : 
+                     generationOptions.generateVideo === 'aws_nova_reel' ? 'AWS Nova Reel' :
+                     generationOptions.generateVideo === 'google_veo2' ? 'Google Veo2' :
+                     generationOptions.generateVideo === 'google_veo3' ? 'Google Veo3' :
+                     generationOptions.generateVideo === 'google_veo3_audio' ? 'Veo3 + Audio' : 'Off'}
+                  </Text>
                 </View>
               </View>
-              
-              <View style={styles.optionButtonGroup}>
-                {renderOptionButton('None', generationOptions.generateImage, 'none', handleImageGenerationChange, 'close-circle-outline')}
-                {renderOptionButton('Auto', generationOptions.generateImage, 'auto', handleImageGenerationChange, 'flash-outline')}
-                {renderOptionButton('Always', generationOptions.generateImage, 'always', handleImageGenerationChange, 'checkmark-circle-outline')}
-              </View>
 
-              {generationOptions.generateImage !== 'none' && (
-                <View style={styles.providerSection}>
-                  <Text style={styles.subSectionTitle}>Provider</Text>
-                <View style={styles.optionButtonGroup}>
-                  {renderOptionButton('OpenAI', generationOptions.imageProvider, 'openai', handleImageProviderChange, 'aperture-outline')}
-                  {renderOptionButton('Gemini', generationOptions.imageProvider, 'gemini', handleImageProviderChange, 'sparkles-outline')}
-                </View>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Video Generation */}
-          <View style={styles.section}>
-            <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitleContainer}>
-                  <View style={[styles.iconBadge, { backgroundColor: theme.isDark ? 'rgba(236, 72, 153, 0.15)' : 'rgba(236, 72, 153, 0.1)' }]}>
-                    <Ionicons name="videocam" size={20} color="#ec4899" />
-                  </View>
-                  <View style={styles.titleTextContainer}>
-                    <Text style={styles.sectionTitle}>Video Generation</Text>
-                    <Text style={styles.sectionDescription}>
-                      Select AI model for video creation
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              
-              {/* Video Model Options */}
               <View style={styles.videoModelsContainer}>
+                {/* None Option */}
+                <TouchableOpacity
+                  style={[
+                    styles.videoModelOption,
+                    generationOptions.generateVideo === 'none' && styles.videoModelOptionSelected
+                  ]}
+                  onPress={() => onGenerationOptionsChange({ ...generationOptions, generateVideo: 'none' })}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.videoModelLeft}>
+                    <Ionicons 
+                      name="close-circle-outline" 
+                      size={20} 
+                      color={generationOptions.generateVideo === 'none' ? theme.colors.text : theme.colors.textSecondary} 
+                    />
+                    <Text style={[
+                      styles.videoModelName,
+                      generationOptions.generateVideo === 'none' && styles.videoModelNameSelected
+                    ]}>
+                      None
+                    </Text>
+                  </View>
+                  {generationOptions.generateVideo === 'none' && (
+                    <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
+                  )}
+                </TouchableOpacity>
+
                 {/* AWS Nova Reel */}
                 <TouchableOpacity
                   style={[
@@ -359,7 +346,7 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
                 >
                   <View style={styles.videoModelLeft}>
                     <Ionicons 
-                      name="videocam" 
+                      name="flash" 
                       size={20} 
                       color={generationOptions.generateVideo === 'aws_nova_reel' ? '#3b82f6' : theme.colors.textSecondary} 
                     />
@@ -389,7 +376,7 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
                 >
                   <View style={styles.videoModelLeft}>
                     <Ionicons 
-                      name="videocam" 
+                      name="sparkles" 
                       size={20} 
                       color={generationOptions.generateVideo === 'google_veo2' ? '#10b981' : theme.colors.textSecondary} 
                     />
@@ -419,7 +406,7 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
                 >
                   <View style={styles.videoModelLeft}>
                     <Ionicons 
-                      name="videocam" 
+                      name="star" 
                       size={20} 
                       color={generationOptions.generateVideo === 'google_veo3' ? '#10b981' : theme.colors.textSecondary} 
                     />
@@ -469,32 +456,11 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
-        </ScrollView>
-
-        <View style={styles.footer}>
-          <TouchableOpacity 
-            style={styles.doneButton} 
-            onPress={() => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              setCurrentView('attachments');
-            }}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={[theme.colors.primary, theme.colors.primary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.doneButtonGradient}
-            >
-              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-              <Text style={styles.doneButtonText}>Apply Settings</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </>
-    );
-  };
+          </>
+        )}
+      </ScrollView>
+    </>
+  );
 
   return (
     <Modal
@@ -507,7 +473,7 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
       <TouchableOpacity
         style={styles.overlay}
         activeOpacity={1}
-        onPress={currentView === 'attachments' ? onClose : undefined}
+        onPress={onClose}
       >
         {Platform.OS === 'ios' ? (
           <BlurView intensity={80} tint={theme.isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
@@ -522,11 +488,8 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
         >
-          <View style={[
-            styles.modalCard,
-            currentView === 'ai-options' && styles.modalCardExpanded
-          ]}>
-            {currentView === 'attachments' ? renderAttachmentsView() : renderAIOptionsView()}
+          <View style={styles.modalCard}>
+            {renderUnifiedView()}
           </View>
         </TouchableOpacity>
       </TouchableOpacity>
@@ -556,6 +519,7 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.colors.background,
       borderRadius: 24,
       padding: 20,
+      maxHeight: '85%',
       ...Platform.select({
         ios: {
           shadowColor: '#000',
@@ -568,28 +532,11 @@ const getStyles = (theme: Theme) =>
         },
       }),
     },
-    modalCardExpanded: {
-      maxHeight: '85%',
-    },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 20,
-    },
-    headerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flex: 1,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: theme.colors.backgroundLight,
-      justifyContent: 'center',
-      alignItems: 'center',
     },
     title: {
       fontSize: 24,
@@ -627,40 +574,115 @@ const getStyles = (theme: Theme) =>
       color: theme.colors.text,
       textAlign: 'center',
     },
-    aiOptionsRow: {
-      marginTop: 16,
-      paddingTop: 16,
-      borderTopWidth: 1,
-      borderTopColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
+    divider: {
+      height: 1,
+      backgroundColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
+      marginVertical: 20,
     },
-    aiOptionsButton: {
+    // Compact AI Options Cards
+    aiOptionsGrid: {
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
+      gap: 12,
+      marginBottom: 16,
+    },
+    compactCard: {
+      flex: 1,
+      backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+      borderRadius: 16,
       padding: 14,
-      borderRadius: 12,
-      backgroundColor: theme.colors.backgroundLight,
-      borderWidth: 1,
-      borderColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
+      borderWidth: 1.5,
+      borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
     },
-    aiOptionsButtonActive: {
-      backgroundColor: theme.colors.primary + '15',
+    compactCardActive: {
       borderColor: theme.colors.primary + '40',
+      backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.05)',
     },
-    aiOptionsButtonText: {
+    compactCardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    compactIconBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    compactCardTitle: {
       fontSize: 15,
       fontWeight: '600',
       color: theme.colors.text,
+      marginBottom: 4,
     },
-    activeBadge: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      backgroundColor: theme.colors.primary,
-      justifyContent: 'center',
+    compactCardDescription: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+    },
+    // Expanded Section for Image Options
+    expandedSection: {
+      backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+      borderRadius: 16,
+      padding: 14,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+      gap: 12,
+    },
+    optionRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
       alignItems: 'center',
-      marginLeft: 4,
+    },
+    optionRowLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    inlineButtonGroup: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    inlineButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+      borderWidth: 1.5,
+      borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+    },
+    inlineButtonActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    inlineButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    inlineButtonTextActive: {
+      color: '#FFFFFF',
+    },
+    // Section Header for Video
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 14,
+    },
+    sectionHeaderTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    sectionHeaderSubtitle: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
     },
     // AI Options view styles
     scrollContent: {
@@ -671,127 +693,6 @@ const getStyles = (theme: Theme) =>
     },
     section: {
       marginBottom: 16,
-    },
-    card: {
-      backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-      borderRadius: 16,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-    },
-    sectionHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 16,
-    },
-    sectionTitleContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      flex: 1,
-    },
-    iconBadge: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    titleTextContainer: {
-      flex: 1,
-    },
-    sectionTitle: {
-      fontSize: 17,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 2,
-    },
-    sectionDescription: {
-      fontSize: 13,
-      color: theme.colors.textSecondary,
-      lineHeight: 18,
-    },
-    subSectionTitle: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.colors.textSecondary,
-      marginBottom: 10,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    providerSection: {
-      marginTop: 16,
-      paddingTop: 16,
-      borderTopWidth: 1,
-      borderTopColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-    },
-    optionButtonGroup: {
-      flexDirection: 'row',
-      gap: 10,
-    },
-    optionButton: {
-      flex: 1,
-      borderRadius: 12,
-      overflow: 'hidden',
-      borderWidth: 1.5,
-      borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-      backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.03)' : '#FFFFFF',
-    },
-    optionButtonSelected: {
-      borderColor: 'transparent',
-    },
-    optionButtonContent: {
-      paddingVertical: 12,
-      paddingHorizontal: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
-      gap: 6,
-    },
-    selectedGradient: {
-      paddingVertical: 12,
-      paddingHorizontal: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
-      gap: 6,
-    },
-    optionIconSmall: {
-      marginRight: 2,
-    },
-    optionButtonText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.colors.text,
-    },
-    optionButtonTextSelected: {
-      color: '#FFFFFF',
-    },
-    footer: {
-      paddingTop: 16,
-      marginTop: 8,
-    },
-    doneButton: {
-      borderRadius: 14,
-      overflow: 'hidden',
-      shadowColor: theme.colors.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
-    },
-    doneButtonGradient: {
-      paddingVertical: 16,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-    },
-    doneButtonText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: '#FFFFFF',
     },
     // Video Model Styles
     videoModelsContainer: {
