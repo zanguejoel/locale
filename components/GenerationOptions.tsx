@@ -5,7 +5,6 @@ import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 
 export interface GenerationOptionsState {
   webSearch: boolean;
@@ -22,6 +21,8 @@ interface GenerationOptionsProps {
   onOptionsChange: (options: GenerationOptionsState) => void;
 }
 
+// This component is now deprecated in favor of the integrated AI Options view in AttachmentsModal
+// Keeping it for backward compatibility but it's no longer actively used
 const GenerationOptions: React.FC<GenerationOptionsProps> = ({
   visible,
   onClose,
@@ -107,15 +108,19 @@ const GenerationOptions: React.FC<GenerationOptionsProps> = ({
   return (
     <Modal
       visible={visible}
-      animationType="fade"
+      animationType="slide"
       transparent={true}
       onRequestClose={onClose}
+      presentationStyle="overFullScreen"
     >
-      <TouchableOpacity 
-        style={styles.modalOverlay} 
-        activeOpacity={1}
-        onPress={onClose}
-      >
+      <View style={styles.modalOverlay}>
+        <TouchableOpacity 
+          style={styles.overlayTouchable} 
+          activeOpacity={1}
+          onPress={onClose}
+        >
+          <View style={{ flex: 1 }} />
+        </TouchableOpacity>
         <Animated.View 
           style={[
             styles.modalContentWrapper,
@@ -260,7 +265,7 @@ const GenerationOptions: React.FC<GenerationOptionsProps> = ({
             </View>
           </TouchableOpacity>
         </Animated.View>
-      </TouchableOpacity>
+      </View>
     </Modal>
   );
 };
@@ -271,8 +276,14 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'flex-end',
   },
+  overlayTouchable: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   modalContentWrapper: {
-    flex: 1,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -459,4 +470,3 @@ const getStyles = (theme: Theme) => StyleSheet.create({
 });
 
 export default GenerationOptions;
-

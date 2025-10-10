@@ -42,6 +42,7 @@ import { isLlamaModel } from '@/constants/Models';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import ErrorBanner from '@/components/ErrorBanner';
 import EnhancedEmptyState from '@/components/EnhancedEmptyState';
+import { SelectedFile } from '@/components/FilePreviewModal';
 
 // Helper function to get time-based greeting
 const getGreeting = (firstName: string = 'there') => {
@@ -124,23 +125,9 @@ const ChatPage = () => {
 
   const id = (params as { id?: string })?.id
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
-
-  // Type-safe wrapper for setSelectedImage
-  const handleSetSelectedImage = useCallback((asset: ImagePicker.ImagePickerAsset | DocumentPicker.DocumentPickerAsset | null) => {
-    // If it's a DocumentPickerAsset, we only use the URI which is compatible with ImagePickerAsset
-    if (asset && 'mimeType' in asset) {
-      // DocumentPickerAsset - convert to a compatible format
-      setSelectedImage({
-        uri: asset.uri,
-        width: 0,
-        height: 0,
-        assetId: null,
-      } as ImagePicker.ImagePickerAsset);
-    } else {
-      setSelectedImage(asset as ImagePicker.ImagePickerAsset | null);
-    }
-  }, []);
+  
+  // File attachments state
+  const [files, setFiles] = useState<SelectedFile[]>([]);
 
   // Type-safe wrapper for fetchMessages
   const handleFetchMessages = useCallback((conversationId?: string) => {
@@ -564,19 +551,7 @@ const ChatPage = () => {
     right: 0
   }
 
-  const renderSelectedFile = () => {
-    return (
-      <View style={styles.selectedFileContainer}>
-        <AntDesign onPress={() => setSelectedImage(null)} name="closecircleo" style={styles.closeIcon} size={14} color={theme.colors.red} />
-        <Image
-          source={{ uri: selectedImage?.uri, cache: 'force-cache' }}
-          style={styles.previewImage}
-          resizeMode="cover"
-          testID="inline-image"
-        />
-      </View>
-    )
-  }
+  // File preview is handled via FilePreviewModal in ChatInput
 
   return (
     <GradientBackground variant="background" style={styles.pageContainer}>
@@ -709,7 +684,6 @@ const ChatPage = () => {
             </TouchableOpacity>
           )}
         </View>
-        {selectedImage && renderSelectedFile()}
         {isLocal && (
           <LocalModelDownloadProgress 
             progress={localModelDownloadProgress} 
@@ -730,10 +704,45 @@ const ChatPage = () => {
             />
           </View>
         )}
+        
+        {/* Attachment Preview */}
+        {files.length > 0 && (
+          <View style={styles.attachmentPreviewContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+              {files.map((file, index) => (
+                <View key={`file-${index}`} style={styles.attachmentPreview}>
+                  <Image
+                    source={{ uri: file.uri }}
+                    style={styles.attachmentPreviewImage}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    style={styles.removeAttachmentButton}
+                    onPress={() => {
+                      setFiles(files.filter((_, i) => i !== index));
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    accessibilityLabel="Remove attachment"
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="close-circle" size={24} color={theme.colors.red} />
+                  </TouchableOpacity>
+                  <View style={styles.attachmentInfo}>
+                    <Ionicons name="image" size={16} color="#FFFFFF" />
+                    <Text style={styles.attachmentName} numberOfLines={1}>
+                      {file.name || 'Attachment'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        
         <View style={[styles.inputBlurContainer]}>
           <ChatInput
-            setSelectedImage={handleSetSelectedImage}
-            selectedImage={selectedImage}
+            files={files}
+            setFiles={setFiles}
             fetchMessages={handleFetchMessages}
             onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
               // Scroll to bottom when sending a new message
@@ -781,14 +790,63 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.text,
   },
-  selectedFileContainer: {
-    marginBottom: 4,
-    marginLeft: 16,
+  // Attachment Preview Styles
+  attachmentPreviewContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.background,
   },
-  previewImage: {
-    width: 40,
-    height: 40,
+  attachmentPreview: {
+    position: 'relative',
+    width: 120,
     borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.backgroundLight,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  attachmentPreviewImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+  },
+  removeAttachmentButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attachmentInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  attachmentName: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    flex: 1,
   },
   image: {
     width: 120,

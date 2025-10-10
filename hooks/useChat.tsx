@@ -592,6 +592,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       imageProvider?: string;
       imageModel?: string;
       generateVideo?: string;
+      files?: Array<{
+        uri: string;
+        type: string;
+        name: string;
+        size?: number;
+      }>;
     }
   ) => {
     // console.log('[Cloud] Starting cloud message send:', { message, messageType, operation, options });
@@ -620,11 +626,49 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const formData = new FormData();
 
+    // Handle multiple files from options (new multi-file approach)
+    const filesToUpload = options?.files || [];
+    
     if (messageType !== 'audio' && messageType !== 'image' && message) {
       formData.append('text', message);
     }
 
-    if (files?.length || messageType === 'audio' || messageType === 'image') {
+    // Multi-file upload (new approach)
+    if (filesToUpload.length > 0) {
+      console.log('[Cloud] Processing', filesToUpload.length, 'files for upload');
+      
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
+        try {
+          // Optimize images before upload
+          if (file.type.startsWith('image/')) {
+            const optimizedPath = await optimizeImage(file.uri);
+            const mimeType = getFileType(optimizedPath);
+            formData.append('files', {
+              uri: optimizedPath,
+              type: mimeType,
+              name: file.name || `file_${i}.jpg`,
+            } as any);
+          } else {
+            // Other file types - send as-is
+            formData.append('files', {
+              uri: file.uri,
+              type: file.type,
+              name: file.name || `file_${i}`,
+            } as any);
+          }
+        } catch (error) {
+          console.error(`[Cloud] Error processing file ${i}:`, error);
+          // Continue with other files even if one fails
+        }
+      }
+      
+      // Add text/caption if provided
+      if (additionalData || message) {
+        formData.append('text', additionalData || message);
+      }
+    } else if (files?.length || messageType === 'audio' || messageType === 'image') {
+      // Legacy single file handling (for backward compatibility)
       let file = null;
       if (message.startsWith('file://')) {
         try {
@@ -717,7 +761,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       conversation_id: conversationId,
       has_web_search: options?.webSearch || false,
       has_image_generation: !!options?.generateImage,
-      has_files: files && files.length > 0,
+      has_files: filesToUpload.length > 0 || (files && files.length > 0),
+      file_count: filesToUpload.length,
     });
 
     if (conversationId) {
