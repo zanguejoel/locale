@@ -14,6 +14,7 @@ export default {
     },
     extra: {
       mixpanelToken: process.env.EXPO_PUBLIC_MIXPANEL_TOKEN,
+      webFrontendUrl: process.env.EXPO_PUBLIC_WEB_FRONTEND_URL || 'https://odysseytech.ai',
     },
     ios: {
         supportsTablet: true,

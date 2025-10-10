@@ -282,6 +282,7 @@ const Page = () => {
       <CreditPurchaseModal
         visible={isCreditPurchaseVisible}
         onClose={() => setIsCreditPurchaseVisible(false)}
+        source="settings"
       />
       </SafeAreaView>
     </GradientBackground>

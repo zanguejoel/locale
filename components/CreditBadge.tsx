@@ -10,9 +10,10 @@ import * as Haptics from 'expo-haptics';
 interface CreditBadgeProps {
   variant?: 'compact' | 'full';
   onPress?: () => void;
+  source?: 'header_badge' | 'settings' | 'error_banner' | 'empty_state';
 }
 
-const CreditBadge: React.FC<CreditBadgeProps> = ({ variant = 'compact', onPress }) => {
+const CreditBadge: React.FC<CreditBadgeProps> = ({ variant = 'compact', onPress, source = 'header_badge' }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
   const { credits, isLoading } = useCredits();
@@ -74,6 +75,7 @@ const CreditBadge: React.FC<CreditBadgeProps> = ({ variant = 'compact', onPress 
         <CreditPurchaseModal
           visible={showPurchaseModal}
           onClose={() => setShowPurchaseModal(false)}
+          source={source}
         />
       </>
     );
@@ -103,6 +105,7 @@ const CreditBadge: React.FC<CreditBadgeProps> = ({ variant = 'compact', onPress 
       <CreditPurchaseModal
         visible={showPurchaseModal}
         onClose={() => setShowPurchaseModal(false)}
+        source={source}
       />
     </>
   );

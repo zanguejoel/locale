@@ -15,6 +15,7 @@ import {
   ModelEvent,
   SettingsEvent,
   SubscriptionEvent,
+  CreditEvent,
 } from '@/types/mixpanel';
 
 // ============================================
@@ -269,6 +270,13 @@ class MixpanelService {
    * Track subscription events
    */
   public async trackSubscription(event: SubscriptionEvent, properties?: EventProperties): Promise<void> {
+    await this.track(event, properties);
+  }
+
+  /**
+   * Track credit events
+   */
+  public async trackCredit(event: CreditEvent, properties?: EventProperties): Promise<void> {
     await this.track(event, properties);
   }
 

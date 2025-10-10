@@ -806,6 +806,7 @@ const ChatPage = () => {
           // Refetch messages or take appropriate action after purchase
           if (id) fetchMessages(id);
         }}
+        source={chatError?.type === 'credit' ? 'error_banner' : 'header_badge'}
       />
     </GradientBackground>
   );

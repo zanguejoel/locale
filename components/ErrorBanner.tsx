@@ -131,7 +131,7 @@ const ErrorBanner: React.FC<ErrorBannerProps> = ({
           defaultAction: {
             text: 'Upgrade',
             onPress: () => {
-              Linking.openURL('https://beta.jaiime.com/pricing');
+              Linking.openURL('https://odysseytech.ai/dashboard/settings?tab=usage');
             },
           },
         };

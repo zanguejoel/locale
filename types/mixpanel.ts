@@ -100,6 +100,21 @@ export enum SubscriptionEvent {
   SUBSCRIPTION_ACTIVE = 'Subscription Active Detected',
 }
 
+export enum CreditEvent {
+  // Credit Purchase Flow
+  CREDIT_PURCHASE_MODAL_OPENED = 'Credit Purchase Modal Opened',
+  CREDIT_PACKAGE_SELECTED = 'Credit Package Selected',
+  CREDIT_CUSTOM_AMOUNT_ENTERED = 'Credit Custom Amount Entered',
+  CREDIT_PURCHASE_INITIATED = 'Credit Purchase Initiated',
+  CREDIT_PURCHASE_COMPLETED = 'Credit Purchase Completed',
+  CREDIT_PURCHASE_FAILED = 'Credit Purchase Failed',
+  
+  // Credit Balance
+  CREDIT_BALANCE_VIEWED = 'Credit Balance Viewed',
+  CREDIT_LOW_WARNING_SHOWN = 'Credit Low Warning Shown',
+  CREDIT_DEPLETED_ERROR_SHOWN = 'Credit Depleted Error Shown',
+}
+
 // ============================================
 // EVENT PROPERTY INTERFACES
 // ============================================
@@ -163,6 +178,32 @@ export interface SubscriptionEventProperties {
   source?: 'settings' | 'chat_limit' | 'feature_gate';
 }
 
+export interface CreditEventProperties {
+  // Purchase details
+  credit_amount?: number;
+  purchase_cost?: number;
+  package_type?: 'preset' | 'custom';
+  package_name?: string;
+  account_type?: 'PRO' | 'BUSINESS';
+  
+  // Transaction details
+  payment_method?: 'saved' | 'checkout';
+  transaction_completed?: boolean;
+  checkout_url?: string;
+  
+  // Balance info
+  credits_before?: number;
+  credits_after?: number;
+  credits_remaining?: number;
+  
+  // User context
+  source?: 'header_badge' | 'settings' | 'error_banner' | 'empty_state';
+  error_message?: string;
+  
+  // UI interaction
+  tab_used?: 'packages' | 'custom';
+}
+
 // ============================================
 // USER PROFILE INTERFACE
 // ============================================
@@ -215,6 +256,7 @@ export type EventProperties =
   | ModelEventProperties
   | SettingsEventProperties
   | SubscriptionEventProperties
+  | CreditEventProperties
   | BaseEventProperties
   | Record<string, any>;
 
