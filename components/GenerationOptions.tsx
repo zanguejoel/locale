@@ -449,6 +449,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   doneButton: {
     borderRadius: 14,
     overflow: 'hidden',
+    backgroundColor: theme.colors.primary, // Solid background for efficient shadow calculation
     shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

@@ -306,6 +306,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   menuContainer: {
     minHeight: 600,
     borderRadius: 16,
+    backgroundColor: theme.colors.card, // Solid background for efficient shadow calculation
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

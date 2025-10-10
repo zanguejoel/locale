@@ -826,7 +826,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         backgroundColor: theme.colors.activeChatItem,
     },
     activeChatItemGradient: {
-        // No background color - gradient handles it
+        backgroundColor: '#3b82f6', // Solid background for efficient shadow calculation
         shadowColor: '#3b82f6',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,

@@ -214,6 +214,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   infoContainer: {
     borderRadius: 12,
+    backgroundColor: theme.colors.card, // Solid background for efficient shadow calculation
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

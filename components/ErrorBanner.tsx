@@ -300,6 +300,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   bannerWrapper: {
     borderRadius: 16,
     overflow: 'hidden',
+    backgroundColor: theme.colors.card, // Solid background for efficient shadow calculation
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -390,6 +391,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     minHeight: 50,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'transparent', // Background is set dynamically by config.color
     ...Platform.select({
       ios: {
         shadowColor: '#000',

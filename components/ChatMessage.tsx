@@ -1173,7 +1173,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     ...shadows.sm,
   },
   userContent: {
-    // backgroundColor removed - using LinearGradient instead
+    backgroundColor: theme.colors.primary, // Solid background for efficient shadow calculation
     borderBottomRightRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS,
     // Enhanced shadow for user messages with primary color tint
     shadowColor: theme.colors.primary,

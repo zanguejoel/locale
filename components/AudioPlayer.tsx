@@ -78,6 +78,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         borderRadius: 15,
         paddingHorizontal: 12,
         maxWidth: '100%',
+        backgroundColor: 'transparent', // Default background for efficient shadow calculation
         ...Platform.select({
             ios: {
                 shadowColor: '#000',

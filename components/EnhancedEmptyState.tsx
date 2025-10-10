@@ -188,6 +188,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     borderRadius: 48,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#667eea', // Solid background for efficient shadow calculation
     shadowColor: '#667eea',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
