@@ -215,6 +215,14 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
       onShouldSend(message, 'text', null, '', options);
     }
     
+    // Reset generation options after sending
+    // This ensures image/video generation options are cleared after use
+    setGenerationOptions(prev => ({
+      ...prev,
+      generateImage: 'none',
+      generateVideo: 'none',
+    }));
+    
     setMessage('');
     setInputHeight(CHAT_INPUT.MIN_HEIGHT);
   };
