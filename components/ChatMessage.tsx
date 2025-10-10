@@ -779,7 +779,7 @@ const ChatMessage = memo(({
                       {/* Render media first for user messages */}
                       {(() => {
                         const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
-                        const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+                        const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
                         
                         return (
                           <>
@@ -798,7 +798,7 @@ const ChatMessage = memo(({
                       })()}
                       
                       {/* Text content */}
-                      {content && (
+                      {content && !isAudio(content) && (
                         <Animated.View
                           style={[
                             styles.markdownContainer,
@@ -823,6 +823,13 @@ const ChatMessage = memo(({
                           </View>
                         </Animated.View>
                       )}
+                      
+                      {/* Audio content within message bubble */}
+                      {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+                        <View style={styles.audioInMessage}>
+                          {renderAudio()}
+                        </View>
+                      )}
                     </Pressable>
                   </LinearGradient>
                 ) : (
@@ -841,7 +848,7 @@ const ChatMessage = memo(({
                     testID="markdown-container"
                   >
                     {/* Text content first for bot */}
-                    {content && (
+                    {content && !isAudio(content) && (
                       <Animated.View
                         style={[
                           styles.markdownContainer,
@@ -856,7 +863,7 @@ const ChatMessage = memo(({
                     {/* Render media after text for bot messages */}
                     {(() => {
                       const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
-                      const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+                      const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
                       
                       return (
                         <>
@@ -873,6 +880,13 @@ const ChatMessage = memo(({
                         </>
                       );
                     })()}
+                    
+                    {/* Audio content within message bubble */}
+                    {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+                      <View style={styles.audioInMessage}>
+                        {renderAudio()}
+                      </View>
+                    )}
                   </Pressable>
                 )}
               </ContextMenu.Trigger>
@@ -898,16 +912,11 @@ const ChatMessage = memo(({
               </ContextMenu.Content>
             </ContextMenu.Root>
           )}
-
-          {/* Audio rendering (not grouped in bubble) */}
-          {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
-            renderAudio()
-          )}
           
           {/* Render AI-generated content (additional_data) - shown outside message bubble */}
           {(() => {
             const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
-            const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+            const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
             const hasAdditionalVideo = additional_data && additional_data.some(item => item.data_type === 'video');
             const hasAdditionalImage = additional_data && additional_data.some(item => item.data_type === 'img');
             
@@ -951,7 +960,7 @@ const ChatMessage = memo(({
                 {/* Render media first for user messages */}
                 {(() => {
                   const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
-                  const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+                  const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
                   
                   return (
                     <>
@@ -970,7 +979,7 @@ const ChatMessage = memo(({
                 })()}
                 
                 {/* Text content */}
-                {content && (
+                {content && !isAudio(content) && (
                   <Animated.View
                     style={[
                       styles.markdownContainer,
@@ -995,6 +1004,13 @@ const ChatMessage = memo(({
                     </View>
                   </Animated.View>
                 )}
+                
+                {/* Audio content within message bubble */}
+                {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+                  <View style={styles.audioInMessage}>
+                    {renderAudio()}
+                  </View>
+                )}
               </Pressable>
             </LinearGradient>
           ) : (
@@ -1013,7 +1029,7 @@ const ChatMessage = memo(({
               testID="markdown-container"
             >
               {/* Text content first for bot */}
-              {content && (
+              {content && !isAudio(content) && (
                 <Animated.View
                   style={[
                     styles.markdownContainer,
@@ -1028,7 +1044,7 @@ const ChatMessage = memo(({
               {/* Render media after text for bot messages */}
               {(() => {
                 const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
-                const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+                const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
                 
                 return (
                   <>
@@ -1045,18 +1061,20 @@ const ChatMessage = memo(({
                   </>
                 );
               })()}
+              
+              {/* Audio content within message bubble */}
+              {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+                <View style={styles.audioInMessage}>
+                  {renderAudio()}
+                </View>
+              )}
             </Pressable>
-          )}
-          
-          {/* Audio rendering (not grouped in bubble) */}
-          {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
-            renderAudio()
           )}
           
           {/* Render AI-generated content (additional_data) - shown outside message bubble */}
           {(() => {
             const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
-            const hasFileImage = isImage(imageData) || files?.[0]?.file_type === 'img';
+            const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
             const hasAdditionalVideo = additional_data && additional_data.some(item => item.data_type === 'video');
             const hasAdditionalImage = additional_data && additional_data.some(item => item.data_type === 'img');
             
@@ -1239,6 +1257,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     marginBottom: 8,
     borderRadius: 12,
     overflow: 'hidden',
+  },
+  audioInMessage: {
+    width: '100%',
   },
   userTextWrapper: {
     width: '100%',

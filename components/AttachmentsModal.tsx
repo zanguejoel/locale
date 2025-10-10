@@ -71,7 +71,8 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
   const hasActiveOptions = generationOptions
     ? generationOptions.webSearch || 
       generationOptions.generateImage !== 'none' || 
-      generationOptions.generateVideo !== 'none'
+      (generationOptions.generateVideo !== 'none' && 
+       ['aws_nova_reel', 'google_veo2', 'google_veo3', 'google_veo3_audio'].includes(generationOptions.generateVideo))
     : false;
 
   // Generation options handlers
@@ -90,7 +91,12 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
   const handleVideoGenerationChange = (value: string) => {
     if (!generationOptions || !onGenerationOptionsChange) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onGenerationOptionsChange({ ...generationOptions, generateVideo: value });
+    // Toggle off if selecting the same model, otherwise switch to new model
+    if (generationOptions.generateVideo === value) {
+      onGenerationOptionsChange({ ...generationOptions, generateVideo: 'none' });
+    } else {
+      onGenerationOptionsChange({ ...generationOptions, generateVideo: value });
+    }
   };
 
   const handleImageProviderChange = (provider: string) => {
@@ -172,8 +178,8 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
           accessibilityLabel="Pick from gallery"
           accessibilityRole="button"
         >
-          <View style={[styles.optionIcon, { backgroundColor: theme.colors.green + '20' }]}>
-            <Ionicons name="images" size={28} color={theme.colors.green} />
+          <View style={[styles.optionIcon, { backgroundColor: theme.colors.orange + '20' }]}>
+            <Ionicons name="images" size={28} color={theme.colors.orange} />
           </View>
           <Text style={styles.optionText}>Gallery</Text>
         </TouchableOpacity>
@@ -314,11 +320,10 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
               {generationOptions.generateImage !== 'none' && (
                 <View style={styles.providerSection}>
                   <Text style={styles.subSectionTitle}>Provider</Text>
-                  <View style={styles.optionButtonGroup}>
-                    {renderOptionButton('Stability', generationOptions.imageProvider, 'stability', handleImageProviderChange, 'cube-outline')}
-                    {renderOptionButton('DALL-E', generationOptions.imageProvider, 'dalle', handleImageProviderChange, 'aperture-outline')}
-                    {renderOptionButton('Midjourney', generationOptions.imageProvider, 'midjourney', handleImageProviderChange, 'diamond-outline')}
-                  </View>
+                <View style={styles.optionButtonGroup}>
+                  {renderOptionButton('OpenAI', generationOptions.imageProvider, 'openai', handleImageProviderChange, 'aperture-outline')}
+                  {renderOptionButton('Gemini', generationOptions.imageProvider, 'gemini', handleImageProviderChange, 'sparkles-outline')}
+                </View>
                 </View>
               )}
             </View>
@@ -335,16 +340,133 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
                   <View style={styles.titleTextContainer}>
                     <Text style={styles.sectionTitle}>Video Generation</Text>
                     <Text style={styles.sectionDescription}>
-                      AI-powered video creation
+                      Select AI model for video creation
                     </Text>
                   </View>
                 </View>
               </View>
               
-              <View style={styles.optionButtonGroup}>
-                {renderOptionButton('None', generationOptions.generateVideo, 'none', handleVideoGenerationChange, 'close-circle-outline')}
-                {renderOptionButton('Auto', generationOptions.generateVideo, 'auto', handleVideoGenerationChange, 'flash-outline')}
-                {renderOptionButton('Always', generationOptions.generateVideo, 'always', handleVideoGenerationChange, 'checkmark-circle-outline')}
+              {/* Video Model Options */}
+              <View style={styles.videoModelsContainer}>
+                {/* AWS Nova Reel */}
+                <TouchableOpacity
+                  style={[
+                    styles.videoModelOption,
+                    generationOptions.generateVideo === 'aws_nova_reel' && styles.videoModelOptionSelected
+                  ]}
+                  onPress={() => handleVideoGenerationChange('aws_nova_reel')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.videoModelLeft}>
+                    <Ionicons 
+                      name="videocam" 
+                      size={20} 
+                      color={generationOptions.generateVideo === 'aws_nova_reel' ? '#3b82f6' : theme.colors.textSecondary} 
+                    />
+                    <View style={styles.videoModelInfo}>
+                      <Text style={[
+                        styles.videoModelName,
+                        generationOptions.generateVideo === 'aws_nova_reel' && styles.videoModelNameSelected
+                      ]}>
+                        AWS Nova Reel
+                      </Text>
+                      <Text style={styles.videoModelCost}>36 credits · Fast</Text>
+                    </View>
+                  </View>
+                  {generationOptions.generateVideo === 'aws_nova_reel' && (
+                    <Ionicons name="checkmark-circle" size={20} color="#3b82f6" />
+                  )}
+                </TouchableOpacity>
+
+                {/* Google Veo2 */}
+                <TouchableOpacity
+                  style={[
+                    styles.videoModelOption,
+                    generationOptions.generateVideo === 'google_veo2' && styles.videoModelOptionSelected
+                  ]}
+                  onPress={() => handleVideoGenerationChange('google_veo2')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.videoModelLeft}>
+                    <Ionicons 
+                      name="videocam" 
+                      size={20} 
+                      color={generationOptions.generateVideo === 'google_veo2' ? '#10b981' : theme.colors.textSecondary} 
+                    />
+                    <View style={styles.videoModelInfo}>
+                      <Text style={[
+                        styles.videoModelName,
+                        generationOptions.generateVideo === 'google_veo2' && styles.videoModelNameSelected
+                      ]}>
+                        Google Veo2
+                      </Text>
+                      <Text style={styles.videoModelCost}>300 credits · High quality</Text>
+                    </View>
+                  </View>
+                  {generationOptions.generateVideo === 'google_veo2' && (
+                    <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                  )}
+                </TouchableOpacity>
+
+                {/* Google Veo3 */}
+                <TouchableOpacity
+                  style={[
+                    styles.videoModelOption,
+                    generationOptions.generateVideo === 'google_veo3' && styles.videoModelOptionSelected
+                  ]}
+                  onPress={() => handleVideoGenerationChange('google_veo3')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.videoModelLeft}>
+                    <Ionicons 
+                      name="videocam" 
+                      size={20} 
+                      color={generationOptions.generateVideo === 'google_veo3' ? '#10b981' : theme.colors.textSecondary} 
+                    />
+                    <View style={styles.videoModelInfo}>
+                      <Text style={[
+                        styles.videoModelName,
+                        generationOptions.generateVideo === 'google_veo3' && styles.videoModelNameSelected
+                      ]}>
+                        Google Veo3
+                      </Text>
+                      <Text style={styles.videoModelCost}>300 credits · Latest</Text>
+                    </View>
+                  </View>
+                  {generationOptions.generateVideo === 'google_veo3' && (
+                    <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                  )}
+                </TouchableOpacity>
+
+                {/* Google Veo3 + Audio */}
+                <TouchableOpacity
+                  style={[
+                    styles.videoModelOption,
+                    generationOptions.generateVideo === 'google_veo3_audio' && styles.videoModelOptionSelected
+                  ]}
+                  onPress={() => handleVideoGenerationChange('google_veo3_audio')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.videoModelLeft}>
+                    <Ionicons 
+                      name="musical-notes" 
+                      size={20} 
+                      color={generationOptions.generateVideo === 'google_veo3_audio' ? '#a855f7' : theme.colors.textSecondary} 
+                    />
+                    <View style={styles.videoModelInfo}>
+                      <Text style={[
+                        styles.videoModelName,
+                        generationOptions.generateVideo === 'google_veo3_audio' && styles.videoModelNameSelected
+                      ]}>
+                        Google Veo3 + Audio
+                      </Text>
+                      <Text style={styles.videoModelCost}>450 credits · With sound</Text>
+                    </View>
+                  </View>
+                  {generationOptions.generateVideo === 'google_veo3_audio' && (
+                    <Ionicons name="checkmark-circle" size={20} color="#a855f7" />
+                  )}
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -670,6 +792,46 @@ const getStyles = (theme: Theme) =>
       fontSize: 16,
       fontWeight: '700',
       color: '#FFFFFF',
+    },
+    // Video Model Styles
+    videoModelsContainer: {
+      gap: 10,
+    },
+    videoModelOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+      backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.03)' : '#FFFFFF',
+    },
+    videoModelOptionSelected: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
+    },
+    videoModelLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      flex: 1,
+    },
+    videoModelInfo: {
+      flex: 1,
+    },
+    videoModelName: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 2,
+    },
+    videoModelNameSelected: {
+      color: theme.colors.primary,
+    },
+    videoModelCost: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
     },
   });
 
