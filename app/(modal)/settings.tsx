@@ -7,7 +7,7 @@ import React, { useState } from "react";
 import { useChat } from '@/hooks/useChat';
 import { Theme } from '@/constants/Types';
 import { useTheme } from '@/hooks/useTheme';
-import useMMKVStorage from '@/hooks/useMMKVStorage';
+import useMMKVStorage, { storage } from '@/hooks/useMMKVStorage';
 import { DEFAULT_MODEL_ID, getModelById, isLlamaModel } from '@/constants/Models';
 import ModelSelectorModal from '@/components/modals/ModelSelectorModal/ModelSelectorModal';
 import LocalModelSelectorModal from '@/components/modals/LocalModelSelectorModal/LocalModelSelectorModal';
@@ -90,8 +90,19 @@ const Page = () => {
   const [isModelSelectorVisible, setIsModelSelectorVisible] = useState(false);
   const [isLocalModelSelectorVisible, setIsLocalModelSelectorVisible] = useState(false);
   const [isCreditPurchaseVisible, setIsCreditPurchaseVisible] = useState(false);
-  const [defaultModelId, setDefaultModelId] = useMMKVStorage('default_model_id', DEFAULT_MODEL_ID);
-  const [defaultLocalModelId, setDefaultLocalModelId] = useMMKVStorage('default_local_model_id', DEFAULT_LOCAL_MODEL_ID);
+  
+  // Use storage.getString/set directly for simple string values to avoid JSON parsing issues
+  const [defaultModelId, setDefaultModelIdState] = useState(() => storage.getString('default_model_id') || DEFAULT_MODEL_ID);
+  const setDefaultModelId = (value: string) => {
+    storage.set('default_model_id', value);
+    setDefaultModelIdState(value);
+  };
+  
+  const [defaultLocalModelId, setDefaultLocalModelIdState] = useState(() => storage.getString('default_local_model_id') || DEFAULT_LOCAL_MODEL_ID);
+  const setDefaultLocalModelId = (value: string) => {
+    storage.set('default_local_model_id', value);
+    setDefaultLocalModelIdState(value);
+  };
 
   // Track settings opened
   useEffect(() => {
