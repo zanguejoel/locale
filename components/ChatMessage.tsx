@@ -38,9 +38,6 @@ import { shadows } from '@/constants/Shadows';
 import { isAudio, isImage } from '@/utils/FileTypeHelpers';
 import { CHAT_MESSAGE } from '@/constants/ChatConstants';
 import { handleErrorSilent } from '@/utils/ErrorHandler';
-import GeneratedImageItem from './GeneratedImageItem';
-import GeneratedVideoItem from './GeneratedVideoItem';
-import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -214,10 +211,6 @@ const ChatMessage = memo(({
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   
-  // Additional data image states
-  const [additionalImageLoading, setAdditionalImageLoading] = useState<Record<number, boolean>>({});
-  const [additionalImageError, setAdditionalImageError] = useState<Record<number, boolean>>({});
-  const [videoDownloadProgress, setVideoDownloadProgress] = useState<Record<number, number>>({});
 
   const MarkdownDisplay = useMarkdownDisplay();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -405,7 +398,11 @@ const ChatMessage = memo(({
     setImageLoadError(true);
   };
 
-  const instructionForImageChatDisplay = () => {
+  const instructionForImageChatDisplay = (overrideUrl?: string) => {
+    // If override URL is provided (e.g., from additional_data), use it
+    if (overrideUrl) {
+      return overrideUrl;
+    }
     // Priority: imageData > files s3_url > files file_path
     if (imageData && isImage(imageData)) {
       return imageData; // Already a URL, don't encode here
@@ -422,74 +419,6 @@ const ChatMessage = memo(({
       return content
     }
   }
-
-  // Helper function to determine image layout based on count
-  const getImageLayout = (imageCount: number): 'single' | 'double' | 'grid' => {
-    if (imageCount === 1) return 'single';
-    if (imageCount === 2) return 'double';
-    return 'grid';
-  };
-
-  // Handle download action for generated images
-  const handleImageDownload = useCallback(async (imageUrl: string) => {
-    const startTime = Date.now();
-    try {
-      await downloadAndSaveImage(imageUrl);
-      Alert.alert('Success', 'Image saved to gallery');
-      
-      // Track successful download
-      const downloadTime = Date.now() - startTime;
-      mixpanelService.track('Image Downloaded', {
-        source: 'generated_image',
-        image_url: imageUrl,
-        download_time_ms: downloadTime,
-      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
-    } catch (error) {
-      console.error('[ChatMessage] Image download failed:', error);
-      Alert.alert('Error', 'Failed to save image. Please try again.');
-      
-      // Track download failure
-      mixpanelService.track('Image Download Failed', {
-        source: 'generated_image',
-        image_url: imageUrl,
-        error_message: error instanceof Error ? error.message : String(error),
-      }).catch(() => {});
-    }
-  }, []);
-
-  // Handle share action for generated images
-  const handleImageShare = useCallback(async (imageUrl: string) => {
-    try {
-      await shareImage(imageUrl);
-      
-      // Track successful share
-      mixpanelService.track('Image Shared', {
-        source: 'generated_image',
-        image_url: imageUrl,
-        share_method: Platform.OS === 'ios' ? 'ios_sheet' : 'android_dialog',
-      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
-    } catch (error) {
-      console.error('[ChatMessage] Image share failed:', error);
-      Alert.alert('Error', 'Failed to share image. Please try again.');
-      
-      // Track share failure
-      mixpanelService.track('Image Share Failed', {
-        source: 'generated_image',
-        image_url: imageUrl,
-        error_message: error instanceof Error ? error.message : String(error),
-      }).catch(() => {});
-    }
-  }, []);
-
-  // Handle image error
-  const handleGeneratedImageError = useCallback((index: number, error: Error) => {
-    console.error(`[ChatMessage] Generated image ${index} failed:`, error);
-  }, []);
-
-  // Handle video error
-  const handleGeneratedVideoError = useCallback((index: number, error: Error) => {
-    console.error(`[ChatMessage] Generated video ${index} failed:`, error);
-  }, []);
 
   // Render generated images and videos from additional_data
   const renderAdditionalData = () => {
@@ -519,75 +448,47 @@ const ChatMessage = memo(({
       console.log('[ChatMessage] Nothing to render from additional_data (all media in files[])');
       return null;
     }
-    
-    const imageLayout = getImageLayout(imagesToRender.length);
    
     return (
       <View style={styles.additionalDataContainer}>
-        {/* Image Grid - Responsive Layout */}
-        {imagesToRender.length > 0 && (
-          <View
-            style={[
-              styles.imageGrid,
-              imageLayout === 'single' && styles.singleImageGrid,
-              imageLayout === 'double' && styles.twoImageGrid,
-              imageLayout === 'grid' && styles.multiImageGrid,
-            ]}
-          >
-            {imagesToRender.map((item, imageIndex) => {
-              // Backend sends either "data" or "s3_url" as the image URL
-              const imageUrl = item.data || item.s3_url || '';
-              
-              if (!imageUrl) {
-                console.warn('[ChatMessage] Image item missing URL:', item);
-                return null;
-              }
-              
-              return (
-                <GeneratedImageItem
-                  key={`generated-image-${imageIndex}`}
-                  imageUrl={imageUrl}
-                  index={imageIndex}
-                  layoutType={imageLayout}
-                  totalImages={imagesToRender.length}
-                  onDownload={handleImageDownload}
-                  onShare={handleImageShare}
-                  onError={handleGeneratedImageError}
-                />
-              );
-            })}
-          </View>
-        )}
+        {/* Images - using same renderImageContent as regular images */}
+        {imagesToRender.map((item, imageIndex) => {
+          // Backend sends either "data" or "s3_url" as the image URL
+          const imageUrl = item.data || item.s3_url || '';
+          
+          if (!imageUrl) {
+            console.warn('[ChatMessage] Image item missing URL:', item);
+            return null;
+          }
+          
+          return (
+            <View key={`generated-image-${imageIndex}`} style={styles.generatedMediaItem}>
+              {renderImageContent(imageUrl)}
+            </View>
+          );
+        })}
        
-        {/* Videos - Full Width */}
-        {videosToRender.length > 0 && (
-          <View style={styles.videosContainer}>
-            {videosToRender.map((item, videoIndex) => {
-              // Backend sends either "data" or "s3_url" as the video URL
-              const videoUrl = item.data || item.s3_url || '';
-              
-              if (!videoUrl) {
-                console.warn('[ChatMessage] Video item missing URL:', item);
-                return null;
-              }
-              
-              return (
-                <GeneratedVideoItem
-                  key={`generated-video-${videoIndex}`}
-                  videoUrl={videoUrl}
-                  index={videoIndex}
-                  totalVideos={videosToRender.length}
-                  onError={handleGeneratedVideoError}
-                />
-              );
-            })}
-          </View>
-        )}
+        {/* Videos - using same renderVideo as regular videos */}
+        {videosToRender.map((item, videoIndex) => {
+          // Backend sends either "data" or "s3_url" as the video URL
+          const videoUrl = item.data || item.s3_url || '';
+          
+          if (!videoUrl) {
+            console.warn('[ChatMessage] Video item missing URL:', item);
+            return null;
+          }
+          
+          return (
+            <View key={`generated-video-${videoIndex}`} style={styles.generatedMediaItem}>
+              {renderVideo(videoUrl)}
+            </View>
+          );
+        })}
       </View>
     );
   };
 
-  const renderImageContent = () => {
+  const renderImageContent = (overrideUrl?: string) => {
     if (imageLoadError && imageAttempts >= maxImageRetryAttempts) {
       return (
         <View style={styles.imageErrorContainer}>
@@ -607,7 +508,7 @@ const ChatMessage = memo(({
     }
 
     // Get the image URL with proper priority handling
-    const imageUrl = instructionForImageChatDisplay();
+    const imageUrl = instructionForImageChatDisplay(overrideUrl);
     
     // console.log('[ChatMessage] renderImageContent - imageUrl:', imageUrl);
     // console.log('[ChatMessage] renderImageContent - files:', files);
@@ -690,8 +591,8 @@ const ChatMessage = memo(({
     )
   };
 
-  const renderVideo = () => {
-    const videoUrl = files?.[0]?.s3_url;
+  const renderVideo = (overrideUrl?: string) => {
+    const videoUrl = overrideUrl || files?.[0]?.s3_url;
     const handleDownloadVideo = async () => {
       try {
         setLoadingDownloadVideo(true)
@@ -1465,6 +1366,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   additionalDataContainer: {
     marginTop: 12,
     width: '100%',
+  },
+  generatedMediaItem: {
+    marginBottom: 12,
   },
   // Image Grid Layouts
   imageGrid: {

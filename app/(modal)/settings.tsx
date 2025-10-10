@@ -17,6 +17,8 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { SettingsEvent } from '@/types/mixpanel';
 import { useEffect } from 'react';
+import CreditPurchaseModal from '@/components/CreditPurchaseModal';
+import CreditBadge from '@/components/CreditBadge';
 
 const rawPage = [{
   id: 1,
@@ -25,26 +27,31 @@ const rawPage = [{
   icon: 'person-outline'
 }, {
   id: 2,
+  key: 'credits',
+  title: 'Purchase Credits',
+  icon: 'diamond-outline'
+}, {
+  id: 3,
   key: 'plans-pricing',
   title: 'Plans & Pricing',
   icon: 'card-outline'
 }, {
-  id: 3,
+  id: 4,
   key: 'default-model',
   title: 'Default AI Model',
   icon: 'chatbubbles-outline'
 }, {
-  id: 4,
+  id: 5,
   key: 'model-manager',
   title: 'Manage Downloaded Models',
   icon: 'folder-open-outline'
 }, {
-  id: 5,
+  id: 6,
   key: 'change-password',
   title: 'Change password',
   icon: 'settings-outline'
 }, {
-  id: 6,
+  id: 7,
   key: 'sign_out',
   title: 'Sign Out',
   icon: 'log-out-outline'
@@ -76,6 +83,7 @@ const Page = () => {
   } = useChat();
   const [isModelSelectorVisible, setIsModelSelectorVisible] = useState(false);
   const [isLocalModelSelectorVisible, setIsLocalModelSelectorVisible] = useState(false);
+  const [isCreditPurchaseVisible, setIsCreditPurchaseVisible] = useState(false);
   const [defaultModelId, setDefaultModelId] = useMMKVStorage('default_model_id', DEFAULT_MODEL_ID);
   const [defaultLocalModelId, setDefaultLocalModelId] = useMMKVStorage('default_local_model_id', DEFAULT_LOCAL_MODEL_ID);
 
@@ -173,6 +181,8 @@ const Page = () => {
     switch (type) {
       case 'profile':
         return router.push('/profile')
+      case 'credits':
+        return setIsCreditPurchaseVisible(true)
       case 'plans-pricing':
         return router.push('/plans-pricing')
       case 'default-model':
@@ -216,9 +226,18 @@ const Page = () => {
                 Manage subscriptions on web
               </Text>
             )}
+            {item.key === 'credits' && (
+              <Text style={styles.menuItemSubtext}>
+                Buy more AI credits
+              </Text>
+            )}
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={theme.colors.greyLight} />
+        {item.key === 'credits' ? (
+          <CreditBadge variant="compact" />
+        ) : (
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.greyLight} />
+        )}
       </Pressable>
     )
   }
@@ -259,6 +278,10 @@ const Page = () => {
         onClose={() => setIsLocalModelSelectorVisible(false)}
         selectedModelId={defaultLocalModelId}
         onSelectModel={handleLocalModelSelect}
+      />
+      <CreditPurchaseModal
+        visible={isCreditPurchaseVisible}
+        onClose={() => setIsCreditPurchaseVisible(false)}
       />
       </SafeAreaView>
     </GradientBackground>

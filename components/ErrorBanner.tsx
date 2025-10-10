@@ -5,7 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import * as Haptics from 'expo-haptics';
 
-export type ErrorType = 'network' | 'api' | 'permission' | 'model' | 'generic';
+export type ErrorType = 'network' | 'api' | 'permission' | 'model' | 'credit' | 'generic';
 
 interface ErrorBannerProps {
   type: ErrorType;
@@ -121,6 +121,18 @@ const ErrorBanner: React.FC<ErrorBannerProps> = ({
           defaultAction: {
             text: 'Change Model',
             onPress: () => {},
+          },
+        };
+      case 'credit':
+        return {
+          icon: 'card' as const,
+          color: '#FF3B30',
+          defaultMessage: 'You have reached your credit limit.',
+          defaultAction: {
+            text: 'Upgrade',
+            onPress: () => {
+              Linking.openURL('https://beta.jaiime.com/pricing');
+            },
           },
         };
       default:

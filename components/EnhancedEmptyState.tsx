@@ -1,10 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, ScrollView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useCredits } from '@/hooks/useCredits';
+import CreditPurchaseModal from './CreditPurchaseModal';
 
 interface EnhancedEmptyStateProps {
   firstName?: string;
@@ -19,6 +21,8 @@ const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
 }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
+  const { credits, isLoading: creditsLoading } = useCredits();
+  const [showCreditPurchaseModal, setShowCreditPurchaseModal] = useState(false);
   
   // Animation refs
   const logoScale = useRef(new Animated.Value(0)).current;
@@ -122,6 +126,34 @@ const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
         <Text style={styles.subGreeting}>
           I'm Odyssey, ready to help you with anything
         </Text>
+        
+        {/* Credits Display */}
+        {!isLocal && (
+          <TouchableOpacity
+            style={styles.creditsBadge}
+            onPress={async () => {
+              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowCreditPurchaseModal(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={styles.creditsIconContainer}>
+              <Ionicons name="diamond" size={16} color={theme.colors.primary} />
+            </View>
+            {creditsLoading ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            ) : credits ? (
+              <>
+                <Text style={styles.creditsAmount}>
+                  {credits.remaining_credits.toLocaleString()}
+                </Text>
+                <Text style={styles.creditsLabel}>credits available</Text>
+              </>
+            ) : null}
+            <Ionicons name="add-circle" size={20} color={theme.colors.primary} style={{ marginLeft: 8 }} />
+          </TouchableOpacity>
+        )}
+        
         {isLocal && (
           <View style={styles.localBadge}>
             <Ionicons name="phone-portrait" size={14} color="#34C759" />
@@ -130,7 +162,10 @@ const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
         )}
       </Animated.View>
 
-     
+      <CreditPurchaseModal
+        visible={showCreditPurchaseModal}
+        onClose={() => setShowCreditPurchaseModal(false)}
+      />
     </ScrollView>
   );
 };
@@ -189,6 +224,35 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     fontSize: 12,
     color: '#34C759',
     fontWeight: '600',
+  },
+  creditsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.backgroundLight,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
+    marginTop: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '40',
+  },
+  creditsIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  creditsAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  creditsLabel: {
+    fontSize: 13,
+    color: theme.colors.mutedForeground,
   },
   capabilitiesContainer: {
     width: '100%',

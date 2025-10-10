@@ -76,6 +76,12 @@ export interface ChatRoom {
   updated_at: string;
 }
 
+export interface ChatError {
+  type: 'network' | 'api' | 'permission' | 'model' | 'credit' | 'generic';
+  message: string;
+  statusCode?: number;
+}
+
 interface ChatContextType {
   messages: Message[];
   conversations: Conversations[];
@@ -105,6 +111,8 @@ interface ChatContextType {
   localModelDownloadProgress: number;
   isLocalModelReady: boolean;
   clearLocalModel: () => void;
+  chatError: ChatError | null;
+  clearChatError: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -118,6 +126,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [chatError, setChatError] = useState<ChatError | null>(null);
   const [stream, setStream] = useState('');
   const [intermediate, setIntermediate] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -571,12 +580,50 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const handleError = useCallback((error: string) => {
-    // console.error({
-    //   title: 'We encountered an error.',
-    //   description: error,
-    //   variant: 'destructive',
-    //   position: 'top-right'
-    // });
+    // Parse streaming errors and set chat error
+    setChatError({
+      type: 'api',
+      message: error,
+      statusCode: 0,
+    });
+  }, []);
+
+  const clearChatError = useCallback(() => {
+    setChatError(null);
+  }, []);
+
+  const parseErrorResponse = useCallback((errorText: string, statusCode: number): ChatError => {
+    let errorMessage = errorText;
+    let errorType: ChatError['type'] = 'generic';
+
+    try {
+      // Try to parse as JSON
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.detail || errorJson.message || errorText;
+    } catch {
+      // Not JSON, use as-is
+    }
+
+    // Determine error type based on status code and message
+    if (statusCode === 401) {
+      errorType = 'permission';
+    } else if (statusCode === 429) {
+      errorType = 'credit';
+    } else if (statusCode === 400 && (errorMessage.toLowerCase().includes('credit') || errorMessage.toLowerCase().includes('upgrade'))) {
+      errorType = 'credit';
+    } else if (statusCode >= 500) {
+      errorType = 'api';
+    } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('connection')) {
+      errorType = 'network';
+    } else if (errorMessage.toLowerCase().includes('model')) {
+      errorType = 'model';
+    }
+
+    return {
+      type: errorType,
+      message: errorMessage,
+      statusCode,
+    };
   }, []);
 
   // ---------------- Chat Operations ----------------
@@ -613,6 +660,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setChatLoading(true)
     setError('');
+    setChatError(null); // Clear any previous errors
     setStream('');
     setIntermediate('');
     setAdditionalData([]); // Reset additional data for new message
@@ -888,19 +936,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (!_response.ok) {
         const errorMessage = await _response.text();
-        // console.error('[Cloud] Error response:', errorMessage);
+        console.log('[Cloud] Error response:', errorMessage, 'Status:', _response.status);
         
-        // Handle authentication errors specifically
+        // Parse the error and set it in state
+        const parsedError = parseErrorResponse(errorMessage, _response.status);
+        setChatError(parsedError);
+        
+        // Still show alerts for critical errors (like auth)
         if (_response.status === 401) {
           Alert.alert(
             'Authentication Error',
             'Your session has expired. Please sign in again.',
             [{ text: 'OK' }]
           );
-          // Optionally: navigate to login screen
-          // router.replace('/login');
-        } else {
-          Alert.alert('Error', `Server error: ${_response.status}`);
         }
         
         setIsSending(false);
@@ -957,6 +1005,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.error('[Cloud] Unexpected error during message send:', e);
       
+      // Set network error if it's a network issue
+      if (e.message?.toLowerCase().includes('network') || 
+          e.message?.toLowerCase().includes('fetch') ||
+          e.message?.toLowerCase().includes('connection')) {
+        setChatError({
+          type: 'network',
+          message: 'Network error. Please check your connection and try again.',
+          statusCode: 0,
+        });
+      } else {
+        setChatError({
+          type: 'generic',
+          message: e instanceof Error ? e.message : 'Something went wrong. Please try again.',
+          statusCode: 0,
+        });
+      }
+      
       // Track failed response
       const modelId = getDefaultModelId();
       const conversationId = currentConversationId || '';
@@ -966,8 +1031,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         conversation_id: conversationId,
         error_message: e instanceof Error ? e.message : String(e),
       });
-      
-      Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
       streamControllerRef.current = null;
       setIsSending(false);
@@ -1424,7 +1487,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLocalLLMSupported: deviceSupportsLocalLLM,
     localModelDownloadProgress,
     isLocalModelReady,
-    clearLocalModel
+    clearLocalModel,
+    chatError,
+    clearChatError
   }), [
     isChatLoading,
     setChatLoading,
@@ -1454,7 +1519,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     deviceSupportsLocalLLM,
     localModelDownloadProgress,
     isLocalModelReady,
-    clearLocalModel
+    clearLocalModel,
+    chatError,
+    clearChatError
   ]);
 
   return (

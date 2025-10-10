@@ -43,6 +43,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 import ErrorBanner from '@/components/ErrorBanner';
 import EnhancedEmptyState from '@/components/EnhancedEmptyState';
 import { SelectedFile } from '@/components/FilePreviewModal';
+import CreditPurchaseModal from '@/components/CreditPurchaseModal';
 
 // Helper function to get time-based greeting
 const getGreeting = (firstName: string = 'there') => {
@@ -89,6 +90,7 @@ const ChatPage = () => {
   const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [errorState, setErrorState] = useState<{ show: boolean; type: 'network' | 'api' | 'permission' | 'model' | 'generic'; message: string } | null>(null);
+  const [showCreditPurchaseModal, setShowCreditPurchaseModal] = useState(false);
 
 
   // Animation values
@@ -119,7 +121,9 @@ const ChatPage = () => {
     resetChat,
     conversations,
     currentConversationId,
-    createNewConversation
+    createNewConversation,
+    chatError,
+    clearChatError
   } = chat;
 
 
@@ -555,18 +559,34 @@ const ChatPage = () => {
 
   return (
     <GradientBackground variant="background" style={styles.pageContainer}>
-      {/* Error Banner */}
-      {errorState?.show && (
+      {/* Error Banner - Priority to chatError from useChat */}
+      {(chatError || errorState?.show) && (
         <ErrorBanner
-          type={errorState.type}
-          message={errorState.message}
-          onDismiss={() => setErrorState(null)}
+          type={chatError?.type || errorState!.type}
+          message={chatError?.message || errorState!.message}
+          onDismiss={() => {
+            if (chatError) {
+              clearChatError();
+            } else {
+              setErrorState(null);
+            }
+          }}
           autoHide={true}
-          autoHideDuration={5000}
-          action={{
+          autoHideDuration={chatError?.type === 'credit' ? 10000 : 5000}
+          action={chatError?.type === 'credit' ? {
+            text: 'Purchase Credits',
+            onPress: () => {
+              clearChatError();
+              setShowCreditPurchaseModal(true);
+            }
+          } : {
             text: 'Retry',
             onPress: () => {
-              setErrorState(null);
+              if (chatError) {
+                clearChatError();
+              } else {
+                setErrorState(null);
+              }
               if (id) fetchMessages(id);
             }
           }}
@@ -768,6 +788,14 @@ const ChatPage = () => {
         originalContent={editingMessage?.content || ''}
         onClose={() => setEditingMessage(null)}
         onSave={handleSaveEdit}
+      />
+      <CreditPurchaseModal
+        visible={showCreditPurchaseModal}
+        onClose={() => setShowCreditPurchaseModal(false)}
+        onSuccess={() => {
+          // Refetch messages or take appropriate action after purchase
+          if (id) fetchMessages(id);
+        }}
       />
     </GradientBackground>
   );
