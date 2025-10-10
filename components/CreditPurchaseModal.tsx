@@ -12,6 +12,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '@/constants/Types';
@@ -25,6 +26,8 @@ interface CreditPurchaseModalProps {
   onClose: () => void;
   onSuccess?: () => void;
 }
+
+type TabType = 'packages' | 'custom';
 
 const CreditPurchaseModal: React.FC<CreditPurchaseModalProps> = ({
   visible,
@@ -41,31 +44,42 @@ const CreditPurchaseModal: React.FC<CreditPurchaseModalProps> = ({
   const accountType: AccountType = user?.user_teams && user.user_teams.length > 0 ? 'BUSINESS' : 'PRO';
   const creditPackages = CREDIT_PACKAGES[accountType];
   
+  const [activeTab, setActiveTab] = useState<TabType>('packages');
   const [customAmount, setCustomAmount] = useState('');
-  const [useCustomAmount, setUseCustomAmount] = useState(false);
-  const [selectedPackageIndex, setSelectedPackageIndex] = useState<number | null>(null);
+  const [selectedPackageIndex, setSelectedPackageIndex] = useState<number | null>(1); // Default to popular package
   const [showInfo, setShowInfo] = useState(false);
+
+  const handleTabChange = async (tab: TabType) => {
+    setActiveTab(tab);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // Clear selections when switching tabs
+    if (tab === 'packages') {
+      setCustomAmount('');
+      if (selectedPackageIndex === null) {
+        setSelectedPackageIndex(1); // Default to popular
+      }
+    } else {
+      setSelectedPackageIndex(null);
+    }
+  };
 
   const handleSelectPackage = async (index: number) => {
     setSelectedPackageIndex(index);
-    setUseCustomAmount(false);
-    setCustomAmount('');
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const handleCustomAmountChange = (text: string) => {
     // Only allow numbers
     const numericValue = text.replace(/[^0-9]/g, '');
     setCustomAmount(numericValue);
-    setUseCustomAmount(true);
-    setSelectedPackageIndex(null);
   };
 
   const getSelectedAmount = (): number | null => {
-    if (useCustomAmount && customAmount) {
+    if (activeTab === 'custom' && customAmount) {
       return parseInt(customAmount);
     }
-    if (selectedPackageIndex !== null) {
+    if (activeTab === 'packages' && selectedPackageIndex !== null) {
       return creditPackages[selectedPackageIndex].amount;
     }
     return null;
@@ -75,10 +89,10 @@ const CreditPurchaseModal: React.FC<CreditPurchaseModalProps> = ({
     const amount = getSelectedAmount();
     if (!amount) return null;
     
-    if (useCustomAmount) {
+    if (activeTab === 'custom') {
       return amount / CREDITS_PER_DOLLAR;
     }
-    if (selectedPackageIndex !== null) {
+    if (activeTab === 'packages' && selectedPackageIndex !== null) {
       return creditPackages[selectedPackageIndex].cost;
     }
     return null;
@@ -175,16 +189,7 @@ const CreditPurchaseModal: React.FC<CreditPurchaseModalProps> = ({
           <View style={styles.modalContent}>
             {/* Header */}
             <View style={styles.header}>
-              <View style={styles.headerLeft}>
-                <Text style={styles.headerTitle}>Add Credits</Text>
-                <TouchableOpacity
-                  onPress={() => setShowInfo(!showInfo)}
-                  style={styles.infoButton}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="information-circle-outline" size={24} color={theme.colors.primary} />
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.headerTitle}>Purchase Credits</Text>
               <TouchableOpacity
                 onPress={onClose}
                 style={styles.closeButton}
@@ -194,47 +199,58 @@ const CreditPurchaseModal: React.FC<CreditPurchaseModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Info Banner - Collapsible */}
-            {showInfo && (
-              <View style={styles.infoCard}>
-                <Text style={styles.infoTitle}>{accountType} Credit Packages</Text>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Rate:</Text>
-                  <Text style={styles.infoValue}>{CREDITS_PER_DOLLAR} credits = $1</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Minimum:</Text>
-                  <Text style={styles.infoValue}>500 credits ($10)</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Expiration:</Text>
-                  <Text style={styles.infoValue}>
-                    {accountType === 'PRO' 
-                      ? 'Expires after 1 month from purchase' 
-                      : 'Expires after 30 days or renewal cycle'}
-                  </Text>
-                </View>
-              </View>
-            )}
-
             {/* Current Balance */}
             {credits && (
               <View style={styles.balanceCard}>
-                <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>Current Balance:</Text>
-                  <Text style={styles.balanceAmount}>
-                    {credits.remaining_credits.toLocaleString()} credits
-                  </Text>
+                <View style={styles.balanceHeader}>
+                  <Ionicons name="wallet" size={20} color={theme.colors.primary} />
+                  <Text style={styles.balanceLabel}>Current Balance</Text>
                 </View>
-                {credits.subscription_credits > 0 && credits.custom_credits > 0 && (
-                  <View style={styles.balanceBreakdown}>
-                    <Text style={styles.balanceBreakdownText}>
-                      {credits.subscription_credits.toLocaleString()} from subscription + {credits.custom_credits.toLocaleString()} purchased
-                    </Text>
-                  </View>
-                )}
+                <Text style={styles.balanceAmount}>
+                  {credits.remaining_credits.toLocaleString()}
+                </Text>
+                <Text style={styles.balanceUnit}>credits</Text>
               </View>
             )}
+
+            {/* Tab Switcher */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'packages' && styles.tabActive]}
+                onPress={() => handleTabChange('packages')}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="grid" 
+                  size={18} 
+                  color={activeTab === 'packages' ? theme.colors.primary : theme.colors.greyLight} 
+                />
+                <Text style={[
+                  styles.tabText,
+                  activeTab === 'packages' && styles.tabTextActive
+                ]}>
+                  Quick Select
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'custom' && styles.tabActive]}
+                onPress={() => handleTabChange('custom')}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="create" 
+                  size={18} 
+                  color={activeTab === 'custom' ? theme.colors.primary : theme.colors.greyLight} 
+                />
+                <Text style={[
+                  styles.tabText,
+                  activeTab === 'custom' && styles.tabTextActive
+                ]}>
+                  Custom Amount
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <ScrollView
               style={styles.scrollView}
@@ -242,111 +258,143 @@ const CreditPurchaseModal: React.FC<CreditPurchaseModalProps> = ({
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled"
             >
-              {/* Description */}
-              <Text style={styles.description}>
-                Enter the amount of credits you want to add ({CREDITS_PER_DOLLAR} credits = $1)
-              </Text>
+              {activeTab === 'packages' ? (
+                <>
+                  {/* Package Selection */}
+                  <View style={styles.packagesContainer}>
+                    {creditPackages.map((pkg, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.packageCard,
+                          selectedPackageIndex === index && styles.packageCardSelected,
+                        ]}
+                        onPress={() => handleSelectPackage(index)}
+                        activeOpacity={0.7}
+                      >
+                        {'popular' in pkg && pkg.popular && (
+                          <View style={styles.popularBadge}>
+                            <Ionicons name="star" size={12} color="#fff" />
+                            <Text style={styles.popularBadgeText}>POPULAR</Text>
+                          </View>
+                        )}
+                        
+                        <View style={styles.packageMainContent}>
+                          <View style={styles.packageAmountContainer}>
+                            <Text style={styles.packageAmount}>
+                              {pkg.amount.toLocaleString()}
+                            </Text>
+                            <Text style={styles.packageAmountLabel}>credits</Text>
+                          </View>
+                          
+                          <View style={styles.packageDivider} />
+                          
+                          <View style={styles.packageCostContainer}>
+                            <Text style={styles.packageCost}>${pkg.cost}</Text>
+                            <Text style={styles.packageRate}>
+                              ${(pkg.cost / pkg.amount).toFixed(3)}/credit
+                            </Text>
+                          </View>
+                        </View>
 
-              {/* Custom Amount Input */}
-              <View style={styles.inputSection}>
-                <Text style={styles.inputLabel}>Custom Amount</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter amount (min. 500)"
-                    placeholderTextColor={theme.colors.greyLight}
-                    keyboardType="number-pad"
-                    value={customAmount}
-                    onChangeText={handleCustomAmountChange}
-                    maxLength={6}
-                  />
-                  {customAmount && parseInt(customAmount) >= 500 && (
-                    <View style={styles.inputBadge}>
-                      <Text style={styles.inputBadgeText}>
-                        ${(parseInt(customAmount) / CREDITS_PER_DOLLAR).toFixed(2)}
+                        {selectedPackageIndex === index && (
+                          <View style={styles.selectedIndicator}>
+                            <Ionicons name="checkmark-circle" size={28} color={theme.colors.primary} />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Info Section */}
+                  <View style={styles.infoSection}>
+                    <View style={styles.infoRow}>
+                      <Ionicons name="time-outline" size={16} color={theme.colors.greyLight} />
+                      <Text style={styles.infoText}>
+                        {accountType === 'PRO' 
+                          ? 'Credits expire after 1 month' 
+                          : 'Expires after 30 days or renewal'}
                       </Text>
                     </View>
-                  )}
-                </View>
-                {customAmount && parseInt(customAmount) < 500 && (
-                  <Text style={styles.errorText}>Minimum amount is 500 credits</Text>
-                )}
-              </View>
-
-              {/* OR Divider */}
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>OR SELECT A PACKAGE</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              {/* Package Selection */}
-              <View style={styles.packagesContainer}>
-                {creditPackages.map((pkg, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.packageCard,
-                      selectedPackageIndex === index && !useCustomAmount && styles.packageCardSelected,
-                      pkg.popular && styles.packageCardPopular,
-                    ]}
-                    onPress={() => handleSelectPackage(index)}
-                    activeOpacity={0.7}
-                  >
-                    {pkg.popular && (
-                      <View style={styles.popularBadge}>
-                        <Ionicons name="star" size={10} color="#fff" />
-                        <Text style={styles.popularBadgeText}>POPULAR</Text>
+                    <View style={styles.infoRow}>
+                      <Ionicons name="flash-outline" size={16} color={theme.colors.greyLight} />
+                      <Text style={styles.infoText}>
+                        Works with all AI models
+                      </Text>
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <>
+                  {/* Custom Amount Input */}
+                  <View style={styles.customInputSection}>
+                    <Text style={styles.customInputLabel}>
+                      How many credits do you need?
+                    </Text>
+                    <Text style={styles.customInputHint}>
+                      {CREDITS_PER_DOLLAR} credits = $1.00
+                    </Text>
+                    
+                    <View style={styles.inputWrapper}>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="0"
+                        placeholderTextColor={theme.colors.greyLight}
+                        keyboardType="number-pad"
+                        value={customAmount}
+                        onChangeText={handleCustomAmountChange}
+                        maxLength={6}
+                        autoFocus={activeTab === 'custom'}
+                      />
+                      <Text style={styles.inputSuffix}>credits</Text>
+                    </View>
+                    
+                    {customAmount && parseInt(customAmount) >= 500 && (
+                      <View style={styles.costPreview}>
+                        <Text style={styles.costPreviewLabel}>Total Cost:</Text>
+                        <Text style={styles.costPreviewAmount}>
+                          ${(parseInt(customAmount) / CREDITS_PER_DOLLAR).toFixed(2)}
+                        </Text>
                       </View>
                     )}
                     
-                    <View style={styles.packageContent}>
-                      <Text style={styles.packageLabel}>{pkg.label}</Text>
-                      <Text style={styles.packageRate}>
-                        ${(pkg.cost / pkg.amount).toFixed(3)}/credit
-                      </Text>
-                    </View>
-
-                    {selectedPackageIndex === index && !useCustomAmount && (
-                      <View style={styles.selectedIndicator}>
-                        <Ionicons name="checkmark-circle" size={24} color={theme.colors.primary} />
+                    {customAmount && parseInt(customAmount) < 500 && (
+                      <View style={styles.errorContainer}>
+                        <Ionicons name="alert-circle" size={16} color={theme.colors.destructive} />
+                        <Text style={styles.errorText}>Minimum amount is 500 credits ($10)</Text>
                       </View>
                     )}
-                  </TouchableOpacity>
-                ))}
-              </View>
 
-              {/* Features */}
-              <View style={styles.featuresContainer}>
-                <Text style={styles.featuresTitle}>What's included:</Text>
-                {[
-                  'No monthly commitment',
-                  'Works with all AI models',
-                  'Priority processing',
-                  'Image & video generation',
-                  'Unused credits expire per tier policy',
-                ].map((feature, index) => (
-                  <View key={index} style={styles.featureRow}>
-                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
-                    <Text style={styles.featureText}>{feature}</Text>
+                    {!customAmount && (
+                      <View style={styles.hintContainer}>
+                        <Ionicons name="information-circle-outline" size={16} color={theme.colors.primary} />
+                        <Text style={styles.hintText}>Minimum purchase is 500 credits ($10.00)</Text>
+                      </View>
+                    )}
                   </View>
-                ))}
-              </View>
+
+                  {/* Quick Suggestions */}
+                  <Text style={styles.suggestionsTitle}>Quick Suggestions</Text>
+                  <View style={styles.suggestionsContainer}>
+                    {[500, 1000, 2500, 5000].map((amount) => (
+                      <TouchableOpacity
+                        key={amount}
+                        style={styles.suggestionChip}
+                        onPress={() => setCustomAmount(amount.toString())}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.suggestionText}>
+                          {amount.toLocaleString()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
             </ScrollView>
 
             {/* Purchase Button */}
             <View style={styles.footer}>
-              {selectedAmount && selectedCost && (
-                <View style={styles.costSummary}>
-                  <Text style={styles.costSummaryLabel}>
-                    {selectedAmount.toLocaleString()} credits
-                  </Text>
-                  <Text style={styles.costSummaryAmount}>
-                    ${selectedCost.toFixed(2)}
-                  </Text>
-                </View>
-              )}
-              
               <TouchableOpacity
                 style={[
                   styles.purchaseButton,
@@ -357,23 +405,40 @@ const CreditPurchaseModal: React.FC<CreditPurchaseModalProps> = ({
                 activeOpacity={0.8}
               >
                 {isPurchasing ? (
-                  <ActivityIndicator color="#fff" />
+                  <View style={styles.purchaseButtonContent}>
+                    <ActivityIndicator color="#fff" size="small" />
+                    <Text style={styles.purchaseButtonText}>Processing...</Text>
+                  </View>
                 ) : (
-                  <>
-                    <Ionicons name="card" size={20} color="#fff" style={styles.purchaseButtonIcon} />
-                    <Text style={styles.purchaseButtonText}>
-                      {selectedAmount && selectedCost
-                        ? `Purchase for $${selectedCost.toFixed(2)}`
-                        : 'Select amount or package'}
-                    </Text>
-                  </>
+                  <View style={styles.purchaseButtonContent}>
+                    {selectedAmount && selectedCost ? (
+                      <>
+                        <View style={styles.purchaseButtonLeft}>
+                          <Ionicons name="card" size={22} color="#fff" />
+                          <Text style={styles.purchaseButtonText}>Purchase</Text>
+                        </View>
+                        <View style={styles.purchaseButtonRight}>
+                          <Text style={styles.purchaseButtonAmount}>
+                            ${selectedCost.toFixed(2)}
+                          </Text>
+                          <Ionicons name="arrow-forward" size={18} color="#fff" />
+                        </View>
+                      </>
+                    ) : (
+                      <Text style={styles.purchaseButtonText}>
+                        Select an amount to continue
+                      </Text>
+                    )}
+                  </View>
                 )}
               </TouchableOpacity>
               
-              <Text style={styles.securePaymentText}>
-                <Ionicons name="lock-closed" size={12} color={theme.colors.greyLight} />
-                {' '}Secure payment via Stripe
-              </Text>
+              <View style={styles.securePaymentContainer}>
+                <Ionicons name="lock-closed" size={14} color={theme.colors.greyLight} />
+                <Text style={styles.securePaymentText}>
+                  Secure payment via Stripe
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -393,7 +458,7 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.colors.background,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
-      maxHeight: '90%',
+      maxHeight: '80%',
       paddingTop: 20,
     },
     header: {
@@ -402,24 +467,11 @@ const getStyles = (theme: Theme) =>
       justifyContent: 'space-between',
       paddingHorizontal: 20,
       paddingBottom: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.greyLight,
-    },
-    headerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
     },
     headerTitle: {
-      fontSize: 24,
+      fontSize: 22,
       fontWeight: 'bold',
       color: theme.colors.text,
-    },
-    infoButton: {
-      width: 28,
-      height: 28,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     closeButton: {
       width: 40,
@@ -427,269 +479,348 @@ const getStyles = (theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    infoCard: {
-      backgroundColor: theme.colors.backgroundLight,
-      margin: 20,
-      marginBottom: 0,
-      padding: 16,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.primary + '40',
-    },
-    infoTitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 12,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-    },
-    infoLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.colors.greyLight,
-    },
-    infoValue: {
-      fontSize: 12,
-      color: theme.colors.text,
-      flex: 1,
-      textAlign: 'right',
-    },
+    // Balance Card
     balanceCard: {
-      backgroundColor: theme.colors.primary + '10',
-      margin: 20,
-      marginBottom: 0,
+      backgroundColor: theme.colors.backgroundLight,
+      marginHorizontal: 20,
+      marginTop: 12,
       padding: 16,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.primary + '40',
-    },
-    balanceRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      borderRadius: 16,
       alignItems: 'center',
+    },
+    balanceHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 8,
     },
     balanceLabel: {
       fontSize: 13,
       fontWeight: '600',
-      color: theme.colors.text,
+      color: theme.colors.greyLight,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
     },
     balanceAmount: {
-      fontSize: 18,
+      fontSize: 36,
       fontWeight: 'bold',
       color: theme.colors.primary,
+      lineHeight: 42,
     },
-    balanceBreakdown: {
-      marginTop: 8,
-      paddingTop: 8,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.primary + '20',
+    balanceUnit: {
+      fontSize: 14,
+      color: theme.colors.greyLight,
+      marginTop: -4,
     },
-    balanceBreakdownText: {
-      fontSize: 11,
+    // Tab Switcher
+    tabContainer: {
+      flexDirection: 'row',
+      marginHorizontal: 20,
+      marginTop: 16,
+      backgroundColor: theme.colors.backgroundLight,
+      borderRadius: 12,
+      padding: 4,
+      gap: 4,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      gap: 8,
+    },
+    tabActive: {
+      backgroundColor: theme.colors.background,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    tabText: {
+      fontSize: 14,
+      fontWeight: '600',
       color: theme.colors.greyLight,
     },
+    tabTextActive: {
+      color: theme.colors.primary,
+    },
+    // Scroll View
     scrollView: {
       flex: 1,
     },
     scrollContent: {
       padding: 20,
+      paddingBottom: 20,
     },
-    description: {
-      fontSize: 14,
-      color: theme.colors.greyLight,
-      marginBottom: 20,
-      lineHeight: 20,
-    },
-    inputSection: {
-      marginBottom: 24,
-    },
-    inputLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 8,
-    },
-    inputContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      position: 'relative',
-    },
-    input: {
-      flex: 1,
-      backgroundColor: theme.colors.backgroundLight,
-      borderWidth: 2,
-      borderColor: theme.colors.greyLight,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      fontSize: 16,
-      color: theme.colors.text,
-    },
-    inputBadge: {
-      position: 'absolute',
-      right: 12,
-      backgroundColor: theme.colors.primary,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 8,
-    },
-    inputBadgeText: {
-      color: '#fff',
-      fontSize: 14,
-      fontWeight: '600',
-    },
-    errorText: {
-      fontSize: 12,
-      color: theme.colors.destructive,
-      marginTop: 4,
-    },
-    divider: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 20,
-    },
-    dividerLine: {
-      flex: 1,
-      height: 1,
-      backgroundColor: theme.colors.greyLight,
-    },
-    dividerText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: theme.colors.greyLight,
-      marginHorizontal: 12,
-    },
+    // Package Cards
     packagesContainer: {
       gap: 12,
-      marginBottom: 24,
     },
     packageCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
       backgroundColor: theme.colors.backgroundLight,
-      borderRadius: 12,
+      borderRadius: 16,
       padding: 16,
       borderWidth: 2,
-      borderColor: 'transparent',
+      borderColor: theme.colors.backgroundLight,
       position: 'relative',
+      minHeight: 90,
     },
     packageCardSelected: {
       borderColor: theme.colors.primary,
-      backgroundColor: theme.colors.primary + '10',
-    },
-    packageCardPopular: {
-      borderColor: theme.colors.primary + '60',
+      backgroundColor: theme.colors.primary + '08',
     },
     popularBadge: {
       position: 'absolute',
-      top: -8,
-      left: 12,
+      top: -10,
+      right: 16,
       backgroundColor: theme.colors.primary,
-      paddingHorizontal: 8,
+      paddingHorizontal: 10,
       paddingVertical: 4,
-      borderRadius: 8,
+      borderRadius: 12,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 3,
     },
     popularBadgeText: {
       color: '#fff',
       fontSize: 10,
       fontWeight: 'bold',
+      letterSpacing: 0.5,
     },
-    packageContent: {
+    packageMainContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
       flex: 1,
     },
-    packageLabel: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 4,
+    packageAmountContainer: {
+      flex: 1,
     },
-    packageRate: {
+    packageAmount: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+    },
+    packageAmountLabel: {
       fontSize: 12,
       color: theme.colors.greyLight,
+      marginTop: 2,
     },
-    selectedIndicator: {
-      marginLeft: 12,
+    packageDivider: {
+      width: 1,
+      height: 36,
+      backgroundColor: theme.colors.greyLight + '40',
     },
-    featuresContainer: {
-      backgroundColor: theme.colors.backgroundLight,
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 20,
-    },
-    featuresTitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 12,
-    },
-    featureRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 10,
-      gap: 10,
-    },
-    featureText: {
-      fontSize: 13,
-      color: theme.colors.text,
+    packageCostContainer: {
       flex: 1,
+      alignItems: 'flex-end',
     },
-    footer: {
-      padding: 20,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.greyLight,
-      gap: 12,
-    },
-    costSummary: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      backgroundColor: theme.colors.backgroundLight,
-      borderRadius: 12,
-    },
-    costSummaryLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.text,
-    },
-    costSummaryAmount: {
-      fontSize: 20,
+    packageCost: {
+      fontSize: 22,
       fontWeight: 'bold',
       color: theme.colors.primary,
     },
-    purchaseButton: {
-      backgroundColor: theme.colors.primary,
+    packageRate: {
+      fontSize: 10,
+      color: theme.colors.greyLight,
+      marginTop: 2,
+    },
+    selectedIndicator: {
+      position: 'absolute',
+      top: 12,
+      right: 12,
+    },
+    // Info Section
+    infoSection: {
+      marginTop: 20,
+      gap: 12,
+    },
+    infoRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 16,
-      borderRadius: 12,
       gap: 8,
+    },
+    infoText: {
+      fontSize: 13,
+      color: theme.colors.greyLight,
+      flex: 1,
+    },
+    // Custom Input
+    customInputSection: {
+      gap: 16,
+    },
+    customInputLabel: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    customInputHint: {
+      fontSize: 14,
+      color: theme.colors.greyLight,
+      marginTop: -8,
+    },
+    inputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.backgroundLight,
+      borderRadius: 16,
+      borderWidth: 2,
+      borderColor: theme.colors.greyLight + '60',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      gap: 12,
+    },
+    input: {
+      flex: 1,
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      padding: 0,
+      minHeight: 40,
+    },
+    inputSuffix: {
+      fontSize: 16,
+      color: theme.colors.greyLight,
+      fontWeight: '600',
+    },
+    costPreview: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.colors.primary + '10',
+      padding: 16,
+      borderRadius: 12,
+    },
+    costPreviewLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    costPreviewAmount: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.primary,
+    },
+    errorContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: theme.colors.destructive + '10',
+      padding: 12,
+      borderRadius: 12,
+    },
+    errorText: {
+      fontSize: 13,
+      color: theme.colors.destructive,
+      flex: 1,
+    },
+    hintContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: theme.colors.primary + '10',
+      padding: 12,
+      borderRadius: 12,
+    },
+    hintText: {
+      fontSize: 13,
+      color: theme.colors.primary,
+      flex: 1,
+    },
+    // Suggestions
+    suggestionsTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginTop: 24,
+      marginBottom: 12,
+    },
+    suggestionsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    suggestionChip: {
+      backgroundColor: theme.colors.backgroundLight,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.colors.greyLight + '40',
+    },
+    suggestionText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    // Footer
+    footer: {
+      padding: 16,
+      paddingTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.greyLight + '30',
+      gap: 10,
+    },
+    purchaseButton: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: 16,
+      paddingVertical: 16,
+      paddingHorizontal: 20,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
     },
     purchaseButtonDisabled: {
       backgroundColor: theme.colors.greyLight,
-      opacity: 0.5,
+      opacity: 0.6,
+      shadowOpacity: 0,
     },
-    purchaseButtonIcon: {
-      marginRight: 4,
+    purchaseButtonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    purchaseButtonLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    purchaseButtonRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
     },
     purchaseButtonText: {
       color: '#fff',
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '600',
+    },
+    purchaseButtonAmount: {
+      color: '#fff',
+      fontSize: 20,
+      fontWeight: 'bold',
+    },
+    securePaymentContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
     },
     securePaymentText: {
       fontSize: 12,
       color: theme.colors.greyLight,
-      textAlign: 'center',
     },
   });
 
