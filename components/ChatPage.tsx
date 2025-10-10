@@ -161,12 +161,29 @@ const ChatPage = () => {
     };
   }, []);
 
+  // Effect to handle conversation loading/clearing based on route
   useEffect(() => {
     if (id) {
       setCurrentRoom(id);
       setUserHasScrolledUp(false);
-      
-      // Update model selection to match the conversation's model_type
+    } else {
+      // Clear conversation when navigating to /new route
+      // This prevents old conversation from being refetched
+      resetChat();
+    }
+    // Entrance animation
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+      easing: Easing.out(Easing.quad),
+    }).start();
+  }, [id, resetChat, setCurrentRoom]);
+  
+  // Separate effect to update model selection when conversation loads
+  // This runs when conversations list updates but doesn't trigger refetch
+  useEffect(() => {
+    if (id) {
       const currentConversation = conversations.find(c => c.id === id);
       const conversationModelType = currentConversation?.model_type;
       
@@ -179,13 +196,6 @@ const ChatPage = () => {
         }
       }
     }
-    // Entrance animation
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-      easing: Easing.out(Easing.quad),
-    }).start();
   }, [id, conversations]);
 
   // Handle logo animation based on messages

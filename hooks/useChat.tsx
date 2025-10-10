@@ -170,6 +170,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isLocal && deviceSupportsLocalLLM && !shouldInitializeLLM) {
       console.log('[Local] User switched to local mode - initializing ExecuTorch...');
       setShouldInitializeLLM(true);
+    } else if (!isLocal && shouldInitializeLLM) {
+      // Clean up when switching back to cloud
+      console.log('[Local] Switched to cloud mode - cleaning up local state...');
+      setShouldInitializeLLM(false);
+      setHasTestedModelReady(false);
+      setHasTestedOnSwitch(false);
+      setLocalModelDownloadProgress(0);
+      setIsLocalModelReady(false);
     }
   }, [isLocal, deviceSupportsLocalLLM, shouldInitializeLLM]);
   
@@ -245,6 +253,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if(llm && isLocal && shouldInitializeLLM && 'response' in llm && (llm as any).response) {
       const filteredResponse = filterSpecialTokens((llm as any).response);
       setStream(filteredResponse);
+    } else if (!isLocal) {
+      // Clear local response when switching to cloud to prevent stale data
+      // Note: Don't clear stream entirely as cloud sets it directly
     }
   }, [llm, isLocal, shouldInitializeLLM, (llm as any)?.response]);
   
@@ -1205,6 +1216,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setStream('');
     setIntermediate('');
     setAdditionalData([]); // Reset additional data when clearing chat
+    setCurrentConversationId(null); // Clear conversation ID to prevent refetch
   }, []);
 
   const deleteConversation = useCallback(async (conversationId: string): Promise<boolean> => {
@@ -1297,9 +1309,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   // Update model state when llm changes
   useEffect(() => {
+    // Early return and cleanup if not in local mode
     if (!llm || !isLocal || !shouldInitializeLLM) {
       setLocalModelDownloadProgress(0);
       setIsLocalModelReady(false);
+      console.log('[Local] Cleaning up model state - not in local mode');
       return;
     }
     
@@ -1428,6 +1442,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setHasTestedOnSwitch(true);
       setHasTestedModelReady(false); // Reset download completion test flag
       
+      // Abort any ongoing cloud streams when switching to local
+      if (streamControllerRef.current) {
+        console.log('[Local] Aborting ongoing cloud stream on switch to local');
+        streamControllerRef.current.abort();
+        streamControllerRef.current = null;
+      }
+      
       // Wait a bit for model to start loading
       const timer = setTimeout(() => {
         testModelReadiness();
@@ -1437,8 +1458,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else if (!isLocal) {
       // Reset flag when switching away from local mode
       setHasTestedOnSwitch(false);
+      
+      // Clear any local generation state
+      if (isSending) {
+        console.log('[Cloud] Switched to cloud while local generation in progress');
+        setIsSending(false);
+      }
     }
-  }, [isLocal, deviceSupportsLocalLLM, shouldInitializeLLM, llm, hasTestedOnSwitch, testModelReadiness]);
+  }, [isLocal, deviceSupportsLocalLLM, shouldInitializeLLM, llm, hasTestedOnSwitch, testModelReadiness, isSending]);
   
   const clearLocalModel = useCallback(() => {
     // Get current local model info

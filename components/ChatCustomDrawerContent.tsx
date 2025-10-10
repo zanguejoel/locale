@@ -215,32 +215,30 @@ export const CustomDrawerContent = (props: any) => {
             setLocalLoading(true);
             
             if (newIsLocal) {
-                // For local mode, ALWAYS navigate to a new conversation
-                // even if user is already in local mode
+                // For local mode, navigate to new conversation (Option B: navigate cleanly)
                 const wasAlreadyLocal = isLocal;
                 
-                // Update state to local mode
+                // Update state to local mode FIRST (before navigation)
                 setIsLocal(true);
                 
-                // Reset the chat (no server-side conversation needed)
-                resetChat();
-                
-                // Always navigate to a fresh conversation
-                router.push('/(chat)/new');
-                
-                // Show info about local model only if switching FROM cloud mode
+                // Only navigate to new conversation if switching FROM cloud mode
                 if (!wasAlreadyLocal) {
+                    // Navigate to new conversation - this will naturally clear the view
+                    // without calling resetChat() which caused the race condition
+                    router.push('/(chat)/new');
+                    
+                    // Show info about local model
                     setTimeout(() => {
                         const selectedModel = getLocalModelById(getDefaultLocalModelId());
                         Alert.alert(
                             'Switched to Local Mode',
-                            `Using ${selectedModel?.displayName || 'Llama 3.2 1B'} (${selectedModel?.size || '~1.2GB'}).\n\nThe model will download on first use and run completely offline.`,
+                            `Using ${selectedModel?.displayName || 'Llama 3.2 1B'} (${selectedModel?.size || '~1.2GB'}).\n\nThe model will download on first use and run completely offline.\n\nNote: Local models don't support web search, image generation, or file attachments.`,
                             [{ text: 'Got it' }]
                         );
                     }, 300);
                 }
             } else if (newIsLocal !== isLocal) {
-                // For cloud mode, only create new conversation if switching FROM local mode
+                // For cloud mode, create new conversation when switching FROM local mode
                 setIsLocal(false);
                 
                 // Create a new server-side conversation
@@ -248,8 +246,7 @@ export const CustomDrawerContent = (props: any) => {
                 if (newConvId) {
                     router.push(`/(chat)/${newConvId}`);
                 } else {
-                    // Fallback if creation fails
-                    resetChat();
+                    // Fallback: just navigate to /new route
                     router.push('/(chat)/new');
                 }
             }
