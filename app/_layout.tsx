@@ -214,6 +214,24 @@ const Layout = () => {
         }}
       />
       <Stack.Screen
+        name="(modal)/plans-pricing"
+        options={{
+          headerTitle: "Plans & Pricing",
+          headerTitleAlign: 'center',
+          headerTintColor: theme.colors.text,
+          headerTitleStyle: { color: theme.colors.text },
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color={theme.colors.text} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <Stack.Screen
         name="(modal)/image/[url]"
         options={{
           headerTitle: "",

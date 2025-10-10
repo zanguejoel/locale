@@ -16,6 +16,7 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { SubscriptionEvent } from '@/types/mixpanel';
 import { useEffect } from 'react';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const WEB_PLANS_URL = 'https://www.odysseytech.ai/dashboard/settings?tab=plans';
 
@@ -38,6 +39,7 @@ const Page = () => {
   const theme = useTheme();
   const styles = getStyles(theme);
   const router = useRouter();
+  const { subscription, isLoading: isLoadingSubscription } = useSubscription();
 
   // Track plans page opened
   useEffect(() => {
@@ -45,6 +47,24 @@ const Page = () => {
       source: 'settings',
     });
   }, []);
+
+  // Helper function to map subscription tier to plan identifier
+  const getCurrentPlanId = (): string => {
+    if (!subscription) return 'free';
+    
+    const tier = subscription.tier.toUpperCase();
+    
+    // Map backend tiers to plan identifiers
+    if (tier === 'FREE') return 'free';
+    if (tier === 'PRO' || tier === 'PERSONAL') return 'pro';
+    if (tier === 'BUSINESS' || tier === 'TEAM') return 'business';
+    
+    // Default to free for unknown tiers
+    return 'free';
+  };
+
+  // Get the current plan identifier
+  const currentPlanId = getCurrentPlanId();
 
   // Define plans for display purposes
   const plans: Plan[] = [
@@ -62,6 +82,7 @@ const Page = () => {
         { text: 'Priority support', included: false },
       ],
       highlighted: false,
+      isCurrentPlan: currentPlanId === 'free',
     },
     {
       title: 'Pro',
@@ -75,6 +96,7 @@ const Page = () => {
         { text: 'Email & chat support', included: true },
       ],
       highlighted: true,
+      isCurrentPlan: currentPlanId === 'pro',
     },
     {
       title: 'Business',
@@ -90,6 +112,7 @@ const Page = () => {
         { text: 'Priority support', included: true },
       ],
       highlighted: false,
+      isCurrentPlan: currentPlanId === 'business',
     },
   ];
 
@@ -134,11 +157,19 @@ const Page = () => {
       style={[
         styles.planCard,
         plan.highlighted && styles.planCardHighlighted,
+        plan.isCurrentPlan && styles.planCardCurrent,
       ]}
     >
-      {plan.highlighted && (
+      {plan.highlighted && !plan.isCurrentPlan && (
         <View style={styles.popularBadge}>
           <Text style={styles.popularText}>MOST POPULAR</Text>
+        </View>
+      )}
+
+      {plan.isCurrentPlan && (
+        <View style={styles.currentPlanBadge}>
+          <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.currentPlanIcon} />
+          <Text style={styles.currentPlanText}>CURRENT PLAN</Text>
         </View>
       )}
 
@@ -159,21 +190,9 @@ const Page = () => {
   return (
     <GradientBackground variant="background">
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Plans & Pricing</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
+       
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           <View style={styles.contentContainer}>
-            <Text style={styles.pageTitle}>Plans & Pricing</Text>
-            <Text style={styles.pageSubtitle}>
-              Explore our flexible subscription options
-            </Text>
-
             {/* Web Management Banner */}
             <View style={styles.webBanner}>
               <View style={styles.webBannerIcon}>
@@ -313,6 +332,31 @@ const getStyles = (theme: Theme) =>
       fontSize: 11,
       fontWeight: 'bold',
       letterSpacing: 0.5,
+    },
+    currentPlanBadge: {
+      position: 'absolute',
+      top: -12,
+      left: 20,
+      backgroundColor: '#10B981',
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    currentPlanText: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: 'bold',
+      letterSpacing: 0.5,
+    },
+    currentPlanIcon: {
+      marginRight: 2,
+    },
+    planCardCurrent: {
+      borderColor: '#10B981',
+      borderWidth: 2,
     },
     planHeader: {
       marginBottom: 20,
