@@ -311,6 +311,15 @@ class ApiClient {
     return this.api.delete(url, config);
   }
 
+  // Delete Account Methods
+  public async requestAccountDeletion(): Promise<ApiResponse<{ detail: string }>> {
+    return this.api.post('/auth/close-account-request');
+  }
+
+  public async deleteAccount(code: string, email: string): Promise<ApiResponse<{ detail: string }>> {
+    return this.api.post('/auth/close-account', { code, email });
+  }
+
   /**
    * Cleanup method to stop intervals and clear cache
    * Call this when the app is being destroyed or backgrounded for extended periods

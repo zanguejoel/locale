@@ -79,6 +79,7 @@ export interface CommonColors {
   greyLight: string;
   input: string;
   selected: string;
+  error: string;
 }
 
 export interface AppTheme {
@@ -239,6 +240,7 @@ const theme: AppTheme = {
     greyLight: "#B8B3BA",
     input: "#EEE9F0",
     selected: "#e5f3f7",
+    error: "#EF4444",
   },
 };
 

@@ -179,7 +179,7 @@ const Layout = () => {
         name="profile"
         options={{
           headerTitle: "Profile",
-          presentation: "modal",
+         // presentation: "modal",
           headerTintColor: theme.colors.light,
           headerTitleStyle: { color: theme.colors.text },
           headerStyle: { backgroundColor: theme.colors.background },
