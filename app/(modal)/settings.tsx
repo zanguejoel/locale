@@ -1,7 +1,7 @@
 import Colors from '@/constants/Colors';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, SafeAreaView, Image, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from "react";
 import { useChat } from '@/hooks/useChat';
@@ -47,11 +47,16 @@ const rawPage = [{
   icon: 'folder-open-outline'
 }, {
   id: 6,
+  key: 'clear-all-chats',
+  title: 'Clear All Chats',
+  icon: 'trash-outline'
+}, {
+  id: 7,
   key: 'change-password',
   title: 'Change password',
   icon: 'settings-outline'
 }, {
-  id: 7,
+  id: 8,
   key: 'sign_out',
   title: 'Sign Out',
   icon: 'log-out-outline'
@@ -79,7 +84,8 @@ const Page = () => {
     isLocal,
     conversations,
     currentConversationId,
-    resetChat
+    resetChat,
+    clearAllConversations
   } = useChat();
   const [isModelSelectorVisible, setIsModelSelectorVisible] = useState(false);
   const [isLocalModelSelectorVisible, setIsLocalModelSelectorVisible] = useState(false);
@@ -172,6 +178,41 @@ const Page = () => {
   const selectedLocalModel = getLocalModelById(defaultLocalModelId);
   const modelSize = selectedLocalModel?.size || '~1.2GB';
 
+  const handleClearAllChats = async () => {
+    Alert.alert(
+      'Clear All Chats',
+      'Are you sure you want to delete all conversations? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const success = await clearAllConversations();
+              if (success) {
+                Alert.alert('Success', 'All conversations have been cleared.');
+                // Track clear all chats
+                await mixpanelService.trackSettings(SettingsEvent.SETTINGS_SECTION_VIEWED, {
+                  section: 'clear_all_chats',
+                });
+                // Navigate to new chat
+                router.push('/(chat)/new');
+              } else {
+                Alert.alert('Error', 'Failed to clear all conversations.');
+              }
+            } catch (error) {
+              Alert.alert('Error', 'An unexpected error occurred.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleInstruction = async (type: string) => {
     // Track settings section viewed
     await mixpanelService.trackSettings(SettingsEvent.SETTINGS_SECTION_VIEWED, {
@@ -189,6 +230,8 @@ const Page = () => {
         return setIsModelSelectorVisible(true)
       case 'model-manager':
         return router.push('/model-manager')
+      case 'clear-all-chats':
+        return handleClearAllChats()
       case 'change-password':
         return router.push('/change-password')
       case 'sign_out':
@@ -229,6 +272,11 @@ const Page = () => {
             {item.key === 'credits' && (
               <Text style={styles.menuItemSubtext}>
                 Buy more AI credits
+              </Text>
+            )}
+            {item.key === 'clear-all-chats' && (
+              <Text style={styles.menuItemSubtext}>
+                Delete all conversations
               </Text>
             )}
           </View>

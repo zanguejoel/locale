@@ -119,6 +119,7 @@ export const CustomDrawerContent = (props: any) => {
             },
             {
                 text: 'Delete',
+                style: 'destructive',
                 onPress: async () => {
                     try {
                         setLocalLoading(true);
@@ -447,6 +448,12 @@ export const CustomDrawerContent = (props: any) => {
                                             >
                                                 <Ionicons name="pencil" size={16} color="#FFFFFF" />
                                             </Pressable>
+                                            <Pressable
+                                                style={styles.actionButton}
+                                                onPress={() => onDeleteChat(chatId)}
+                                            >
+                                                <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                                            </Pressable>
                                         </View>
                                     </View>
                                 </Pressable>
@@ -483,6 +490,12 @@ export const CustomDrawerContent = (props: any) => {
                                             onPress={() => onRenameChat(chatId, chatTitle)}
                                         >
                                             <Ionicons name="pencil" size={16} color={theme.colors.greyLight} />
+                                        </Pressable>
+                                        <Pressable
+                                            style={styles.actionButton}
+                                            onPress={() => onDeleteChat(chatId)}
+                                        >
+                                            <Ionicons name="trash-outline" size={16} color={theme.colors.greyLight} />
                                         </Pressable>
                                     </View>
                                 </View>

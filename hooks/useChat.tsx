@@ -98,6 +98,7 @@ interface ChatContextType {
   clearChat: (conversationId: string) => Promise<void>;
   deleteConversation: (conversationId: string) => Promise<boolean>;
   renameConversation: (conversationId: string, newTitle: string) => Promise<boolean>;
+  clearAllConversations: () => Promise<boolean>;
   resetChat: () => void;
   createNewConversation: () => Promise<string>;
   intermediate: string;
@@ -1276,6 +1277,37 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
+  const clearAllConversations = useCallback(async (): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const token = await getToken();
+      await api.setAuthToken(token || '');
+      
+      // Delete all conversations one by one
+      const deletePromises = conversations.map(conv => 
+        api.delete(`/conversation/${conv.id}`)
+      );
+      
+      const results = await Promise.all(deletePromises);
+      const allSucceeded = results.every(response => response.ok);
+      
+      if (allSucceeded) {
+        setConversations([]);
+        setMessages([]);
+        setCurrentConversationId(null);
+        resetChat();
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      // console.error('Clear all conversations error:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [conversations, resetChat]);
+
   const createNewConversation = useCallback(async (): Promise<string> => {
     try {
       setIsLoading(true);
@@ -1503,6 +1535,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearChat,
     deleteConversation,
     renameConversation,
+    clearAllConversations,
     resetChat,
     createNewConversation,
     streamWorking,
@@ -1536,6 +1569,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearChat,
     deleteConversation,
     renameConversation,
+    clearAllConversations,
     resetChat,
     createNewConversation,
     streamWorking,
