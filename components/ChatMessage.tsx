@@ -12,6 +12,7 @@ import {
   Image,
   Pressable,
   Animated,
+  Easing,
   AccessibilityInfo,
   Platform,
   TouchableOpacity,
@@ -89,69 +90,42 @@ const LoadingDots = memo(() => {
   const theme = useTheme();
   const styles = getStyles(theme);
 
-  // Create animated values only once using useMemo
-  const dotAnimations = useMemo(() => [
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0)
-  ], []);
-  
-  const animationsRef = useRef<Animated.CompositeAnimation[]>([]);
-  const animationsRunning = useRef(false);
+  // Single animated value for pulse effect
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (animationsRunning.current) {
-      return;
-    }
+    // Create smooth pulse animation
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.3,
+          duration: 800,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      ])
+    );
 
-    // Create standalone animations for smoother performance
-    const createDotAnimation = (dot: Animated.Value, delay: number) => {
-      return Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(dot, {
-            toValue: 1,
-            duration: CHAT_MESSAGE.ANIMATION.LOADING_DOT,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dot, {
-            toValue: 0,
-            duration: CHAT_MESSAGE.ANIMATION.LOADING_DOT,
-            useNativeDriver: true,
-          }),
-          Animated.delay(CHAT_MESSAGE.ANIMATION.LOADING_DOT), // Add consistent delay between cycles
-        ])
-      );
-    };
+    animation.start();
 
-    // Create and start animations with different delays for a cascading effect
-    animationsRef.current = [
-      createDotAnimation(dotAnimations[0], 0),
-      createDotAnimation(dotAnimations[1], CHAT_MESSAGE.ANIMATION.LOADING_DOT_DELAY),
-      createDotAnimation(dotAnimations[2], CHAT_MESSAGE.ANIMATION.LOADING_DOT_DELAY * 2)
-    ];
-
-    animationsRunning.current = true;
-    animationsRef.current.forEach(anim => anim.start());
-
-    // Cleanup function to stop animations when component unmounts
     return () => {
-      animationsRef.current.forEach(anim => anim.stop());
-      dotAnimations.forEach(dot => {
-        dot.stopAnimation();
-        dot.setValue(0);
-      });
-      animationsRef.current = [];
-      animationsRunning.current = false;
+      animation.stop();
+      pulseAnim.stopAnimation();
     };
-  }, [dotAnimations]);
+  }, [pulseAnim]);
 
-  const getTranslateY = (dot: Animated.Value) => {
-    return dot.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, CHAT_MESSAGE.LOADING_DOTS.TRANSLATE_Y],
-    });
-  };
+  // Interpolate scale and opacity for pulse effect
+  const scale = pulseAnim;
+  const opacity = pulseAnim.interpolate({
+    inputRange: [1, 1.3],
+    outputRange: [0.6, 1],
+  });
 
   return (
     <View
@@ -159,18 +133,16 @@ const LoadingDots = memo(() => {
       accessibilityLabel="Loading message"
       testID="loading-dots-container"
     >
-      {dotAnimations.map((dot, index) => (
-        <Animated.View
-          key={index}
-          style={[
-            styles.loadingDot,
-            {
-              transform: [{ translateY: getTranslateY(dot) }]
-            }
-          ]}
-          testID={`loading-dot-${index}`}
-        />
-      ))}
+      <Animated.View
+        style={[
+          styles.loadingDot,
+          {
+            transform: [{ scale }],
+            opacity,
+          }
+        ]}
+        testID="loading-dot"
+      />
     </View>
   );
 });
@@ -247,7 +219,7 @@ const ChatMessage = memo(({
     }
   };
   // Force loading state to be a boolean
-  const isLoading = loading === true;
+  const isLoading = Boolean(loading);
 
   // Add subtle pulse animation for streaming content
   useEffect(() => {
@@ -1020,13 +992,18 @@ const ChatMessage = memo(({
     isLastInGroup && styles.lastInGroup,
   ];
 
+  // Check if we have streaming content to show alongside intermediate state
+  const hasStreamingContent = content && content.length > 0 && content !== '...' && content.trim() !== '';
+  
   return (
     <Animated.View
       style={containerStyle}
       testID={`message-${role === Role.Bot ? 'bot' : 'user'}`}
     >
+     
       {isLoading ? (
-        <>
+        <View style={styles.loadingStateContainer}>
+          {/* Show intermediate state indicator */}
           {intermediate ? (
             <View style={styles.intermediateContainer}>
               <View style={styles.intermediateIconContainer}>
@@ -1037,28 +1014,28 @@ const ChatMessage = memo(({
                 ) : intermediate.toLowerCase().includes('search') ? (
                   <Ionicons name="search" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
                 ) : (
-                  <ActivityIndicator size="small" color={theme.colors.primary} style={styles.intermediateIcon} />
+                  <LoadingDots />
                 )}
               </View>
               <AnimatedText text={intermediate?.toString()} />
             </View>
           ) : (
-            <View
-              style={[
-                styles.contentContainer,
-                styles.loadingContainer,
-
-                role === Role.Bot ? styles.botContent : styles.userContent,
-
-                // Make background more transparent when loading
-                { backgroundColor: role === Role.Bot ? theme.colors.backgroundLight : 'rgba(200, 230, 255, 0.6)' }
-              ]}
-              testID="loading-animation-container"
-            >
-              <LoadingDots />
+            <View style={[styles.intermediateContainer, {backgroundColor: 'transparent', borderWidth: 0}]}>
+              <View style={styles.intermediateIconContainer}>
+                <LoadingDots />
+              </View>
             </View>
           )}
-        </>
+          
+          {/* Show streaming content below intermediate state if it exists */}
+          {hasStreamingContent && (
+            <View style={[styles.messageWrapper, styles.streamingContentWrapper]}>
+              <View style={styles.messageContent} testID="message-content">
+                {renderContent()}
+              </View>
+            </View>
+          )}
+        </View>
 
       ) : (
         <View style={styles.messageWrapper}>
@@ -1541,6 +1518,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     fontWeight: '600',
   },
   // Intermediate state styles
+  loadingStateContainer: {
+    flexDirection: 'column',
+    gap: 12, // Space between intermediate state and streaming content
+    alignItems: 'flex-start',
+  },
   intermediateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1550,13 +1532,16 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     borderRadius: CHAT_MESSAGE.MESSAGE_BORDER_RADIUS,
     borderWidth: 1,
     borderColor: theme.isDark ? 'rgba(138, 43, 226, 0.3)' : 'rgba(138, 43, 226, 0.2)',
-    maxWidth: '85%',
+    maxWidth: '100%',
   },
   intermediateIconContainer: {
-    marginRight: 8,
+    // marginRight: 8,
   },
   intermediateIcon: {
     opacity: 0.8,
+  },
+  streamingContentWrapper: {
+    marginTop: 8, // Additional spacing for streaming content when shown with intermediate
   },
 });
 

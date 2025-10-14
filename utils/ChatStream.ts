@@ -22,12 +22,19 @@ export const processStream = async (
   setStreamWorking: (v: boolean) => void,
   setAdditionalData?: (a: any[]) => void
 ): Promise<StreamData | null> => {
-  console.log("[ChatStream] processStream called, response exists:", !!response);
+  console.log("[ChatStream] ═══════════════════════════════════════");
+  console.log("[ChatStream] processStream called");
+  console.log("[ChatStream] - Response exists:", !!response);
+  console.log("[ChatStream] - Has additionalData callback:", !!setAdditionalData);
+  console.log("[ChatStream] ═══════════════════════════════════════");
+  
   setStreamWorking(true);
   let res: StreamData | null = null;
   let buffer = '';
   let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   let chunkCount = 0;
+  let hasReceivedContent = false;
+  let hasReceivedIntermediate = false;
 
   if (!response) {
     // console.error("[ChatStream] Error: No response stream");
@@ -77,12 +84,20 @@ export const processStream = async (
               switch (data.type) {
                 case 'stream':
                   if (data.content !== undefined) {
+                    if (!hasReceivedContent) {
+                      console.log('[ChatStream] ✅ First content received');
+                      hasReceivedContent = true;
+                    }
                     setStream((prev) => prev + data.content);
                   }
                   break;
 
                 case 'state':
                   if (data.content) {
+                    if (!hasReceivedIntermediate) {
+                      console.log('[ChatStream] 🔄 First intermediate state received');
+                      hasReceivedIntermediate = true;
+                    }
                     console.log('[ChatStream] State update:', data.content);
                     setIntermediate(data.content);
                   }
@@ -91,34 +106,40 @@ export const processStream = async (
                 case 'meta':
                   // Handle metadata during streaming (e.g., generated images)
                   if (data?.data?.additional_data) {
-                    // console.log('[ChatStream] Received meta with additional_data:', data.data.additional_data);
+                    console.log('[ChatStream] 📦 Received meta with additional_data:', data.data.additional_data.length, 'items');
                     setAdditionalData?.(data.data.additional_data);
                   }
                   break;
 
                 case 'final':
                   res = data;
-                  console.log('[ChatStream] Received final response');
-                  console.log('[ChatStream] Final data object:', JSON.stringify(data.data, null, 2));
+                  console.log('[ChatStream] ✅ Received final response');
+                  console.log('[ChatStream] - Has content:', !!data.content);
+                  console.log('[ChatStream] - Has additional_data:', !!data?.data?.additional_data);
+                  
+                  // Clear intermediate state when final response is received
+                  console.log('[ChatStream] Clearing intermediate state');
+                  setIntermediate('');
+                  
                   if (data?.data?.additional_data) {
                     console.log('[ChatStream] Final has additional_data:', data.data.additional_data.length, 'items');
-                    console.log('[ChatStream] Additional data content:', JSON.stringify(data.data.additional_data, null, 2));
                     setAdditionalData?.(data.data.additional_data);
                   } else {
                     console.log('[ChatStream] ⚠️ No additional_data in final response');
-                    console.log('[ChatStream] Available keys in data:', Object.keys(data?.data || {}));
                   }
                   break;
 
                 case 'error':
                   if (data.error) {
-                    // console.error(`[ChatStream] Stream error: ${data.error}`);
+                    console.error(`[ChatStream] ❌ Stream error: ${data.error}`);
                     handleError(data.error);
+                    // Clear intermediate state on error
+                    setIntermediate('');
                   }
                   break;
 
                 default:
-                  // console.warn('[ChatStream] Unknown stream data type:', data.type, data);
+                  console.warn('[ChatStream] ⚠️ Unknown stream data type:', data.type);
               }
             } catch (e) {
               // console.error(`[ChatStream] Error processing stream data: ${e instanceof Error ? e.message : String(e)}`);
@@ -151,8 +172,15 @@ export const processStream = async (
       }
     }
   } catch (error) {
-    // console.error('[ChatStream] Stream processing error:', error);
+    console.error('[ChatStream] Stream processing error:', error);
     handleError(error instanceof Error ? error.message : String(error));
+    
+    // Clear all streaming states on error to prevent UI from being stuck
+    setStream('');
+    setIntermediate('');
+    if (setAdditionalData) {
+      setAdditionalData([]);
+    }
   } finally {
     setStreamWorking(false);
     
@@ -165,6 +193,15 @@ export const processStream = async (
         // console.warn('[ChatStream] Error releasing reader:', e);
       }
     }
+    
+    // Log streaming session summary
+    console.log("[ChatStream] ═══════════════════════════════════════");
+    console.log("[ChatStream] Stream processing complete");
+    console.log("[ChatStream] - Total chunks:", chunkCount);
+    console.log("[ChatStream] - Had content:", hasReceivedContent);
+    console.log("[ChatStream] - Had intermediate:", hasReceivedIntermediate);
+    console.log("[ChatStream] - Has final result:", !!res);
+    console.log("[ChatStream] ═══════════════════════════════════════");
   }
 
   return res;

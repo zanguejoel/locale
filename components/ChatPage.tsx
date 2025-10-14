@@ -180,21 +180,12 @@ const ChatPage = () => {
     }).start();
   }, [id, resetChat, setCurrentRoom]);
   
-  // Separate effect to update model selection when conversation loads
-  // This runs when conversations list updates but doesn't trigger refetch
+  // Set model selection when conversation loads
   useEffect(() => {
-    if (id) {
-      const currentConversation = conversations.find(c => c.id === id);
-      const conversationModelType = currentConversation?.model_type;
-      
-      if (conversationModelType) {
-        try {
-          // Update the default cloud model to match this conversation's model
-          storage.set('default_model_id', conversationModelType);
-        } catch (error) {
-          // console.error('Error updating model selection for conversation:', error);
-        }
-      }
+    const currentConversation = conversations.find(c => c.id === id);
+    if (currentConversation?.model_type) {
+      // Simply set the model - the model selector will handle if it exists or not
+      storage.set('default_model_id', currentConversation.model_type);
     }
   }, [id, conversations]);
 
@@ -457,35 +448,11 @@ const ChatPage = () => {
 
   const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => {
     // In inverted list with reversed array, index 0 is the newest message
-    const isLastBotMessage =
-      item.role === Role.Bot &&
-      index === 0;
-
-    // Show loading if:
-    // 1. Last bot message AND sending AND no stream yet (waiting for response)
-    // 2. Last bot message AND sending AND has intermediate state (e.g., "Generating image...")
-    // 3. BUT NOT if message already has content or additional_data (completed)
-    const hasContent = item.content && item.content.length > 0 && item.content !== '...' && item.content.trim() !== '';
-    const hasAdditionalData = item.additional_data && item.additional_data.length > 0;
-    const isComplete = hasContent || hasAdditionalData;
+    const isLastBotMessage = item.role === Role.Bot && index === 0;
+    const hasNoContent = !item.content || item.content.trim() === '';
     
-    // Debug log for the last bot message
-    if (isLastBotMessage && __DEV__) {
-      console.log('[ChatPage] Last bot message state:', {
-        index,
-        isSending,
-        hasStream: !!stream,
-        hasIntermediate: !!intermediate,
-        hasContent,
-        hasAdditionalData,
-        isComplete,
-        content: item.content?.substring(0, 50),
-        additional_data_count: item.additional_data?.length || 0,
-      });
-    }
-    
-    const isLoading = isLastBotMessage && isSending && !isComplete;
-    const isStreaming = isLastBotMessage && isSending && !!stream && !isComplete;
+    // Unified loading state: show loading dots ONLY on the last bot message while sending and has no content
+    const showLoading = isLastBotMessage && isSending && hasNoContent;
     
     // Show date separator if last message or different day from next (inverted)
     const showDateSeparator = 
@@ -493,7 +460,7 @@ const ChatPage = () => {
       !isSameDay(item.timestamp, reversedMessages[index + 1]?.timestamp);
 
     // Check if message can be retried (user message that failed or needs retry)
-    const canRetry = item.role === Role.User && !isLoading;
+    const canRetry = item.role === Role.User && !isSending;
     
     // Check if message is pinned
     const isPinned = pinnedMessages.some(m => m.id === item.id);
@@ -533,8 +500,7 @@ const ChatPage = () => {
             <ChatMessage
               {...item}
               intermediate={intermediate}
-              loading={isLoading}
-              streamingContent={isStreaming}
+              loading={showLoading}
               isFirstInGroup={isFirstInGroup}
               isLastInGroup={isLastInGroup}
               isOnlyInGroup={isOnlyInGroup}
@@ -554,7 +520,7 @@ const ChatPage = () => {
         )}
       </>
     );
-  }, [reversedMessages, isSending, stream, intermediate, pinnedMessages, handleCopyMessage, handleDeleteMessage, handleRetryMessage, handleEditMessage, handleMessagePin, handleReplyToMessage, handleScrollToPinnedMessage, handleAddReaction, handleRemoveReaction]);
+  }, [reversedMessages, isSending, intermediate, pinnedMessages, handleCopyMessage, handleDeleteMessage, handleRetryMessage, handleEditMessage, handleMessagePin, handleReplyToMessage, handleScrollToPinnedMessage, handleAddReaction, handleRemoveReaction]);
 
   const CustomView = Platform.OS === 'ios' ? PanGestureHandler : View
 
@@ -672,7 +638,7 @@ const ChatPage = () => {
               <SkeletonLoader variant="message" count={5} />
             </View>
           )}
-
+          {messages.length > 0 && (
           <CustomView style={{ flex: 1 }}>
             <FlashList
               contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}
@@ -686,7 +652,7 @@ const ChatPage = () => {
               onScroll={handleScroll}
               estimatedItemSize={200}
               scrollEventThrottle={16}
-              extraData={[isSending, stream]}
+              extraData={isSending}
               inverted
               maintainVisibleContentPosition={{
                 minIndexForVisible: 0,
@@ -701,6 +667,7 @@ const ChatPage = () => {
               }}
             />
           </CustomView>
+          )}
           {showScrollButton && messages.length > 0 && (
             <TouchableOpacity
               style={[styles.scrollButton, styles.touchTarget]}

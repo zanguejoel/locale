@@ -190,8 +190,15 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
     Keyboard.dismiss();
     
     // Prepare generation options for cloud models (skip for local)
+    // Only include imageProvider/imageModel when actually generating images
     const options = !isLocal ? {
-      ...generationOptions,
+      webSearch: generationOptions.webSearch,
+      generateImage: generationOptions.generateImage,
+      ...(generationOptions.generateImage !== 'none' && {
+        imageProvider: generationOptions.imageProvider,
+        imageModel: generationOptions.imageModel,
+      }),
+      generateVideo: generationOptions.generateVideo,
       files: files.length > 0 ? files : undefined, // Pass files array in options
     } : undefined;
     
@@ -342,6 +349,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
         <View style={styles.row}>
           <View style={styles.attachmentButtonContainer}>
             <TouchableOpacity 
+              disabled={isLoading}
               onPress={async () => {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 // Always show attachments modal - file preview is already visible above input
@@ -351,8 +359,14 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
               accessibilityLabel="Show attachments and AI options"
               accessibilityRole="button"
               accessibilityHint="Opens modal to show camera, gallery, document options, and AI settings"
+              accessibilityState={{ disabled: isLoading }}
             >
-              <Ionicons name="add" size={24} color={theme.colors.mutedForeground} />
+              <Ionicons 
+                name="add" 
+                size={24} 
+                color={isLoading ? theme.colors.mutedForeground : theme.colors.mutedForeground} 
+                style={{ opacity: isLoading ? 0.5 : 1 }}
+              />
             </TouchableOpacity>
             
             {/* File count badge */}
@@ -377,6 +391,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
             returnKeyType="default"
             blurOnSubmit={false}
             enablesReturnKeyAutomatically={true}
+            editable={!isLoading}
             inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_VIEW_ID : undefined}
           />
           {message.length > 0 ? (

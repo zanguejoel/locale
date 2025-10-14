@@ -1,3 +1,5 @@
+import { API_URL_PROD } from "@/utils/ApiClient";
+
 /**
  * Application Configuration Constants
  * Centralized configuration for the entire application
@@ -7,9 +9,9 @@
  * File Upload Configuration
  */
 export const FILE_UPLOAD = {
-  MAX_IMAGE_SIZE: 2 * 1024 * 1024, // 2MB
+  MAX_IMAGE_SIZE: 4 * 1024 * 1024, // 2MB
   MAX_IMAGE_DIMENSION: 1200,
-  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+  MAX_FILE_SIZE: 20 * 1024 * 1024, // 10MB
   SUPPORTED_IMAGE_FORMATS: ['jpg', 'jpeg', 'png', 'heic', 'heif'],
   SUPPORTED_AUDIO_FORMATS: ['m4a', 'mp3', 'wav'],
   SUPPORTED_DOCUMENT_FORMATS: ['pdf', 'doc', 'docx', 'txt'],
@@ -19,7 +21,7 @@ export const FILE_UPLOAD = {
  * API Configuration
  */
 export const API_CONFIG = {
-  BASE_URL: 'https://api.odysseytech.ai',
+  BASE_URL: API_URL_PROD,
   TIMEOUT: 30000, // 30 seconds
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000, // 1 second

@@ -19,35 +19,25 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import {
-  useLLM,
-} from 'react-native-executorch';
 
 import useMMKVStorage, { storage } from './useMMKVStorage';
-import api from '@/utils/ApiClient';
+import api, { API_URL_PROD } from '@/utils/ApiClient';
 import { Message, Role } from '@/utils/Interfaces';
-
-
-import { processStream, filterSpecialTokens } from '@/utils/ChatStream';
-import { Keyboard, Alert, Platform, InteractionManager } from 'react-native';
+import { processStream } from '@/utils/ChatStream';
+import { Keyboard, Alert, Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuth } from './useAuth';
 import { getDefaultModelId } from './useDefaultModel';
-import { getDefaultLocalModelId, useDefaultLocalModel } from './useDefaultLocalModel';
-import { isLocalLLMSupported, getLocalLLMUnsupportedMessage } from '@/utils/DeviceCapabilities';
+import { getDefaultLocalModelId } from './useDefaultLocalModel';
 import { getToken } from '@/utils/SecureTokenManager';
 import { formatAuthHeader } from '@/utils/AuthHelpers';
-import { getLocalModelById } from '@/constants/LocalModels';
-import { DownloadedModelsTracker } from '@/utils/DownloadedModelsTracker';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { AIEvent } from '@/types/mixpanel';
-import { deferToBackgroundThread, AppStateMonitor } from '@/utils/DownloadOptimizer';
-import { CrashReporter } from '@/utils/CrashReporter';
+import { useLocalModel } from './useLocalModel';
 
 // Import API_URL_PROD from ApiClient configuration
-const API_URL_PROD = "https://api.odysseytech.ai";
 const BASE_URL = API_URL_PROD;
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -121,216 +111,129 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-
+  // ============ Debugging & Lifecycle Management ============
+  const mountTimeRef = useRef(Date.now());
+  const lastRenderLogRef = useRef(0);
   
-  const { user } = useAuth();
-  const [conversations, setConversations] = useState<Conversations[]>([])
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [chatError, setChatError] = useState<ChatError | null>(null);
-  const [stream, setStream] = useState('');
-  const [intermediate, setIntermediate] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [files, setFiles] = useState<any[]>([]);
-  const [inputDisabled, setInputDisabled] = useState(false);
-  const [pastedActive, setPastedActive] = useState(false);
-  const [streamWorking, setStreamWorking] = useState(false);
-  const [isChatLoading, setChatLoading] = useState(false)
-  const [additionalData, setAdditionalData] = useState<any[]>([]);
-  const [isLocal, setIsLocal] = useState(false);
-  
-  // AbortController refs for managing streaming requests
-  const streamControllerRef = useRef<AbortController | null>(null);
-  const fetchControllerRef = useRef<AbortController | null>(null);
-  const currentConversationIdRef = useRef<string | null>(null);
-  
-  // Local model state - declare early to use in effects below
-  const [localModelDownloadProgress, setLocalModelDownloadProgress] = useState(0);
-  const [isLocalModelReady, setIsLocalModelReady] = useState(false);
-  const [hasTestedModelReady, setHasTestedModelReady] = useState(false);
-  const [hasTestedOnSwitch, setHasTestedOnSwitch] = useState(false);
-  
-  // Track if LLM should be initialized (only when user switches to local mode)
-  const [shouldInitializeLLM, setShouldInitializeLLM] = useState(false);
-  
-  // Check if device supports local LLM
-  const deviceSupportsLocalLLM = useMemo(() => isLocalLLMSupported(), []);
-  
-  // Get the selected default local model from settings
-  const selectedLocalModel = useDefaultLocalModel();
-  
-  // Validate that model source exists to prevent crashes
-  const hasValidModelSource = Boolean(selectedLocalModel?.modelSource);
-  
-  if (!hasValidModelSource) {
-    console.error('[Local] Invalid model source:', {
-      modelId: selectedLocalModel?.id,
-      modelSource: selectedLocalModel?.modelSource
-    });
+  // Throttle render logs to prevent log spam (log at most every 1 second)
+  const now = Date.now();
+  if (now - lastRenderLogRef.current > 1000) {
+    console.log('[ChatProvider] Rendering - mount time:', mountTimeRef.current, 'age:', now - mountTimeRef.current, 'ms');
+    lastRenderLogRef.current = now;
   }
   
-  // Initialize LLM with new API (v0.5.8+)
-  // Always call the hook (React rules), but use preventLoad to delay initialization until user switches to local mode
-  // Ensure we have a valid model source before passing to useLLM
-  const safeModelSource = hasValidModelSource ? selectedLocalModel.modelSource : null;
+  const { user } = useAuth();
   
-  console.log('[Local] Initializing useLLM with:', {
-    modelSource: safeModelSource ? 'valid' : 'null',
-    preventLoad: !deviceSupportsLocalLLM || !shouldInitializeLLM || !hasValidModelSource,
-    deviceSupported: deviceSupportsLocalLLM,
-    shouldInit: shouldInitializeLLM,
-    hasValidSource: hasValidModelSource
-  });
+  // ============ Conversation State ============
+  const [conversations, setConversations] = useState<Conversations[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const currentConversationIdRef = useRef<string | null>(null);
   
-  const llm = useLLM({
-    model: safeModelSource,
-    preventLoad: !deviceSupportsLocalLLM || !shouldInitializeLLM || !hasValidModelSource
-  });
+  // ============ Message State ============
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [additionalData, setAdditionalData] = useState<any[]>([]);
   
-  // Monitor app state to pause downloads when app goes to background
-  useEffect(() => {
-    if (isLocal && shouldInitializeLLM) {
-      console.log('[Local] Setting up app state monitoring for downloads...');
-      
-      AppStateMonitor.addListener('local-model-download', (nextAppState) => {
-        if (nextAppState === 'background') {
-          console.log('[Local] App went to background - download will pause automatically');
-        } else if (nextAppState === 'active') {
-          console.log('[Local] App became active - download will resume');
-        }
-      });
-      
-      return () => {
-        AppStateMonitor.removeListener('local-model-download');
-      };
-    }
-  }, [isLocal, shouldInitializeLLM]);
-
-  // Initialize ExecuTorch when user switches to local mode
-  // Use InteractionManager to defer initialization until after UI is ready
-  useEffect(() => {
-    if (isLocal && deviceSupportsLocalLLM && !shouldInitializeLLM && hasValidModelSource) {
-      // Check if local models are temporarily disabled due to crash loop
-      if (CrashReporter.isLocalModelsDisabled()) {
-        console.warn('[Local] Local models temporarily disabled due to recent crashes');
-        Alert.alert(
-          'Local Models Temporarily Disabled',
-          'Local models were disabled due to recent crashes. Please try again in 30 minutes or use cloud models.',
-          [
-            { text: 'Use Cloud', onPress: () => setIsLocal(false) },
-            { text: 'Enable Anyway', onPress: () => {
-              CrashReporter.reenableLocalModels();
-              // Retry initialization
-              setShouldInitializeLLM(true);
-            }}
-          ]
-        );
+  // ============ Loading & Sending State ============
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isChatLoading, setChatLoading] = useState(false);
+  const isSendingRef = useRef(isSending);
+  
+  // ============ Streaming State ============
+  const [stream, setStream] = useState('');
+  const [intermediate, setIntermediate] = useState('');
+  const [streamWorking, setStreamWorking] = useState(false);
+  const streamWorkingRef = useRef(streamWorking);
+  const intermediateRef = useRef(intermediate);
+  
+  // ============ Error State ============
+  const [error, setError] = useState('');
+  const [chatError, setChatError] = useState<ChatError | null>(null);
+  
+  // ============ File Handling State ============
+  const [files, setFiles] = useState<any[]>([]);
+  const [pastedActive, setPastedActive] = useState(false);
+  
+  // ============ Request Management ============
+  const streamControllerRef = useRef<AbortController | null>(null);
+  const fetchControllerRef = useRef<AbortController | null>(null);
+  
+  // ============ Message Timing ============
+  const lastMessageUpdateTimeRef = useRef(0);
+  const messageStartTimeRef = useRef(0);
+  const MESSAGE_UPDATE_THROTTLE_MS = 50;
+  
+  // ============ Message History Management ============
+  const appendToMessageHistory = useCallback((message: string, role: Role) => {
+    try {
+      if (typeof message !== 'string') {
+        console.error('[Chat] Invalid message type:', typeof message, message);
         return;
       }
-      
-      console.log('[Local] User switched to local mode - scheduling ExecuTorch initialization...');
-      console.log('[Local] Model info:', {
-        id: selectedLocalModel?.id,
-        name: selectedLocalModel?.displayName,
-        hasModelSource: Boolean(selectedLocalModel?.modelSource)
-      });
-      
-      // Defer initialization to avoid blocking UI using our optimization utility
-      deferToBackgroundThread(async () => {
-        console.log('[Local] Starting ExecuTorch initialization (deferred to background)...');
-        
-        // Additional delay to ensure all UI updates are complete
-        await new Promise(resolve => setTimeout(resolve, 150));
-        
+      if (role !== Role.User && role !== Role.Bot) {
+        console.error('[Chat] Invalid role:', role);
+        return;
+      }
+      setMessages(prev => {
         try {
-          // Trigger initialization
-          setShouldInitializeLLM(true);
-          console.log('[Local] ExecuTorch initialization triggered');
+          return [...prev, { role, content: message }];
         } catch (error) {
-          CrashReporter.report(error as Error, 'ExecuTorch initialization', {
-            modelId: selectedLocalModel?.id
-          });
-          throw error;
+          console.error('[Chat] Error creating new messages array:', error);
+          return prev; // Return previous state on error
         }
-      }).catch(error => {
-        console.error('[Local] Error during deferred initialization:', error);
-        CrashReporter.report(error as Error, 'Deferred initialization', {
-          modelId: selectedLocalModel?.id
-        });
-        
-        Alert.alert(
-          'Initialization Error',
-          'Failed to start local model download. Please try again or use cloud models.',
-          [
-            { text: 'Use Cloud', onPress: () => setIsLocal(false) },
-            { text: 'Try Again', onPress: () => {
-              // Reset and retry
-              setShouldInitializeLLM(false);
-              setTimeout(() => {
-                if (CrashReporter.isLocalModelsDisabled()) {
-                  setIsLocal(false);
-                }
-              }, 100);
-            }}
-          ]
-        );
       });
-    } else if (isLocal && deviceSupportsLocalLLM && !hasValidModelSource) {
-      // Handle invalid model source
-      console.error('[Local] Cannot initialize - invalid model source');
-      Alert.alert(
-        'Model Error',
-        'The selected local model is not available. Please select a different model from settings.',
-        [
-          { 
-            text: 'Use Cloud Instead', 
-            onPress: () => setIsLocal(false),
-            style: 'cancel'
-          },
-          { text: 'OK' }
-        ]
-      );
-    } else if (!isLocal && shouldInitializeLLM) {
-      // Clean up when switching back to cloud
-      console.log('[Local] Switched to cloud mode - cleaning up local state...');
-      setShouldInitializeLLM(false);
-      setHasTestedModelReady(false);
-      setHasTestedOnSwitch(false);
-      setLocalModelDownloadProgress(0);
-      setIsLocalModelReady(false);
+    } catch (error) {
+      console.error('[Chat] Error in appendToMessageHistory:', error);
     }
-  }, [isLocal, deviceSupportsLocalLLM, shouldInitializeLLM, hasValidModelSource, selectedLocalModel]);
+  }, []);
   
-  // Log and notify when model changes
+  // ============ Local Model Integration ============
+  // Note: messages is passed but useLocalModel uses a ref internally to avoid infinite loops
+  const localModel = useLocalModel({
+    currentConversationId,
+    onStreamUpdate: setStream,
+    onSendingUpdate: setIsSending,
+    onStreamWorkingUpdate: setStreamWorking,
+    onIntermediateUpdate: setIntermediate,
+    messages,
+    appendToMessageHistory,
+  });
+  
+  // ============ Update Refs When State Changes ============
   useEffect(() => {
-    // console.log('[Local] Selected model changed:', {
-    //   id: selectedLocalModel.id,
-    //   name: selectedLocalModel.displayName,
-    //   size: selectedLocalModel.size
-    // });
-    
-    // Reset test flags when model changes
-    setHasTestedModelReady(false);
-    setLocalModelDownloadProgress(0);
-    setIsLocalModelReady(false);
-    
-    // console.log('[Local] Model changed - state reset for new model');
-  }, [selectedLocalModel.id]);
+    isSendingRef.current = isSending;
+    streamWorkingRef.current = streamWorking;
+    intermediateRef.current = intermediate;
+  }, [isSending, streamWorking, intermediate]);
+  
+  // ============ Effective Sending State ============
+  // Safety mechanism: Keep isSending true while we have intermediate state or stream
+  const effectiveIsSending = useMemo(() => 
+    isSending || !!intermediate || (!!stream && stream.length > 0),
+    [isSending, intermediate, stream]
+  );
 
 
-  // Cleanup AbortControllers and LLM on unmount
+  // ============ Cleanup on Unmount ============
   useEffect(() => {
     return () => {
-      console.log('[Local] ChatProvider unmounting - cleaning up resources...');
+      const lifetime = Date.now() - mountTimeRef.current;
+      console.log('[ChatProvider] ⚠️ UNMOUNTING after', lifetime, 'ms of life');
+      console.log('[ChatProvider] Current state at unmount:', {
+        isSending: isSendingRef.current,
+        streamWorking: streamWorkingRef.current,
+        intermediate: intermediateRef.current,
+        hasMessages: messages.length > 0,
+        currentConversationId: currentConversationIdRef.current,
+      });
       
       // Clean up abort controllers
       if (streamControllerRef.current) {
+        console.log('[ChatProvider] ⚠️ Aborting active stream controller on unmount!');
         try {
           streamControllerRef.current.abort();
         } catch (e) {
-          console.warn('[Local] Error aborting stream controller:', e);
+          console.warn('[ChatProvider] Error aborting stream controller:', e);
         }
         streamControllerRef.current = null;
       }
@@ -339,30 +242,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           fetchControllerRef.current.abort();
         } catch (e) {
-          console.warn('[Local] Error aborting fetch controller:', e);
+          console.warn('[ChatProvider] Error aborting fetch controller:', e);
         }
         fetchControllerRef.current = null;
       }
       
-      // Clean up LLM resources if needed
-      try {
-        if (llm && typeof llm === 'object' && 'unload' in llm) {
-          console.log('[Local] Attempting to unload LLM...');
-          (llm as any).unload?.();
-        }
-      } catch (error) {
-        // Ignore cleanup errors - they're not critical
-        console.warn('[Local] LLM cleanup error (non-critical):', error);
-      }
+      console.log('[ChatProvider] Cleanup complete');
     };
-  }, [llm]);
+  }, []);
 
-  // Update conversation ID ref when it changes
+  // ============ Conversation ID Sync ============
   useEffect(() => {
     currentConversationIdRef.current = currentConversationId;
   }, [currentConversationId]);
 
-  // Wait for user to be loaded before fetching conversations
+  // ============ Initial Conversation Fetch ============
   useEffect(() => {
     if (user?.user_id) {
       fetchConversation(undefined, undefined, setCurrentRoom);
@@ -370,9 +264,35 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-
+  // ============ Message Update Handler (Throttled) ============
   useEffect(() => {
     // console.log('[useChat] Updating message - stream length:', stream?.length, 'additionalData:', additionalData);
+    
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastMessageUpdateTimeRef.current;
+    
+    // Record message start time for new messages
+    if (isSending && stream.length === 0 && additionalData?.length === 0 && !intermediate) {
+      const timeSinceMessageStart = now - messageStartTimeRef.current;
+      if (messageStartTimeRef.current === 0 || timeSinceMessageStart > 2000) {
+        messageStartTimeRef.current = now;
+      }
+    }
+    
+    // Always show intermediate state immediately (no throttling)
+    // Always show additional_data immediately (no throttling)
+    const shouldUpdateImmediately = intermediate || additionalData?.length > 0;
+    
+    // Throttle regular stream updates to prevent excessive re-renders
+    if (!shouldUpdateImmediately && 
+        timeSinceLastUpdate < MESSAGE_UPDATE_THROTTLE_MS && 
+        stream.length > 0) {
+      // Will update on next throttle window
+      return;
+    }
+    
+    lastMessageUpdateTimeRef.current = now;
+    
     setMessages(prev => updateLastItem(prev, message => {
       const updatedMessage = {
         ...message,
@@ -390,314 +310,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return updatedMessage;
     }));
-  }, [stream, additionalData]);
+  }, [stream, additionalData, isSending, intermediate]);
 
-  useEffect(() => {
-    // Only update stream from LLM response when in LOCAL mode and LLM is initialized
-    // This prevents interfering with cloud streaming
-    try {
-      // Guard: Only access LLM if it exists and is a valid object
-      if (!llm || typeof llm !== 'object') {
-        return;
-      }
-      
-      if(llm && isLocal && shouldInitializeLLM && 'response' in llm && (llm as any).response) {
-        const filteredResponse = filterSpecialTokens((llm as any).response);
-        setStream(filteredResponse);
-      } else if (!isLocal) {
-        // Clear local response when switching to cloud to prevent stale data
-        // Note: Don't clear stream entirely as cloud sets it directly
-      }
-    } catch (error) {
-      console.error('[Local] Error updating stream from LLM:', error);
-      // Don't crash, just log the error - likely a cleanup error
-      if (String(error).toLowerCase().includes('unload')) {
-        console.warn('[Local] Unload error caught - ignoring cleanup issue');
-      }
-    }
-  }, [llm, isLocal, shouldInitializeLLM, (llm as any)?.response]);
-  
-  // Log LLM state changes for debugging (disabled when llm is null or not initialized)
-  useEffect(() => {
-    // Guard: Only access LLM if it exists and is a valid object
-    if (!llm || typeof llm !== 'object') {
-      return;
-    }
-    
-    if (llm && isLocal && shouldInitializeLLM) {
+  // Helper function to abort current stream and wait for cleanup
+  const abortCurrentStream = useCallback(async () => {
+    if (streamControllerRef.current) {
+      console.log('[Chat] Aborting current stream...');
       try {
-        // Check for errors in LLM state
-        if ((llm as any).error) {
-          console.error('[Local] LLM has error:', (llm as any).error);
-          const errorMsg = (llm as any).error?.message || String((llm as any).error);
-          
-          // Check if it's the content-length error (harmless)
-          if (!errorMsg.toLowerCase().includes('content-length') && 
-              !errorMsg.toLowerCase().includes('unload')) {
-            // Show error to user for non-harmless errors
-            Alert.alert(
-              'Local Model Error',
-              `The local model encountered an error: ${errorMsg}\n\nYou can switch to cloud models to continue.`,
-              [
-                { text: 'Use Cloud', onPress: () => setIsLocal(false) },
-                { text: 'Try Again', onPress: () => setShouldInitializeLLM(false) }
-              ]
-            );
-          }
-        }
-        
-        // console.log('[Local] LLM state update:', {
-        //   isReady: (llm as any).isReady,
-        //   downloadProgress: (llm as any).downloadProgress,
-        //   isGenerating: (llm as any).isGenerating,
-        //   error: (llm as any).error,
-        //   allProps: Object.keys(llm)
-        // });
-      } catch (error) {
-        console.error('[Local] Error checking LLM state:', error);
-        // Ignore unload errors
-        if (!String(error).toLowerCase().includes('unload')) {
-          CrashReporter.report(error as Error, 'LLM state check', {
-            modelId: selectedLocalModel?.id
-          });
-        }
+        streamControllerRef.current.abort();
+        // Wait a tick for abort to propagate through the stream processing
+        await new Promise(resolve => setTimeout(resolve, 50));
+      } catch (e) {
+        console.warn('[Chat] Error aborting stream:', e);
+      } finally {
+        streamControllerRef.current = null;
       }
     }
-  }, [llm, isLocal, shouldInitializeLLM]);
-
- 
-  // Test model readiness by sending a simple test message
-  const testModelReadiness = useCallback(async () => {
-    // Use InteractionManager to avoid blocking UI
-    InteractionManager.runAfterInteractions(async () => {
-      // console.log('[Local] Testing model readiness...');
-      
-      if (!llm || !deviceSupportsLocalLLM) {
-        // console.log('[Local] Cannot test - LLM not available');
-        return;
-      }
-      
-      try {
-        const testMessages = [{ role: 'user', content: 'Hi' }] as any[];
-        // console.log('[Local] Sending test message to verify model is ready...');
-        
-        // Small delay to ensure UI stays responsive
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        await (llm as any).generate(testMessages);
-        
-        // console.log('[Local] ✅ Model test successful - model is ready!');
-      } catch (error) {
-        // console.log('[Local] ⚠️ Model test failed (expected if still loading):', error);
-      }
-    });
-  }, [llm, deviceSupportsLocalLLM]);
-
-  const handleSendLocalMessage = async (message: string) => {
-    // Wrap entire function in try-catch for unexpected errors
-    try {
-      // console.log('[Local] Starting local message send:', message);
-      
-      // Start timing for response
-      const responseStartTime = Date.now();
-      
-      // Track message sent with local model (non-blocking)
-      mixpanelService.trackAI(AIEvent.CHAT_MESSAGE_SENT, {
-        message_type: 'text',
-        message_length: message.length,
-        model_used: selectedLocalModel?.id || 'unknown',
-        is_local_model: true,
-        conversation_id: currentConversationId || '',
-      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
-      
-      // Check if model source is valid
-      if (!hasValidModelSource) {
-        console.error('[Local] Invalid model source');
-        Alert.alert(
-          'Model Error',
-          'The selected local model is not available. Please select a different model from settings or switch to cloud models.',
-          [
-            { 
-              text: 'Use Cloud Instead', 
-              onPress: () => setIsLocal(false),
-              style: 'cancel'
-            },
-            { text: 'OK' }
-          ]
-        );
-        
-        // Track failure (non-blocking)
-        mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
-          model_used: selectedLocalModel?.id || 'unknown',
-          is_local_model: true,
-          error_message: 'Invalid model source',
-        }).catch(() => {});
-        return;
-      }
-      
-      // Check if device supports local LLM
-      if (!deviceSupportsLocalLLM) {
-        // console.error('[Local] Device does not support local LLM');
-        Alert.alert(
-          'Local LLM Not Supported',
-          getLocalLLMUnsupportedMessage(),
-          [{ text: 'OK' }]
-        );
-        
-        // Track failure (non-blocking)
-        mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
-          model_used: selectedLocalModel?.id || 'unknown',
-          is_local_model: true,
-          error_message: 'Device does not support local LLM',
-        }).catch(() => {});
-        return;
-      }
-      
-      // Check if LLM hasn't been initialized yet (shouldn't happen but safety check)
-      if (!llm) {
-        // console.error('[Local] LLM not initialized');
-        Alert.alert(
-          'Model Initializing',
-          'The local model is being initialized. Please wait a moment and try again.',
-          [{ text: 'OK' }]
-        );
-        
-        // Track failure (non-blocking)
-        mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
-          model_used: selectedLocalModel?.id || 'unknown',
-          is_local_model: true,
-          error_message: 'LLM not initialized',
-        }).catch(() => {});
-        return;
-      }
-    
-    // Log LLM state for debugging
-    // console.log('[Local] LLM state:', { 
-    //   isReady: llm ? (llm as any).isReady : 'N/A',
-    //   isGenerating: llm ? (llm as any).isGenerating : 'N/A',
-    //   downloadProgress: llm ? (llm as any).downloadProgress : 'N/A',
-    //   response: llm && 'response' in llm ? (llm as any).response?.substring(0, 50) : 'N/A',
-    //   modelName: selectedLocalModel.displayName,
-    //   modelSize: selectedLocalModel.size
-    // });
-    
-    // Note: We removed the model ready check here - let the generate() call handle it
-    // This allows the library to trigger download if needed
-    
-    // Set sending state
-    setIsSending(true);
-    
-    // Add user message to chat
-    appendToMessageHistory(message, Role.User);
-    appendToMessageHistory('...', Role.Bot);
-    
-    try {
-      // console.log('[Local] Calling llm.generate...');
-      
-      // Format message history for react-native-executorch API
-      // It expects an array of message objects: [{ role: 'user' | 'assistant', content: 'text' }]
-      // Note: At this point, messages array includes the new user message and '...' placeholder (last 2 items)
-      const conversationHistory = messages
-        //.slice(0, -2) // Exclude the last 2 messages (new user message and '...' placeholder)
-        .map(msg => ({
-          role: msg.role === Role.User ? 'user' : 'assistant',
-          content: msg.content || ''
-        }))
-        .filter(msg => msg.content.trim() !== ''); // Remove empty messages
-      
-      // Add the new user message (not from state, but from parameter to ensure it's fresh)
-      conversationHistory.push({ role: 'user', content: message });
-      
-      // Limit context window to last N messages to avoid token limits
-      // Most local models have limited context windows (typically 2K-4K tokens)
-      const MAX_CONTEXT_MESSAGES = 20; // ~10 conversation turns
-      const contextMessages = conversationHistory.slice(-MAX_CONTEXT_MESSAGES);
-      
-      console.log('[Local] Sending with context:', contextMessages.length, 'messages in history');
-      
-      // Use InteractionManager to avoid blocking UI during generation
-      await InteractionManager.runAfterInteractions(async () => {
-        // Small delay to ensure UI stays responsive
-        await new Promise(resolve => setTimeout(resolve, 100));
-      });
-      
-      const result = await (llm as any).generate(contextMessages);
-      // console.log('[Local] Generation result:', result);
-      
-      // Update last used timestamp for this model
-      DownloadedModelsTracker.updateLastUsed(selectedLocalModel.id);
-      
-      // Track successful response
-      const responseDuration = Date.now() - responseStartTime;
-      await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_RECEIVED, {
-        response_time: responseDuration,
-        model_used: selectedLocalModel?.id || 'unknown',
-        is_local_model: true,
-        conversation_id: currentConversationId || '',
-        response_length: result?.length || 0,
-      });
-      
-      return result;
-    } catch (error: any) {
-      // console.error('[Local] LLM generation error:', error);
-      
-      // Track failed response (non-blocking)
-      mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
-        model_used: selectedLocalModel?.id || 'unknown',
-        is_local_model: true,
-        conversation_id: currentConversationId || '',
-        error_message: error instanceof Error ? error.message : String(error),
-      }).catch(() => {});
-      
-      const modelName = selectedLocalModel?.displayName || 'Local Model';
-      const modelSize = selectedLocalModel?.size || 'Unknown';
-      
-      // Check if error is due to model still loading
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('still loading') || errorMessage.includes('not loaded')) {
-        Alert.alert(
-          'Model Still Loading',
-          `${modelName} (${modelSize}) is still downloading. This may take several minutes depending on your connection.\n\nYou can switch to cloud models for immediate responses.`,
-          [{ text: 'OK' }]
-        );
-      } else if (errorMessage.toLowerCase().includes('memory') || errorMessage.toLowerCase().includes('out of memory')) {
-        Alert.alert(
-          'Memory Error',
-          `Your device does not have enough memory to run ${modelName}.\n\nTry switching to a smaller model or use cloud models instead.`,
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert(
-          'Generation Error',
-          `Failed to generate response with ${modelName}.\n\nPlease try again or switch to cloud models.`,
-          [{ text: 'OK' }]
-        );
-      }
-    } finally {
-      // Always reset sending state
-      setIsSending(false);
-    }
-    } catch (unexpectedError: any) {
-      // Catch any unexpected errors in the entire function
-      console.error('[Local] Unexpected error in handleSendLocalMessage:', unexpectedError);
-      
-      // Track unexpected error (non-blocking)
-      mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
-        model_used: selectedLocalModel?.id || 'unknown',
-        is_local_model: true,
-        conversation_id: currentConversationId || '',
-        error_message: 'Unexpected error: ' + (unexpectedError instanceof Error ? unexpectedError.message : String(unexpectedError)),
-      }).catch(() => {});
-      
-      Alert.alert(
-        'Unexpected Error',
-        'An unexpected error occurred. Please try again or switch to cloud models.',
-        [{ text: 'OK' }]
-      );
-      
-      setIsSending(false);
-    }
-  };
+  }, []);
 
   const handleSetConversation = (id: string) => {
     setCurrentConversationId(id);
@@ -804,9 +433,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw error;
     }
   }, []);
-  const appendToMessageHistory = useCallback((message: string, role: Role) => {
-    setMessages(prev => [...prev, { role, content: message }]);
-  }, []);
 
   const handleError = useCallback((error: string) => {
     // Parse streaming errors and set chat error
@@ -887,18 +513,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Start timing for response
     const responseStartTime = Date.now();
     
+    // Set sending state FIRST (both state and ref for immediate UI update)
+    console.log('[Cloud] ✅ Setting isSending = true at start of sendMessage');
+    isSendingRef.current = true;
+    setIsSending(true);
+    
+    // Reset all streaming states
     setChatLoading(true)
     setError('');
     setChatError(null); // Clear any previous errors
     setStream('');
-    setIntermediate('');
+    setIntermediate(''); // Clear intermediate initially - will be set by stream or remain empty for loading dots
     setAdditionalData([]); // Reset additional data for new message
-    setIsSending(true);
+    setStreamWorking(false); // Reset stream working state
 
     setMessages(prev => [
       ...prev,
       { role: Role.User, content: messageType === 'image' ? additionalData : message || '', imageData: message },
-      { role: Role.Bot, content: '' },
+      { role: Role.Bot, content: '' }, // Empty content - will show loading dots until stream starts
     ]);
 
     const formData = new FormData();
@@ -954,8 +586,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const fileExists = await checkFileExists(filePath);
           if (!fileExists) {
             Alert.alert('Error', 'The selected file could not be found.');
+            isSendingRef.current = false;
             setIsSending(false);
-            setInputDisabled(false);
             return;
           }
           if (messageType === 'audio') {
@@ -992,16 +624,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } catch (error) {
           Alert.alert('Error', 'There was a problem processing your file.');
+          isSendingRef.current = false;
           setIsSending(false);
-          setInputDisabled(false);
           return;
         }
       } else {
         if (files && files.length > 0) {
           file = files[0];
         } else {
+          isSendingRef.current = false;
           setIsSending(false);
-          setInputDisabled(false);
           return;
         }
         if (file && file instanceof File) {
@@ -1011,8 +643,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             formData.append('image', file, file.name);
           }
         } else {
+          isSendingRef.current = false;
           setIsSending(false);
-          setInputDisabled(false);
           return;
         }
         setFiles([]);
@@ -1057,8 +689,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setConversations(prev => [...prev, res.data as Conversations]);
         setCurrentConversationId(conv);
       } else {
+        isSendingRef.current = false;
         setIsSending(false);
-        setInputDisabled(false);
         throw new Error('Failed to create new conversation');
       }
     }
@@ -1106,12 +738,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[Cloud] ⚠️ No image generation option set or generateImage is "none"');
     }
 
-    // Abort any previous stream (only if it exists and is different)
-    if (streamControllerRef.current) {
-      console.log('[Cloud] Aborting previous stream controller');
-      streamControllerRef.current.abort();
-      streamControllerRef.current = null;
-    }
+    // Abort any previous stream with proper synchronization
+    await abortCurrentStream();
     
     const newController = new AbortController();
     streamControllerRef.current = newController;
@@ -1125,8 +753,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!token) {
         // console.error('[Cloud] No token found');
         Alert.alert('Error', 'Authentication required. Please sign in again.');
+        isSendingRef.current = false;
         setIsSending(false);
-        setInputDisabled(false);
         setChatLoading(false);
         return;
       }
@@ -1180,9 +808,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           );
         }
         
+        // Reset all streaming states on error
+        isSendingRef.current = false;
         setIsSending(false);
-        setInputDisabled(false);
         setChatLoading(false);
+        setStreamWorking(false);
+        setIntermediate('');
         return;
       }
       
@@ -1222,13 +853,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         response_length: res?.content?.length || 0,
       });
       
-      setInputDisabled(false);
       setPastedActive(false);
     } catch (e: any) {
       // Check if request was aborted (user cancelled or switched conversations)
       if (e.name === 'AbortError') {
         console.log('[Cloud] Request cancelled/aborted');
         console.log('[Cloud] Abort reason:', e.message);
+        // Reset streaming states on abort
+        setStreamWorking(false);
+        setIntermediate('');
+        messageStartTimeRef.current = 0;
         return;
       }
       
@@ -1261,16 +895,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error_message: e instanceof Error ? e.message : String(e),
       });
     } finally {
+      // Always clean up streaming state
       streamControllerRef.current = null;
+      console.log('[Cloud] ❌ Setting isSending = false in finally block');
+      isSendingRef.current = false;
       setIsSending(false);
-      setInputDisabled(false);
       setChatLoading(false);
+      setStreamWorking(false); // Reset stream working state
       setIntermediate(''); // Clear intermediate state to stop loading indicator
+      messageStartTimeRef.current = 0; // Reset for next message
       
       // Don't reset additionalData here - it needs to persist in the message
       console.log('[Cloud] Send message completed, clearing states');
     }
-  }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError]);
+  }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream]);
 
   const fetchConversation = useCallback(async (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => {
     const effectiveLimit = limitValue || 20;
@@ -1320,6 +958,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fetchControllerRef.current.abort();
       fetchControllerRef.current = null;
     }
+    
+    // Abort any ongoing stream when switching conversations (with proper synchronization)
+    await abortCurrentStream();
+    
+    // Reset all streaming states when switching conversations
+    // Do this after abort completes to prevent race conditions
+    setStream('');
+    setIntermediate('');
+    setStreamWorking(false);
+    isSendingRef.current = false;
+    setIsSending(false);
+    setAdditionalData([]);
+    messageStartTimeRef.current = 0; // Reset message timer
     
     fetchControllerRef.current = new AbortController();
     const fetchConvId = conversationId; // Capture for closure
@@ -1385,7 +1036,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fetchControllerRef.current = null;
       setIsLoading(false);
     }
-  }, []);
+  }, [abortCurrentStream]);
 
   const createConversation = useCallback(async (participantIds: string[]): Promise<string> => {
     try {
@@ -1429,13 +1080,27 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const resetChat = useCallback(() => {
+  const resetChat = useCallback(async () => {
+    // Abort any ongoing streams with proper synchronization
+    await abortCurrentStream();
+    
+    if (fetchControllerRef.current) {
+      fetchControllerRef.current.abort();
+      fetchControllerRef.current = null;
+    }
+    
+    // Reset all chat and streaming states
     setMessages([]);
     setStream('');
     setIntermediate('');
+    setStreamWorking(false);
+    isSendingRef.current = false;
+    setIsSending(false);
     setAdditionalData([]); // Reset additional data when clearing chat
+    setChatError(null); // Clear any errors
     setCurrentConversationId(null); // Clear conversation ID to prevent refetch
-  }, []);
+    messageStartTimeRef.current = 0; // Reset message timer
+  }, [abortCurrentStream]);
 
   const deleteConversation = useCallback(async (conversationId: string): Promise<boolean> => {
     try {
@@ -1532,7 +1197,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await api.setAuthToken(token || '');
       
       // Get default model based on current mode
-      const defaultModelId = isLocal ? getDefaultLocalModelId() : getDefaultModelId();
+      const defaultModelId = localModel.isLocal ? getDefaultLocalModelId() : getDefaultModelId();
       
       const response = await api.post<Conversations>('/conversation', { 
         title: 'New Chat',
@@ -1552,222 +1217,49 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [user, setConversations, setCurrentRoom, resetChat, isLocal]);
+  }, [user, setConversations, setCurrentRoom, resetChat, localModel.isLocal]);
 
-  // Get local model state (declarations moved to top of component)
-  
-  // Update model state when llm changes
-  useEffect(() => {
-    // Early return and cleanup if not in local mode
-    if (!llm || !isLocal || !shouldInitializeLLM) {
-      setLocalModelDownloadProgress(0);
-      setIsLocalModelReady(false);
-      console.log('[Local] Cleaning up model state - not in local mode');
-      return;
-    }
+  const contextValue = useMemo(() => {
+    // Temporarily disabled to investigate crash
+    // if (__DEV__) {
+    //   console.log('[useChat] Context value updated - isSending:', isSending, 'effectiveIsSending:', effectiveIsSending, 'hasIntermediate:', !!intermediate, 'streamLength:', stream?.length || 0);
+    // }
     
-    let previousProgress = 0;
-    let previousIsReady = false;
-    let isMounted = true;
-    let testScheduled = false;
-    let progressInterval: NodeJS.Timeout | null = null;
-    let readyInterval: NodeJS.Timeout | null = null;
-    
-    const updateModelState = () => {
-      if (!isMounted || !llm) return;
-      
-      // Use requestAnimationFrame for smoother updates
-      requestAnimationFrame(() => {
-        if (!isMounted) return;
-        
-        const progress = (llm as any).downloadProgress || 0;
-        
-        // Only update state if values have changed significantly (prevents unnecessary rerenders)
-        if (Math.abs(progress - previousProgress) > 0.05) { // Only update if changed by more than 5%
-          setLocalModelDownloadProgress(progress);
-          // console.log('[Local] Progress changed:', progress.toFixed(2));
-          previousProgress = progress;
-        }
-        
-        // Stop polling once complete
-        if (progress >= 1 && progressInterval) {
-          // console.log('[Local] Download complete, stopping progress polling');
-          clearInterval(progressInterval);
-          progressInterval = null;
-        }
-        
-        // Test if model is ready when download reaches 100%
-        if (progress >= 1 && previousProgress < 1 && !testScheduled && !hasTestedModelReady) {
-          // console.log('[Local] Download reached 100%, testing model readiness...');
-          testScheduled = true;
-          setHasTestedModelReady(true);
-          
-          // Send a test message to verify model is ready
-          setTimeout(() => {
-            if (isMounted) {
-              testModelReadiness();
-            }
-          }, 1000);
-        }
-      });
+    return {
+      isChatLoading,
+      setChatLoading,
+      messages,
+      conversations,
+      currentConversationId,
+      isLoading,
+      isSending: effectiveIsSending, // Use effectiveIsSending to keep it true during streaming/intermediate
+      stream,
+      sendMessage,
+      fetchMessages,
+      fetchConversation,
+      createConversation,
+      markAsRead,
+      setCurrentRoom,
+      clearChat,
+      deleteConversation,
+      renameConversation,
+      clearAllConversations,
+      resetChat,
+      createNewConversation,
+      streamWorking,
+      intermediate,
+      appendToMessageHistory,
+      handleSendLocalMessage: localModel.handleSendLocalMessage,
+      isLocal: localModel.isLocal,
+      setIsLocal: localModel.setIsLocal,
+      isLocalLLMSupported: localModel.isLocalLLMSupported,
+      localModelDownloadProgress: localModel.localModelDownloadProgress,
+      isLocalModelReady: localModel.isLocalModelReady,
+      clearLocalModel: localModel.clearLocalModel,
+      chatError,
+      clearChatError
     };
-    
-    const updateReadyState = () => {
-      if (!isMounted || !llm) return;
-      
-      const isReady = (llm as any).isReady || false;
-      
-      if (isReady !== previousIsReady) {
-        requestAnimationFrame(() => {
-          if (!isMounted) return;
-          
-          setIsLocalModelReady(isReady);
-          // console.log('[Local] Ready state changed:', isReady);
-        });
-        previousIsReady = isReady;
-        
-        // Stop polling once model is ready to save resources
-        if (isReady) {
-          // console.log('[Local] Model is ready, stopping ready state polling');
-          
-          if (readyInterval) {
-            clearInterval(readyInterval);
-            readyInterval = null;
-          }
-          
-          // Mark model as downloaded in tracker
-          DownloadedModelsTracker.markAsDownloaded(
-            selectedLocalModel.id,
-            selectedLocalModel.size
-          );
-          // console.log('[Local] Model marked as downloaded:', selectedLocalModel.id);
-        }
-      }
-    };
-    
-    // Update immediately
-    updateModelState();
-    updateReadyState();
-    
-    // Only start polling if not already complete/ready
-    const currentProgress = (llm as any).downloadProgress || 0;
-    const currentReady = (llm as any).isReady || false;
-    
-    // Optimized polling - reduced frequency to prevent UI freezing
-    // Only poll if not complete
-    if (currentProgress < 1) {
-      // Progress updates every 5 seconds (reduced from 3s for better performance)
-      progressInterval = setInterval(updateModelState, 5000);
-      // console.log('[Local] Started progress polling (5s interval)');
-    } else {
-      // console.log('[Local] Model already at 100%, skipping progress polling');
-    }
-    
-    if (!currentReady) {
-      // Ready state checked every 3 seconds (reduced from 2s for better performance)
-      readyInterval = setInterval(updateReadyState, 3000);
-      // console.log('[Local] Started ready state polling (3s interval)');
-    } else {
-      // console.log('[Local] Model already ready, skipping ready state polling');
-    }
-    
-    return () => {
-      isMounted = false;
-      if (progressInterval) {
-        clearInterval(progressInterval);
-        progressInterval = null;
-      }
-      if (readyInterval) {
-        clearInterval(readyInterval);
-        readyInterval = null;
-      }
-    };
-  }, [llm, isLocal, shouldInitializeLLM, selectedLocalModel.id, selectedLocalModel.size, hasTestedModelReady, testModelReadiness]);
-  
-  // Test model when switching to local mode (only once per switch)
-  useEffect(() => {
-    if (isLocal && deviceSupportsLocalLLM && shouldInitializeLLM && llm && !hasTestedOnSwitch) {
-      // console.log('[Local] Switched to local mode, testing model readiness in 2 seconds...');
-      setHasTestedOnSwitch(true);
-      setHasTestedModelReady(false); // Reset download completion test flag
-      
-      // Abort any ongoing cloud streams when switching to local
-      if (streamControllerRef.current) {
-        console.log('[Local] Aborting ongoing cloud stream on switch to local');
-        streamControllerRef.current.abort();
-        streamControllerRef.current = null;
-      }
-      
-      // Wait a bit for model to start loading
-      const timer = setTimeout(() => {
-        testModelReadiness();
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    } else if (!isLocal) {
-      // Reset flag when switching away from local mode
-      setHasTestedOnSwitch(false);
-      
-      // Clear any local generation state
-      if (isSending) {
-        console.log('[Cloud] Switched to cloud while local generation in progress');
-        setIsSending(false);
-      }
-    }
-  }, [isLocal, deviceSupportsLocalLLM, shouldInitializeLLM, llm, hasTestedOnSwitch, testModelReadiness, isSending]);
-  
-  const clearLocalModel = useCallback(() => {
-    // Get current local model info
-    const currentLocalModel = getLocalModelById(getDefaultLocalModelId());
-    const modelSize = currentLocalModel?.size || '~1.2GB';
-    const modelName = currentLocalModel?.displayName || 'Llama 3.2 1B';
-    
-    // Clear the downloaded models tracker
-    DownloadedModelsTracker.clearAll();
-    
-    // This would need to be implemented in react-native-executorch
-    // For now, just show a message
-    Alert.alert(
-      'Clear Downloaded Models',
-      `To clear the ${modelName} (${modelSize}), you need to clear the app data or reinstall the app. This will free up the storage space used by downloaded models.\n\nModel tracking has been reset.`,
-      [{ text: 'OK' }]
-    );
-  }, []);
-
-  const contextValue = useMemo(() => ({
-    isChatLoading,
-    setChatLoading,
-    messages,
-    conversations,
-    currentConversationId,
-    isLoading,
-    isSending,
-    stream,
-    sendMessage,
-    fetchMessages,
-    fetchConversation,
-    createConversation,
-    markAsRead,
-    setCurrentRoom,
-    clearChat,
-    deleteConversation,
-    renameConversation,
-    clearAllConversations,
-    resetChat,
-    createNewConversation,
-    streamWorking,
-    intermediate,
-    appendToMessageHistory,
-    handleSendLocalMessage,
-    isLocal,
-    setIsLocal,
-    isLocalLLMSupported: deviceSupportsLocalLLM,
-    localModelDownloadProgress,
-    isLocalModelReady,
-    clearLocalModel,
-    chatError,
-    clearChatError
-  }), [
+  }, [
     isChatLoading,
     setChatLoading,
     intermediate,
@@ -1776,6 +1268,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     currentConversationId,
     isLoading,
     isSending,
+    effectiveIsSending,
     stream,
     sendMessage,
     fetchMessages,
@@ -1791,13 +1284,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     createNewConversation,
     streamWorking,
     appendToMessageHistory,
-    handleSendLocalMessage,
-    isLocal,
-    setIsLocal,
-    deviceSupportsLocalLLM,
-    localModelDownloadProgress,
-    isLocalModelReady,
-    clearLocalModel,
+    localModel,
     chatError,
     clearChatError
   ]);

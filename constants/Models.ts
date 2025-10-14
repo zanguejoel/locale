@@ -17,7 +17,7 @@ export interface Model {
 }
 
 export const models: Model[] = [
-/*   {
+  {
     id: 'us.meta.llama3-3-70b-instruct-v1:0',
     name: 'LLama 3.3 70B',
     displayName: 'LLama 3.3 70B',
@@ -29,7 +29,7 @@ export const models: Model[] = [
       pdf: true,
       reasoning: false
     }
-  }, */
+  },
   {
     id: 'us.meta.llama4-scout-17b-instruct-v1:0',
     name: 'LLama 4 Scout 17B',

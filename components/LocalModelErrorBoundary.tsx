@@ -32,6 +32,12 @@ class LocalModelErrorBoundary extends Component<
     const errorMessage = error?.message?.toLowerCase() || '';
     const errorStack = error?.stack?.toLowerCase() || '';
     
+    console.log('[LocalModelErrorBoundary] getDerivedStateFromError called with:', {
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack?.substring(0, 200)
+    });
+    
     if (errorMessage.includes('content-length') || errorStack.includes('content-length')) {
       // This is a harmless warning from react-native-executorch
       // Don't show error UI, just log it
@@ -54,7 +60,8 @@ class LocalModelErrorBoundary extends Component<
       return { hasError: false };
     }
     
-    // Update state so the next render will show the fallback UI
+    // Real error - show error UI
+    console.error('[LocalModelErrorBoundary] ⚠️ REAL ERROR DETECTED - will show error UI');
     return { hasError: true, error };
   }
 
@@ -62,6 +69,7 @@ class LocalModelErrorBoundary extends Component<
     // Log error details for debugging
     console.error('[LocalModelErrorBoundary] Caught local model error:', error);
     console.error('[LocalModelErrorBoundary] Error info:', errorInfo);
+    console.error('[LocalModelErrorBoundary] Component stack:', errorInfo?.componentStack);
     
     // Categorize the error
     const errorMessage = error?.message?.toLowerCase() || '';
@@ -71,8 +79,7 @@ class LocalModelErrorBoundary extends Component<
     if (errorMessage.includes('content-length') || errorStack.includes('content-length')) {
       console.warn('[LocalModelErrorBoundary] Content-Length header warning detected - this is harmless');
       console.warn('[LocalModelErrorBoundary] Model download will continue normally');
-      // Reset error state immediately - this is not a real error
-      this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+      // Don't set state - getDerivedStateFromError already handled it
       return;
     }
     
@@ -81,8 +88,7 @@ class LocalModelErrorBoundary extends Component<
         (errorMessage.includes('cannot read property') && errorMessage.includes('undefined'))) {
       console.warn('[LocalModelErrorBoundary] Cleanup error detected - this is harmless');
       console.warn('[LocalModelErrorBoundary] LLM cleanup failed but app will continue normally');
-      // Reset error state immediately - this is not a real error
-      this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+      // Don't set state - getDerivedStateFromError already handled it
       return;
     }
     
