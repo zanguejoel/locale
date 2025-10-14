@@ -18,6 +18,7 @@ import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from '@/hooks/useTheme';
+import { createSecureSession, clearSecureSession } from "@/utils/SecureSession";
 
 interface ErrorType {
   email?: string;
@@ -73,17 +74,51 @@ const ForgotPassword = () => {
         if (res?.ok) {
           setResetSent(true)
         } else {
-          Alert.alert(
-            "Error",
-            res?.data?.detail || "Failed to send . Please try again."
-          );
+          // Extract meaningful error message
+          let errorMessage = "Failed to send reset code. Please try again.";
+          
+          if (res?.data?.detail) {
+            errorMessage = res.data.detail;
+          } else if (res?.data?.message) {
+            errorMessage = res.data.message;
+          } else if (res?.problem) {
+            if (res.problem === 'NETWORK_ERROR') {
+              errorMessage = 'Network error. Please check your internet connection.';
+            } else if (res.problem === 'TIMEOUT_ERROR') {
+              errorMessage = 'Request timed out. Please try again.';
+            } else if (res.problem === 'CONNECTION_ERROR') {
+              errorMessage = 'Unable to connect to server. Please try again.';
+            } else {
+              errorMessage = `Failed to send reset code: ${res.problem}`;
+            }
+          }
+          
+          // Check for specific errors
+          if (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('does not exist')) {
+            Alert.alert(
+              "Email Not Found",
+              "This email is not registered. Please check your email or create a new account.",
+              [
+                { text: "Try Again", style: "default" },
+                { text: "Sign Up", onPress: () => router.replace('/registration'), style: "cancel" }
+              ]
+            );
+          } else {
+            Alert.alert("Reset Code Failed", errorMessage);
+          }
         }
       } catch (err: any) {
-        setError({ code: err })
-        Alert.alert(
-          "Error",
-          err || "Failed to send reset instructions. Please try again."
-        );
+        // Extract meaningful error message
+        let errorMessage = "Failed to send reset instructions. Please try again.";
+        
+        if (typeof err === 'string') {
+          errorMessage = err;
+        } else if (err?.message) {
+          errorMessage = err.message;
+        }
+        
+        setError({ code: errorMessage });
+        Alert.alert("Error", errorMessage);
       }
     }
   };
@@ -96,20 +131,44 @@ const ForgotPassword = () => {
     }
 
     try {
-      const recaptchaToken = "It2wh;Wcj&pkgdD4X2'~6@6FmpqLr1";
-      const result = await resetPassword(email, code, recaptchaToken);
-        // alert(JSON.stringify(result?.data));
-      if (result?.data) {
+      const result = await resetPassword(email, code);
       
-        // Code validated successfully, navigate to password change page
-        router.replace(`/forgot-password-change?email=${encodeURIComponent(email)}&token=${encodeURIComponent(result?.data?.detail?.token)}`);
+      if (result?.data) {
+        // Code validated successfully, create secure session and navigate
+        const sessionId = await createSecureSession({
+          email,
+          token: result?.data?.detail?.token,
+          codeVerified: true
+        });
+        
+        router.replace(`/forgot-password-change?session=${sessionId}`);
+      } else {
+        Alert.alert(
+          "Verification Failed",
+          "Unable to verify code. Please try again."
+        );
       }
     } catch (err: any) {
-      setError({ code: err });
-      Alert.alert(
-        "Error",
-        err?.message || err || "Invalid code. Please try again."
-      );
+      // Extract meaningful error message
+      let errorMessage = "Invalid code. Please try again.";
+      
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.message) {
+        errorMessage = err.message;
+        
+        // Provide specific error messages
+        if (errorMessage.toLowerCase().includes('invalid') || errorMessage.toLowerCase().includes('code')) {
+          errorMessage = 'Invalid verification code. Please check and try again.';
+        } else if (errorMessage.toLowerCase().includes('expired')) {
+          errorMessage = 'Verification code has expired. Please request a new one.';
+        } else if (errorMessage.toLowerCase().includes('network')) {
+          errorMessage = 'Network error. Please check your internet connection.';
+        }
+      }
+      
+      setError({ code: errorMessage });
+      Alert.alert("Verification Failed", errorMessage);
     }
   }
 

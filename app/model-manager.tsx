@@ -31,6 +31,7 @@ import * as ChatHooks from '@/hooks/useChat';
 import { storage } from '@/hooks/useMMKVStorage';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { ModelEvent } from '@/types/mixpanel';
+import { CrashReporter } from '@/utils/CrashReporter';
 
 const useChat = ChatHooks.useChat;
 
@@ -231,24 +232,107 @@ export default function ModelManagerScreen() {
     loadModels(); // Refresh to show updated active state
   };
 
-  const handleDownloadModel = (modelId: string, modelName: string, modelSize: string) => {
+  const handleDownloadModel = async (modelId: string, modelName: string, modelSize: string) => {
+    const model = getLocalModelById(modelId);
+    if (!model) return;
+
+    // Check if local models are temporarily disabled due to crashes
+    if (CrashReporter.isLocalModelsDisabled()) {
+      Alert.alert(
+        'Local Models Temporarily Disabled',
+        'Local models were disabled due to recent crashes. Please try again later or use cloud models.',
+        [
+          { text: 'OK' },
+          { text: 'Enable Anyway', onPress: () => {
+            CrashReporter.reenableLocalModels();
+            // Retry download
+            handleDownloadModel(modelId, modelName, modelSize);
+          }}
+        ]
+      );
+      return;
+    }
+
+    // Check available storage first
+    try {
+      const deviceStorage = await ModelFileManager.getDeviceStorageInfo();
+      const requiredBytes = ModelFileManager.parseSizeString(modelSize);
+      const requiredWithBuffer = requiredBytes * 1.2; // 20% buffer
+      
+      if (deviceStorage.freeSpace < requiredWithBuffer) {
+        const freeSpaceFormatted = ModelFileManager.formatFileSize(deviceStorage.freeSpace);
+        const requiredFormatted = ModelFileManager.formatFileSize(requiredWithBuffer);
+        
+        Alert.alert(
+          '⚠️ Insufficient Storage',
+          `Not enough space to download ${modelName}.\n\n` +
+          `Required: ${requiredFormatted} (with 20% buffer)\n` +
+          `Available: ${freeSpaceFormatted}\n\n` +
+          `Please free up approximately ${ModelFileManager.formatFileSize(requiredWithBuffer - deviceStorage.freeSpace)} to continue.\n\n` +
+          `Tip: You can delete unused models from this screen to free up space.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('[ModelManager] Error checking storage:', error);
+      // Continue with download if storage check fails
+    }
+
+    // Calculate estimated download time
+    const sizeMatch = modelSize.match(/(\d+\.?\d*)\s*(MB|GB)/i);
+    const sizeValue = sizeMatch ? parseFloat(sizeMatch[1]) : 1000;
+    const sizeUnit = sizeMatch ? sizeMatch[2].toUpperCase() : 'MB';
+    const sizeInMB = sizeUnit === 'GB' ? sizeValue * 1024 : sizeValue;
+    const estimatedMinutes = Math.ceil(sizeInMB / 10);
+    const downloadTimeText = estimatedMinutes < 2 
+      ? '1-2 minutes' 
+      : estimatedMinutes < 5 
+      ? '2-5 minutes'
+      : `${estimatedMinutes} minutes`;
+
     Alert.alert(
-      'Download Model',
-      `Download ${modelName} (${modelSize})?`,
+      '📥 Download Local Model?',
+      `${modelName}\n${model.description}\n\n` +
+      `📦 File Size: ${modelSize}\n` +
+      `⏱️ Estimated Time: ${downloadTimeText}\n` +
+      `📡 Network Usage: ${modelSize} of data\n` +
+      `📱 Storage Required: ${modelSize} free space\n\n` +
+      `✅ Benefits:\n` +
+      `• 100% offline AI\n` +
+      `• Complete privacy\n` +
+      `• No API costs\n` +
+      `• Fast responses\n\n` +
+      `⚠️ Limitations:\n` +
+      `• No web search\n` +
+      `• No image generation\n` +
+      `• No file attachments\n\n` +
+      `💡 We recommend downloading over Wi-Fi to avoid using mobile data.`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Cancel', 
+          style: 'cancel' 
+        },
         {
           text: 'Download',
-          onPress: () => {
+          onPress: async () => {
             // Set as default local model
             storage.set('default_local_model_id', modelId);
             
-            // Switch to local mode to trigger download
-            setIsLocal(true);
-            
+            // Provide haptic feedback
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             
-          
+            // Small delay to ensure storage is written
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // Switch to local mode to trigger download (async to avoid blocking)
+            setIsLocal(true);
+            
+            // Small delay before navigation to let state propagate
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Navigate back to chat to show download progress
+            router.back();
           },
         },
       ]

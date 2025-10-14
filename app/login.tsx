@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
-import OAuthButtons from "@/components/OAuthButtons";
+// import OAuthButtons from "@/components/OAuthButtons"; // Commented out for now
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from "@/constants/Types";
@@ -125,7 +125,7 @@ const Login = () => {
           await AsyncStorage.removeItem("savedEmail");
         }
       } catch (err: any) {
-        Alert.alert("Error", err || "Login failed");
+        Alert.alert("Sign In Error", err || "Login failed");
       }
     }
   };
@@ -285,15 +285,15 @@ const Login = () => {
                 <Ionicons name="arrow-forward-outline" size={18} color={theme.colors.white} />
               </TouchableOpacity>
 
-              {/* OAuth Buttons */}
-              <OAuthButtons
+              {/* OAuth Buttons - Commented out for now */}
+              {/* <OAuthButtons
                 onSuccess={(result) => {
                   console.log('OAuth success:', result);
                 }}
                 onError={(error) => {
                   console.error('OAuth error:', error);
                 }}
-              />
+              /> */}
 
               <View style={styles.dividerContainer}>
                 <View style={[styles.divider]} />

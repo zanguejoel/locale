@@ -9,13 +9,15 @@ import {
     SafeAreaView,
     Animated,
     Easing,
+    Alert,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import Colors from "@/constants/Colors";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { Theme } from "@/constants/Types";
+import { getSecureSession, clearSecureSession } from "@/utils/SecureSession";
 
 
 interface ErrorType {
@@ -28,16 +30,42 @@ const SuccessPage = () => {
     const theme = useTheme();
     const styles = getStyles(theme);
 
-    const { email, password } = useLocalSearchParams();
+    const { session } = useLocalSearchParams();
     const [isLoading, setLoading] = useState(false);
+    const [sessionData, setSessionData] = useState<any>(null);
+    const [sessionError, setSessionError] = useState(false);
     
     // Animation values
     const scaleAnim = useRef(new Animated.Value(0)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
     
-    // Success animation on mount
+    // Load session data and animations on mount
     useEffect(() => {
+        const loadSession = async () => {
+            if (session) {
+                const data = await getSecureSession(session as string);
+                if (data) {
+                    setSessionData(data);
+                } else {
+                    setSessionError(true);
+                    Alert.alert(
+                        "Session Expired",
+                        "Your session has expired. Please login to continue.",
+                        [{ text: "OK", onPress: () => router.replace('/login') }]
+                    );
+                }
+            } else {
+                setSessionError(true);
+                Alert.alert(
+                    "Invalid Session",
+                    "No session found. Please login to continue.",
+                    [{ text: "OK", onPress: () => router.replace('/login') }]
+                );
+            }
+        };
+        loadSession();
+        
         // Icon scale animation with bounce
         Animated.spring(scaleAnim, {
             toValue: 1,
@@ -63,16 +91,38 @@ const SuccessPage = () => {
                 easing: Easing.out(Easing.ease),
             }),
         ]).start();
-    }, []);
+    }, [session]);
     
     const handleHome = async () => {
-        setLoading(true)
+        if (!sessionData?.email || !sessionData?.password) {
+            Alert.alert("Error", "Session data not available. Please login manually.");
+            router.replace('/login');
+            return;
+        }
+        
+        setLoading(true);
         try {
-            await signIn(decodeURIComponent(`${email}`), decodeURIComponent(`${password}`));
-        } catch (err) {
-            // console.error(err)
+            await signIn(sessionData.email, sessionData.password);
+            // Clear the session after successful login
+            if (session) {
+                await clearSecureSession(session as string);
+            }
+        } catch (err: any) {
+            // Extract meaningful error message
+            let errorMessage = "Failed to sign in. Please try again.";
+            
+            if (typeof err === 'string') {
+                errorMessage = err;
+            } else if (err?.message) {
+                errorMessage = err.message;
+            }
+            
+            Alert.alert("Sign In Failed", errorMessage, [
+                { text: "Try Again", onPress: () => setLoading(false) },
+                { text: "Go to Login", onPress: () => router.replace('/login') }
+            ]);
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
     }
 

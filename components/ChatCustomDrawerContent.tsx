@@ -32,6 +32,8 @@ import { getDefaultLocalModelId } from '@/hooks/useDefaultLocalModel';
 import { storage } from '@/hooks/useMMKVStorage';
 import { isLlamaModel } from '@/constants/Models';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ModelFileManager } from '@/utils/ModelFileManager';
+import { CrashReporter } from '@/utils/CrashReporter';
 
 
 export const CustomDrawerContent = (props: any) => {
@@ -202,6 +204,22 @@ export const CustomDrawerContent = (props: any) => {
     const handleModelSwitch = async (modelType: 'local' | 'Odyssey') => {
         const newIsLocal = modelType === 'local';
         
+        // Check if local models are temporarily disabled due to crashes
+        if (newIsLocal && CrashReporter.isLocalModelsDisabled()) {
+            Alert.alert(
+                'Local Models Temporarily Disabled',
+                'Local models were disabled due to recent crashes. Please try again later or use cloud models.',
+                [
+                    { text: 'Use Cloud', style: 'cancel' },
+                    { text: 'Enable Anyway', onPress: () => {
+                        CrashReporter.reenableLocalModels();
+                        performModelSwitch(true);
+                    }}
+                ]
+            );
+            return;
+        }
+        
         // Check if trying to switch to local mode on unsupported device
         if (newIsLocal && !isLocalLLMSupported) {
             Alert.alert(
@@ -212,6 +230,78 @@ export const CustomDrawerContent = (props: any) => {
             return;
         }
         
+        // If switching to local mode from cloud mode, show confirmation alert first
+        if (newIsLocal && !isLocal) {
+            const selectedModel = getLocalModelById(getDefaultLocalModelId());
+            if (selectedModel) {
+                // Check available storage first
+                try {
+                    const deviceStorage = await ModelFileManager.getDeviceStorageInfo();
+                    const requiredBytes = ModelFileManager.parseSizeString(selectedModel.size);
+                    const requiredWithBuffer = requiredBytes * 1.2; // 20% buffer
+                    
+                    if (deviceStorage.freeSpace < requiredWithBuffer) {
+                        const freeSpaceFormatted = ModelFileManager.formatFileSize(deviceStorage.freeSpace);
+                        const requiredFormatted = ModelFileManager.formatFileSize(requiredWithBuffer);
+                        
+                        Alert.alert(
+                            '⚠️ Insufficient Storage',
+                            `Not enough space to download ${selectedModel.displayName}.\n\n` +
+                            `Required: ${requiredFormatted} (with 20% buffer)\n` +
+                            `Available: ${freeSpaceFormatted}\n\n` +
+                            `Please free up approximately ${ModelFileManager.formatFileSize(requiredWithBuffer - deviceStorage.freeSpace)} to continue.\n\n` +
+                            `Tip: Go to Model Manager in settings to delete unused models.`,
+                            [{ text: 'OK' }]
+                        );
+                        return;
+                    }
+                } catch (error) {
+                    console.error('[ChatDrawer] Error checking storage:', error);
+                    // Continue with download if storage check fails
+                }
+
+                // Calculate estimated download time
+                const sizeMatch = selectedModel.size.match(/(\d+\.?\d*)\s*(MB|GB)/i);
+                const sizeValue = sizeMatch ? parseFloat(sizeMatch[1]) : 1000;
+                const sizeUnit = sizeMatch ? sizeMatch[2].toUpperCase() : 'MB';
+                const sizeInMB = sizeUnit === 'GB' ? sizeValue * 1024 : sizeValue;
+                const estimatedMinutes = Math.ceil(sizeInMB / 10);
+                const downloadTimeText = estimatedMinutes < 2 
+                    ? '1-2 minutes' 
+                    : estimatedMinutes < 5 
+                    ? '2-5 minutes'
+                    : `${estimatedMinutes} minutes`;
+
+                Alert.alert(
+                    '📥 Download Local Model?',
+                    `${selectedModel.displayName}\n${selectedModel.description}\n\n` +
+                    `📦 File Size: ${selectedModel.size}\n` +
+                    `⏱️ Estimated Time: ${downloadTimeText}\n` +
+                    `📡 Network Usage: ${selectedModel.size} of data\n` +
+                    `📱 Storage Required: ${selectedModel.size} free space\n\n` +
+                    `💡 We recommend downloading over Wi-Fi to avoid using mobile data.`,
+                    [
+                        { 
+                            text: 'Cancel', 
+                            style: 'cancel' 
+                        },
+                        {
+                            text: 'Download',
+                            onPress: async () => {
+                                await performModelSwitch(true);
+                            },
+                        },
+                    ]
+                );
+                return; // Don't proceed with switch yet
+            }
+        }
+        
+        // Proceed with actual model switch
+        await performModelSwitch(newIsLocal);
+    };
+
+    const performModelSwitch = async (newIsLocal: boolean) => {
         try {
             setLocalLoading(true);
             
@@ -219,28 +309,28 @@ export const CustomDrawerContent = (props: any) => {
                 // For local mode, navigate to new conversation (Option B: navigate cleanly)
                 const wasAlreadyLocal = isLocal;
                 
+                // Defer state update to avoid blocking UI
+                // Use setTimeout to break up the work
+                await new Promise(resolve => setTimeout(resolve, 50));
+                
                 // Update state to local mode FIRST (before navigation)
                 setIsLocal(true);
                 
                 // Only navigate to new conversation if switching FROM cloud mode
                 if (!wasAlreadyLocal) {
+                    // Small delay before navigation to ensure state is updated
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
                     // Navigate to new conversation - this will naturally clear the view
                     // without calling resetChat() which caused the race condition
                     router.push('/(chat)/new');
-                    
-                    // Show info about local model
-                    setTimeout(() => {
-                        const selectedModel = getLocalModelById(getDefaultLocalModelId());
-                        Alert.alert(
-                            'Switched to Local Mode',
-                            `Using ${selectedModel?.displayName || 'Llama 3.2 1B'} (${selectedModel?.size || '~1.2GB'}).\n\nThe model will download on first use and run completely offline.\n\nNote: Local models don't support web search, image generation, or file attachments.`,
-                            [{ text: 'Got it' }]
-                        );
-                    }, 300);
                 }
             } else if (newIsLocal !== isLocal) {
                 // For cloud mode, create new conversation when switching FROM local mode
                 setIsLocal(false);
+                
+                // Small delay to ensure state update propagates
+                await new Promise(resolve => setTimeout(resolve, 50));
                 
                 // Create a new server-side conversation
                 const newConvId = await createNewConversation();

@@ -21,7 +21,7 @@ import {
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
-import OAuthButtons from "@/components/OAuthButtons";
+// import OAuthButtons from "@/components/OAuthButtons"; // Commented out for now
 import PasswordStrengthMeter from "@/components/PasswordStrengthMeter";
 import WebView from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
@@ -245,7 +245,39 @@ const Registration = () => {
 
         await signUp(updatedFormData, router);
       } catch (err: any) {
-        Alert.alert("Error", err || "Registration failed");
+        // Extract and display meaningful error messages
+        let errorTitle = "Registration Failed";
+        let errorMessage = "An error occurred during registration. Please try again.";
+        
+        if (typeof err === 'string') {
+          errorMessage = err;
+        } else if (err?.message) {
+          errorMessage = err.message;
+          
+          // Provide user-friendly messages for common errors
+          if (errorMessage.toLowerCase().includes('timeout')) {
+            errorTitle = "Connection Timeout";
+            errorMessage = "The request took too long. Please check your internet connection and try again.";
+          } else if (errorMessage.toLowerCase().includes('network')) {
+            errorTitle = "Network Error";
+            errorMessage = "Unable to connect to the server. Please check your internet connection.";
+          } else if (errorMessage.toLowerCase().includes('email') && errorMessage.toLowerCase().includes('exist')) {
+            errorTitle = "Email Already Registered";
+            errorMessage = "This email is already registered. Please login or use a different email.";
+          } else if (errorMessage.toLowerCase().includes('password')) {
+            errorTitle = "Password Error";
+            // Use the actual message as it's likely a validation error
+          }
+        } else if (err?.detail) {
+          errorMessage = err.detail;
+        }
+        
+        Alert.alert(errorTitle, errorMessage, [
+          { text: "Try Again", style: "default" },
+          ...(errorMessage.includes("already registered") ? [
+            { text: "Go to Login", onPress: () => router.replace('/login'), style: "cancel" }
+          ] : [])
+        ]);
       }
     }
   };
@@ -403,15 +435,15 @@ const Registration = () => {
                 <Text style={styles.btnPrimaryText}>Create Account</Text>
               </TouchableOpacity>
 
-              {/* OAuth Buttons */}
-              <OAuthButtons
+              {/* OAuth Buttons - Commented out for now */}
+              {/* <OAuthButtons
                 onSuccess={(result) => {
                   console.log('OAuth registration success:', result);
                 }}
                 onError={(error) => {
                   console.error('OAuth registration error:', error);
                 }}
-              />
+              /> */}
 
               <View style={styles.loginContainer}>
                 <Text style={[styles.loginText, { color: theme.colors.text }]}>Already have an account?</Text>

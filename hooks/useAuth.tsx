@@ -26,7 +26,7 @@ interface AuthContextType {
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (formatData: FormData, router: any) => Promise<void>;
-  resetPassword: (email: string, code: string, recaptchaToken: string) => Promise<any>;
+  resetPassword: (email: string, code: string) => Promise<any>;
   signOut: () => void;
   isLoading: boolean;
   isInitialLoading: boolean;
@@ -178,7 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error_message: errorMessage,
       }).catch(() => {});
       
-      throw error;
+      throw errorMessage;
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
@@ -208,35 +208,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         router.replace(`/success-page?session=${sessionId}`)
       } else {
         // Handle error properly when response.data is null or doesn't have detail
-        const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Email verification failed';
-        throw errorMessage;
+        let errorMessage = 'Email verification failed';
+        
+        if (response.data?.detail) {
+          errorMessage = response.data.detail;
+        } else if (response.data?.message) {
+          errorMessage = response.data.message;
+        } else if (response.problem) {
+          // Handle network problems
+          if (response.problem === 'NETWORK_ERROR') {
+            errorMessage = 'Network error. Please check your internet connection.';
+          } else if (response.problem === 'TIMEOUT_ERROR') {
+            errorMessage = 'Request timed out. Please try again.';
+          } else if (response.problem === 'CONNECTION_ERROR') {
+            errorMessage = 'Unable to connect to server. Please try again.';
+          } else {
+            errorMessage = `Verification failed: ${response.problem}`;
+          }
+        }
+        
+        // Provide specific error messages for common verification issues
+        if (errorMessage.toLowerCase().includes('invalid') || errorMessage.toLowerCase().includes('code')) {
+          errorMessage = 'Invalid verification code. Please check and try again.';
+        } else if (errorMessage.toLowerCase().includes('expired')) {
+          errorMessage = 'Verification code has expired. Please request a new one.';
+        }
+        
+        throw new Error(errorMessage);
       }
 
-    } catch (error) {
-      // console.error('Email verification error:', JSON.stringify(error))
-      throw error
+    } catch (error: any) {
+      console.error('[Auth] Email verification error:', error);
+      // Throw error with proper message
+      const errorMessage = error?.message || error?.toString() || 'Email verification failed';
+      throw new Error(errorMessage);
     }
   }
 
 
   const forgotPassword = async (email: string) => {
-    // setIsLoading(true);
     try {
-      // Track password reset requested
-      await mixpanelService.trackAuth(AuthEvent.PASSWORD_RESET_REQUESTED, {
+      // Track password reset requested (non-blocking)
+      mixpanelService.trackAuth(AuthEvent.PASSWORD_RESET_REQUESTED, {
         method: 'email',
-      });
+      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
 
       const response = await api.post<{ token: string } | any>(`/auth/reset-password-request?email=${encodeURIComponent(email)}`);
       
-     //  alert(JSON.stringify(response.ok ? 'true' : 'false'));
+      // Return response for caller to handle
       return response;
-
-
-    } catch (error) {
-      // console.error('Forgot password error:', JSON.stringify(error))
-    } finally {
-      // setIsLoading(false);
+    } catch (error: any) {
+      console.error('[Auth] Forgot password error:', error);
+      // Return error response for consistent handling
+      return {
+        ok: false,
+        problem: 'UNKNOWN_ERROR',
+        data: { detail: error?.message || 'Failed to request password reset' }
+      };
     }
   }
 
@@ -285,7 +313,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }),
         new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Sign up timeout')), 30000)
+          setTimeout(() => reject(new Error('Sign up request timed out. Please check your connection and try again.')), 30000)
         )
       ]);
       
@@ -305,31 +333,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           router.push(`/email-verification?session=${sessionId}`)
         } catch (sessionError) {
           console.error('[Auth] Session creation failed:', sessionError);
-          throw new Error('Failed to create secure session');
+          throw new Error('Failed to create secure session. Please try again.');
         }
       } else {
         // Handle error properly when response.data is null or doesn't have detail
-        const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Registration failed';
+        let errorMessage = 'Registration failed';
+        
+        // Try to extract meaningful error from response
+        if (response.data?.detail) {
+          errorMessage = response.data.detail;
+        } else if (response.data?.message) {
+          errorMessage = response.data.message;
+        } else if (response.problem) {
+          // Handle network problems
+          if (response.problem === 'NETWORK_ERROR') {
+            errorMessage = 'Network error. Please check your internet connection.';
+          } else if (response.problem === 'TIMEOUT_ERROR') {
+            errorMessage = 'Request timed out. Please try again.';
+          } else if (response.problem === 'CONNECTION_ERROR') {
+            errorMessage = 'Unable to connect to server. Please try again.';
+          } else if (response.problem === 'SERVER_ERROR') {
+            errorMessage = 'Server error. Please try again later.';
+          } else if (response.problem === 'CLIENT_ERROR') {
+            errorMessage = 'Invalid request. Please check your information and try again.';
+          } else {
+            errorMessage = `Registration failed: ${response.problem}`;
+          }
+        }
         
         // Track sign up failed (non-blocking)
         mixpanelService.trackAuth(AuthEvent.SIGN_UP_FAILED, {
           method: 'email',
-          error_message: typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage),
+          error_message: errorMessage,
+          status_code: response.status,
         }).catch(() => {});
         
-        throw new Error(typeof errorMessage === 'string' ? errorMessage : 'Registration failed');
+        throw new Error(errorMessage);
       }
     } catch (error: any) {
-      const errorMessage = error?.message || 'Registration failed';
+      // Don't wrap error if it already has a message
+      const errorMessage = error?.message || 'Registration failed. Please try again.';
       console.error('[Auth] Sign up error:', errorMessage);
       
-      // Track sign up failed (non-blocking)
-      mixpanelService.trackAuth(AuthEvent.SIGN_UP_FAILED, {
-        method: 'email',
-        error_message: errorMessage,
-      }).catch(() => {});
+      // Track sign up failed (non-blocking) - only if not already tracked
+      if (!error?.tracked) {
+        mixpanelService.trackAuth(AuthEvent.SIGN_UP_FAILED, {
+          method: 'email',
+          error_message: errorMessage,
+        }).catch(() => {});
+      }
       
-      throw error;
+      // Throw error with message property
+      throw new Error(errorMessage);
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
@@ -404,7 +459,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const resetPassword = async (email: string, code: string, recaptchaToken: string) => {
+  const resetPassword = async (email: string, code: string) => {
     try {
       setIsLoading(true);
       const response = await api.patch<any>(
@@ -416,14 +471,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
       
       if (!response.ok) {
-        const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Password reset failed';
-        throw errorMessage;
+        // Extract meaningful error message
+        let errorMessage = 'Code verification failed';
+        
+        if (response.data?.detail) {
+          errorMessage = response.data.detail;
+        } else if (response.data?.message) {
+          errorMessage = response.data.message;
+        } else if (response.problem) {
+          // Handle network problems
+          if (response.problem === 'NETWORK_ERROR') {
+            errorMessage = 'Network error. Please check your internet connection.';
+          } else if (response.problem === 'TIMEOUT_ERROR') {
+            errorMessage = 'Request timed out. Please try again.';
+          } else if (response.problem === 'CONNECTION_ERROR') {
+            errorMessage = 'Unable to connect to server. Please try again.';
+          } else {
+            errorMessage = `Verification failed: ${response.problem}`;
+          }
+        }
+        
+        // Provide specific error messages for common issues
+        if (errorMessage.toLowerCase().includes('invalid') || errorMessage.toLowerCase().includes('code')) {
+          errorMessage = 'Invalid verification code. Please check and try again.';
+        } else if (errorMessage.toLowerCase().includes('expired')) {
+          errorMessage = 'Verification code has expired. Please request a new one.';
+        }
+        
+        throw new Error(errorMessage);
       }
       
       return { data: response.data, status: response.status };
-    } catch (error) {
-      // console.error('Reset password error:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('[Auth] Reset password error:', error);
+      // Throw error with proper message
+      const errorMessage = error?.message || error?.toString() || 'Code verification failed';
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -443,11 +526,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
-      // Track password reset completed on success
       if (response.ok) {
-        await mixpanelService.trackAuth(AuthEvent.PASSWORD_RESET_COMPLETED);
-      }
-      if (response.ok) {
+        // Track password reset completed (non-blocking)
+        mixpanelService.trackAuth(AuthEvent.PASSWORD_RESET_COMPLETED).catch(err => 
+          console.warn('[Mixpanel] Tracking failed:', err)
+        );
+        
         // Create secure session instead of passing password in URL
         const sessionId = await createSecureSession({
           email,
@@ -455,11 +539,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           passwordReset: true
         });
         router.replace(`/success-page?session=${sessionId}`)
+      } else {
+        // Extract meaningful error message
+        let errorMessage = 'Failed to reset password';
+        
+        if (response.data?.detail) {
+          errorMessage = response.data.detail;
+        } else if (response.data?.message) {
+          errorMessage = response.data.message;
+        } else if (response.problem) {
+          // Handle network problems
+          if (response.problem === 'NETWORK_ERROR') {
+            errorMessage = 'Network error. Please check your internet connection.';
+          } else if (response.problem === 'TIMEOUT_ERROR') {
+            errorMessage = 'Request timed out. Please try again.';
+          } else if (response.problem === 'CONNECTION_ERROR') {
+            errorMessage = 'Unable to connect to server. Please try again.';
+          } else if (response.problem === 'SERVER_ERROR') {
+            errorMessage = 'Server error. Please try again later.';
+          } else {
+            errorMessage = `Password reset failed: ${response.problem}`;
+          }
+        }
+        
+        // Provide specific error messages for common issues
+        if (errorMessage.toLowerCase().includes('token') && errorMessage.toLowerCase().includes('expired')) {
+          errorMessage = 'Reset token has expired. Please request a new password reset.';
+        } else if (errorMessage.toLowerCase().includes('token') && errorMessage.toLowerCase().includes('invalid')) {
+          errorMessage = 'Invalid reset token. Please request a new password reset.';
+        } else if (errorMessage.toLowerCase().includes('password') && errorMessage.toLowerCase().includes('weak')) {
+          errorMessage = 'Password is too weak. Please use a stronger password.';
+        }
+        
+        throw new Error(errorMessage);
       }
-
-    } catch (error) {
-      // console.error('handleForgotPasswordChange error:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('[Auth] Password change error:', error);
+      // Throw error with proper message
+      const errorMessage = error?.message || error?.toString() || 'Failed to reset password';
+      throw new Error(errorMessage);
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
@@ -525,7 +643,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 account_created_date: newUser.created_at,
                 membership_tier: 'free',
                 last_login_date: new Date().toISOString(),
-                oauth_provider: provider,
               }),
               mixpanelService.incrementUserProperty('login_count', 1),
               mixpanelService.trackAuth(AuthEvent.LOGIN_COMPLETED, {

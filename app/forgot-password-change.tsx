@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import type { TextInput } from 'react-native';
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
@@ -19,6 +19,7 @@ import CustomInput from "@/components/CustomInput";
 import { useTheme } from '@/hooks/useTheme';
 import { getErrorMessage } from "@/utils/ErrorValidation";
 import { Theme } from "@/constants/Types";
+import { getSecureSession, clearSecureSession } from "@/utils/SecureSession";
 
 interface ErrorType {
   email?: string;
@@ -32,6 +33,8 @@ const ForgotPasswordChange = () => {
 
   const [error, setError] = useState<ErrorType>({});
   const [loading, setLoading] = useState(false);
+  const [sessionData, setSessionData] = useState<any>(null);
+  const [sessionError, setSessionError] = useState(false);
 
   const [formData, setFormData] = useState({
     newPassword: "",
@@ -43,11 +46,38 @@ const ForgotPasswordChange = () => {
     confirmNewPassword: false,
   });
 
-  const { email, token } = useLocalSearchParams();
+  const { session } = useLocalSearchParams();
   
   // Input refs for keyboard navigation
   const newPasswordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
+
+  // Load session data on mount
+  useEffect(() => {
+    const loadSession = async () => {
+      if (session) {
+        const data = await getSecureSession(session as string);
+        if (data) {
+          setSessionData(data);
+        } else {
+          setSessionError(true);
+          Alert.alert(
+            "Session Expired",
+            "Your reset session has expired. Please request a new password reset code.",
+            [{ text: "OK", onPress: () => router.replace('/forgot-password') }]
+          );
+        }
+      } else {
+        setSessionError(true);
+        Alert.alert(
+          "Invalid Session",
+          "No session found. Please request a password reset code.",
+          [{ text: "OK", onPress: () => router.replace('/forgot-password') }]
+        );
+      }
+    };
+    loadSession();
+  }, [session]);
 
 
   const passwordFields = [
@@ -63,21 +93,69 @@ const ForgotPasswordChange = () => {
   };
 
   const handleSavePassword = async () => {
+    // Validate passwords match
     if (formData.newPassword !== formData.confirmNewPassword) {
-      Alert.alert("Error", "New passwords do not match");
+      Alert.alert("Passwords Don't Match", "New passwords do not match. Please try again.");
       return;
     }
+    
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(formData.newPassword)) {
+      Alert.alert(
+        "Weak Password",
+        "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character."
+      );
+      return;
+    }
+    
+    // Check session data
+    if (!sessionData?.email || !sessionData?.token) {
+      Alert.alert(
+        "Session Error",
+        "Session data not available. Please request a new password reset.",
+        [{ text: "OK", onPress: () => router.replace('/forgot-password') }]
+      );
+      return;
+    }
+    
     try {
       setLoading(true);
       await handleForgotPasswordChange(
-        email as string,
-        token as string,
+        sessionData.email,
+        sessionData.token,
         formData.newPassword,
         router 
       );
+      
+      // Clear the session after successful password change
+      if (session) {
+        await clearSecureSession(session as string);
+      }
     } catch (err: any) {
-      Alert.alert("Error", getErrorMessage(err));
-
+      // Extract meaningful error message
+      let errorMessage = "Failed to reset password. Please try again.";
+      
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      } else {
+        errorMessage = getErrorMessage(err);
+      }
+      
+      // Provide specific error messages
+      if (errorMessage.toLowerCase().includes('token') && errorMessage.toLowerCase().includes('expired')) {
+        Alert.alert(
+          "Reset Link Expired",
+          "Your password reset link has expired. Please request a new one.",
+          [{ text: "Request New Reset", onPress: () => router.replace('/forgot-password') }]
+        );
+      } else if (errorMessage.toLowerCase().includes('network')) {
+        Alert.alert("Network Error", "Please check your internet connection and try again.");
+      } else {
+        Alert.alert("Password Reset Failed", errorMessage);
+      }
     } finally {
       setLoading(false);
     }

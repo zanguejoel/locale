@@ -1,7 +1,7 @@
 import Colors from '@/constants/Colors';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, Image, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, SafeAreaView, Image, ScrollView, Alert, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from "react";
 import { useChat } from '@/hooks/useChat';
@@ -19,6 +19,11 @@ import { SettingsEvent } from '@/types/mixpanel';
 import { useEffect } from 'react';
 import CreditPurchaseModal from '@/components/CreditPurchaseModal';
 import CreditBadge from '@/components/CreditBadge';
+import { 
+  isBackendDownloadsEnabled, 
+  enableBackendDownloads, 
+  disableBackendDownloads 
+} from '@/constants/LocalModelsConfig';
 
 const rawPage = [{
   id: 1,
@@ -45,18 +50,24 @@ const rawPage = [{
   key: 'model-manager',
   title: 'Manage Downloaded Models',
   icon: 'folder-open-outline'
-}, {
+}, /* {
   id: 6,
+  key: 'backend-downloads',
+  title: 'Use Backend Model Downloads',
+  icon: 'cloud-download-outline',
+  hasToggle: true
+}, */ {
+  id: 7,
   key: 'clear-all-chats',
   title: 'Clear All Chats',
   icon: 'trash-outline'
 }, {
-  id: 7,
+  id: 8,
   key: 'change-password',
   title: 'Change password',
   icon: 'settings-outline'
 }, {
-  id: 8,
+  id: 9,
   key: 'sign_out',
   title: 'Sign Out',
   icon: 'log-out-outline'
@@ -66,7 +77,8 @@ interface IItemRaw {
   id: number,
   key: string,
   title: string,
-  icon: string
+  icon: string,
+  hasToggle?: boolean
 }
 
 const Page = () => {
@@ -90,6 +102,7 @@ const Page = () => {
   const [isModelSelectorVisible, setIsModelSelectorVisible] = useState(false);
   const [isLocalModelSelectorVisible, setIsLocalModelSelectorVisible] = useState(false);
   const [isCreditPurchaseVisible, setIsCreditPurchaseVisible] = useState(false);
+  const [backendDownloadsEnabled, setBackendDownloadsEnabled] = useState(isBackendDownloadsEnabled());
   
   // Use storage.getString/set directly for simple string values to avoid JSON parsing issues
   const [defaultModelId, setDefaultModelIdState] = useState(() => storage.getString('default_model_id') || DEFAULT_MODEL_ID);
@@ -224,6 +237,35 @@ const Page = () => {
     );
   };
 
+  const handleToggleBackendDownloads = () => {
+    const newValue = !backendDownloadsEnabled;
+    setBackendDownloadsEnabled(newValue);
+    
+    if (newValue) {
+      enableBackendDownloads();
+      Alert.alert(
+        'Backend Downloads Enabled',
+        'Local models will now be downloaded from our faster servers. This provides better download speeds and reliability.',
+        [{ text: 'OK' }]
+      );
+      mixpanelService.trackSettings(SettingsEvent.SETTINGS_ITEM_CLICKED, { 
+        item_name: 'Backend Downloads',
+        enabled: true 
+      });
+    } else {
+      disableBackendDownloads();
+      Alert.alert(
+        'Backend Downloads Disabled',
+        'Local models will use the default download sources.',
+        [{ text: 'OK' }]
+      );
+      mixpanelService.trackSettings(SettingsEvent.SETTINGS_ITEM_CLICKED, { 
+        item_name: 'Backend Downloads',
+        enabled: false 
+      });
+    }
+  };
+
   const handleInstruction = async (type: string) => {
     // Track settings section viewed
     await mixpanelService.trackSettings(SettingsEvent.SETTINGS_SECTION_VIEWED, {
@@ -241,6 +283,8 @@ const Page = () => {
         return setIsModelSelectorVisible(true)
       case 'model-manager':
         return router.push('/model-manager')
+      case 'backend-downloads':
+        return handleToggleBackendDownloads()
       case 'clear-all-chats':
         return handleClearAllChats()
       case 'change-password':
@@ -275,6 +319,11 @@ const Page = () => {
                 View and manage local models
               </Text>
             )}
+            {item.key === 'backend-downloads' && deviceSupportsLocal && (
+              <Text style={styles.menuItemSubtext}>
+                Download models from faster servers
+              </Text>
+            )}
             {item.key === 'plans-pricing' && (
               <Text style={styles.menuItemSubtext}>
                 Manage subscriptions on web
@@ -294,6 +343,13 @@ const Page = () => {
         </View>
         {item.key === 'credits' ? (
           <CreditBadge variant="compact" />
+        ) : item.hasToggle ? (
+          <Switch
+            value={backendDownloadsEnabled}
+            onValueChange={handleToggleBackendDownloads}
+            trackColor={{ false: theme.colors.grey, true: theme.colors.primary }}
+            thumbColor={theme.colors.background}
+          />
         ) : (
           <Ionicons name="chevron-forward" size={20} color={theme.colors.greyLight} />
         )}
@@ -303,8 +359,8 @@ const Page = () => {
   
   // Filter menu items based on device support
   const visibleMenuItems = rawPage.filter(item => {
-    // Hide model-manager option if device doesn't support local models
-    if (item.key === 'model-manager' && !deviceSupportsLocal) {
+    // Hide local model options if device doesn't support local models
+    if ((item.key === 'model-manager' || item.key === 'backend-downloads') && !deviceSupportsLocal) {
       return false;
     }
     return true;
@@ -320,8 +376,8 @@ const Page = () => {
           </View>
           <View style={styles.footer}>
             {/* Logo commented out */}
-            {/* <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} /> */}
-            <Text style={styles.appTitle}>Odyssey</Text>
+           <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} />
+            
             <Text style={styles.appVersion}>App Version 1.0.0</Text>
           </View>
         </View>
@@ -426,6 +482,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   logo: {
     width: 150,
     height: 75,
+    resizeMode: 'contain',
     marginBottom: 10,
   },
   appTitle: {
@@ -442,7 +499,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   appVersion: {
     fontSize: 12,
-    color: theme.colors.greyLight,
+    color: theme.isDark ? theme.colors.greyLight : theme.colors.grey,
   },
 });
 

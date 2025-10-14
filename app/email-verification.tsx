@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import type { TextInput } from 'react-native';
 import { useAuth } from "../hooks/useAuth";
 import { defaultStyles } from "@/constants/Styles";
@@ -19,6 +19,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from "@/hooks/useTheme";
 import { Theme } from "@/constants/Types";
+import { getSecureSession, clearSecureSession } from "@/utils/SecureSession";
 
 interface ErrorType {
     email?: string;
@@ -30,25 +31,71 @@ const EmailVerification = () => {
     const theme = useTheme();
     const styles = getStyles(theme);
     const { isLoading, confirmEmail } = useAuth();
-    const { email, password } = useLocalSearchParams();
+    const { session } = useLocalSearchParams();
 
     const [code, setCode] = useState("");
     const [error, setError] = useState<ErrorType>({});
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [sessionData, setSessionData] = useState<any>(null);
+    const [sessionError, setSessionError] = useState(false);
     
     // Input ref for keyboard navigation
     const codeInputRef = useRef<TextInput>(null);
 
+    // Load session data on mount
+    useEffect(() => {
+        const loadSession = async () => {
+            if (session) {
+                const data = await getSecureSession(session as string);
+                if (data) {
+                    setSessionData(data);
+                } else {
+                    setSessionError(true);
+                    Alert.alert(
+                        "Session Expired",
+                        "Your verification session has expired. Please register again.",
+                        [{ text: "OK", onPress: () => router.replace('/registration') }]
+                    );
+                }
+            } else {
+                setSessionError(true);
+                Alert.alert(
+                    "Invalid Session",
+                    "No session found. Please register again.",
+                    [{ text: "OK", onPress: () => router.replace('/registration') }]
+                );
+            }
+        };
+        loadSession();
+    }, [session]);
+
     const handleConfirm = async () => {
         setIsSubmitted(true);
 
+        if (!sessionData?.email) {
+            Alert.alert("Error", "Session data not available. Please try again.");
+            return;
+        }
+
         try {
-            await confirmEmail(decodeURIComponent(`${email}`), code, router, decodeURIComponent(`${password}`));
+            await confirmEmail(sessionData.email, code, router, sessionData.password || '');
+            // Clear the session after successful verification
+            if (session) {
+                await clearSecureSession(session as string);
+            }
         } catch (err: any) {
-            Alert.alert(
-                "Error",
-                err || "Failed to send reset instructions. Please try again."
-            );
+            // Extract meaningful error message
+            let errorMessage = "Failed to verify email. Please try again.";
+            
+            if (typeof err === 'string') {
+                errorMessage = err;
+            } else if (err?.message) {
+                errorMessage = err.message;
+            } else if (err?.detail) {
+                errorMessage = err.detail;
+            }
+            
+            Alert.alert("Verification Failed", errorMessage);
         }
     };
 
@@ -69,7 +116,9 @@ const EmailVerification = () => {
                     <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} />
                     <Text style={styles.title}>Email Verification</Text>
                     <Text style={styles.subtitle}>
-                        A verification code has been sent to {email}.
+                        {sessionData?.email 
+                            ? `A verification code has been sent to ${sessionData.email}.`
+                            : "Loading..."}
                     </Text>
                 </View>
 

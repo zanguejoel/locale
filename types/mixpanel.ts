@@ -80,6 +80,7 @@ export enum SettingsEvent {
   // Settings Access
   SETTINGS_OPENED = 'Settings Opened',
   SETTINGS_SECTION_VIEWED = 'Settings Section Viewed',
+  SETTINGS_ITEM_CLICKED = 'Settings Item Clicked',
   
   // Profile
   PROFILE_VIEWED = 'Profile Viewed',

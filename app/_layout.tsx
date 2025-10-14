@@ -21,6 +21,7 @@ import { ChatProvider } from "@/hooks/useChat";
 import { useTheme } from "@/hooks/useTheme";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { MixpanelProvider } from "@/utils/mixpanel/MixpanelProvider";
+import LocalModelErrorBoundary from "@/components/LocalModelErrorBoundary";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -44,7 +45,9 @@ if (typeof global.TextDecoder !== 'undefined') {
         // Prevent unbounded growth by removing oldest entry
         if (decoderMap.size >= MAX_DECODERS) {
           const firstKey = decoderMap.keys().next().value;
-          decoderMap.delete(firstKey);
+          if (firstKey) {
+            decoderMap.delete(firstKey);
+          }
         }
         decoderMap.set(key, new OriginalTextDecoder('utf-8', options));
       }
@@ -262,17 +265,19 @@ function RootLayoutNav() {
   return (
     <SafeAreaProvider >
     <AuthProvider>
-      <ChatProvider>
-        <MixpanelProvider>
-          <ThemeProvider
-            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-          >
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <Layout />
-            </GestureHandlerRootView>
-          </ThemeProvider>
-        </MixpanelProvider>
-      </ChatProvider>
+      <LocalModelErrorBoundary>
+        <ChatProvider>
+          <MixpanelProvider>
+            <ThemeProvider
+              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+            >
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <Layout />
+              </GestureHandlerRootView>
+            </ThemeProvider>
+          </MixpanelProvider>
+        </ChatProvider>
+      </LocalModelErrorBoundary>
     </AuthProvider>
     </SafeAreaProvider>
   );

@@ -43,6 +43,8 @@ import { getLocalModelById } from '@/constants/LocalModels';
 import { DownloadedModelsTracker } from '@/utils/DownloadedModelsTracker';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { AIEvent } from '@/types/mixpanel';
+import { deferToBackgroundThread, AppStateMonitor } from '@/utils/DownloadOptimizer';
+import { CrashReporter } from '@/utils/CrashReporter';
 
 // Import API_URL_PROD from ApiClient configuration
 const API_URL_PROD = "https://api.odysseytech.ai";
@@ -159,18 +161,137 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Get the selected default local model from settings
   const selectedLocalModel = useDefaultLocalModel();
   
+  // Validate that model source exists to prevent crashes
+  const hasValidModelSource = Boolean(selectedLocalModel?.modelSource);
+  
+  if (!hasValidModelSource) {
+    console.error('[Local] Invalid model source:', {
+      modelId: selectedLocalModel?.id,
+      modelSource: selectedLocalModel?.modelSource
+    });
+  }
+  
   // Initialize LLM with new API (v0.5.8+)
   // Always call the hook (React rules), but use preventLoad to delay initialization until user switches to local mode
-  const llm = useLLM({
-    model: selectedLocalModel.modelSource,
-    preventLoad: !deviceSupportsLocalLLM || !shouldInitializeLLM
+  // Ensure we have a valid model source before passing to useLLM
+  const safeModelSource = hasValidModelSource ? selectedLocalModel.modelSource : null;
+  
+  console.log('[Local] Initializing useLLM with:', {
+    modelSource: safeModelSource ? 'valid' : 'null',
+    preventLoad: !deviceSupportsLocalLLM || !shouldInitializeLLM || !hasValidModelSource,
+    deviceSupported: deviceSupportsLocalLLM,
+    shouldInit: shouldInitializeLLM,
+    hasValidSource: hasValidModelSource
   });
   
-  // Initialize ExecuTorch when user switches to local mode
+  const llm = useLLM({
+    model: safeModelSource,
+    preventLoad: !deviceSupportsLocalLLM || !shouldInitializeLLM || !hasValidModelSource
+  });
+  
+  // Monitor app state to pause downloads when app goes to background
   useEffect(() => {
-    if (isLocal && deviceSupportsLocalLLM && !shouldInitializeLLM) {
-      console.log('[Local] User switched to local mode - initializing ExecuTorch...');
-      setShouldInitializeLLM(true);
+    if (isLocal && shouldInitializeLLM) {
+      console.log('[Local] Setting up app state monitoring for downloads...');
+      
+      AppStateMonitor.addListener('local-model-download', (nextAppState) => {
+        if (nextAppState === 'background') {
+          console.log('[Local] App went to background - download will pause automatically');
+        } else if (nextAppState === 'active') {
+          console.log('[Local] App became active - download will resume');
+        }
+      });
+      
+      return () => {
+        AppStateMonitor.removeListener('local-model-download');
+      };
+    }
+  }, [isLocal, shouldInitializeLLM]);
+
+  // Initialize ExecuTorch when user switches to local mode
+  // Use InteractionManager to defer initialization until after UI is ready
+  useEffect(() => {
+    if (isLocal && deviceSupportsLocalLLM && !shouldInitializeLLM && hasValidModelSource) {
+      // Check if local models are temporarily disabled due to crash loop
+      if (CrashReporter.isLocalModelsDisabled()) {
+        console.warn('[Local] Local models temporarily disabled due to recent crashes');
+        Alert.alert(
+          'Local Models Temporarily Disabled',
+          'Local models were disabled due to recent crashes. Please try again in 30 minutes or use cloud models.',
+          [
+            { text: 'Use Cloud', onPress: () => setIsLocal(false) },
+            { text: 'Enable Anyway', onPress: () => {
+              CrashReporter.reenableLocalModels();
+              // Retry initialization
+              setShouldInitializeLLM(true);
+            }}
+          ]
+        );
+        return;
+      }
+      
+      console.log('[Local] User switched to local mode - scheduling ExecuTorch initialization...');
+      console.log('[Local] Model info:', {
+        id: selectedLocalModel?.id,
+        name: selectedLocalModel?.displayName,
+        hasModelSource: Boolean(selectedLocalModel?.modelSource)
+      });
+      
+      // Defer initialization to avoid blocking UI using our optimization utility
+      deferToBackgroundThread(async () => {
+        console.log('[Local] Starting ExecuTorch initialization (deferred to background)...');
+        
+        // Additional delay to ensure all UI updates are complete
+        await new Promise(resolve => setTimeout(resolve, 150));
+        
+        try {
+          // Trigger initialization
+          setShouldInitializeLLM(true);
+          console.log('[Local] ExecuTorch initialization triggered');
+        } catch (error) {
+          CrashReporter.report(error as Error, 'ExecuTorch initialization', {
+            modelId: selectedLocalModel?.id
+          });
+          throw error;
+        }
+      }).catch(error => {
+        console.error('[Local] Error during deferred initialization:', error);
+        CrashReporter.report(error as Error, 'Deferred initialization', {
+          modelId: selectedLocalModel?.id
+        });
+        
+        Alert.alert(
+          'Initialization Error',
+          'Failed to start local model download. Please try again or use cloud models.',
+          [
+            { text: 'Use Cloud', onPress: () => setIsLocal(false) },
+            { text: 'Try Again', onPress: () => {
+              // Reset and retry
+              setShouldInitializeLLM(false);
+              setTimeout(() => {
+                if (CrashReporter.isLocalModelsDisabled()) {
+                  setIsLocal(false);
+                }
+              }, 100);
+            }}
+          ]
+        );
+      });
+    } else if (isLocal && deviceSupportsLocalLLM && !hasValidModelSource) {
+      // Handle invalid model source
+      console.error('[Local] Cannot initialize - invalid model source');
+      Alert.alert(
+        'Model Error',
+        'The selected local model is not available. Please select a different model from settings.',
+        [
+          { 
+            text: 'Use Cloud Instead', 
+            onPress: () => setIsLocal(false),
+            style: 'cancel'
+          },
+          { text: 'OK' }
+        ]
+      );
     } else if (!isLocal && shouldInitializeLLM) {
       // Clean up when switching back to cloud
       console.log('[Local] Switched to cloud mode - cleaning up local state...');
@@ -180,7 +301,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLocalModelDownloadProgress(0);
       setIsLocalModelReady(false);
     }
-  }, [isLocal, deviceSupportsLocalLLM, shouldInitializeLLM]);
+  }, [isLocal, deviceSupportsLocalLLM, shouldInitializeLLM, hasValidModelSource, selectedLocalModel]);
   
   // Log and notify when model changes
   useEffect(() => {
@@ -199,19 +320,42 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [selectedLocalModel.id]);
 
 
-  // Cleanup AbortControllers on unmount
+  // Cleanup AbortControllers and LLM on unmount
   useEffect(() => {
     return () => {
+      console.log('[Local] ChatProvider unmounting - cleaning up resources...');
+      
+      // Clean up abort controllers
       if (streamControllerRef.current) {
-        streamControllerRef.current.abort();
+        try {
+          streamControllerRef.current.abort();
+        } catch (e) {
+          console.warn('[Local] Error aborting stream controller:', e);
+        }
         streamControllerRef.current = null;
       }
+      
       if (fetchControllerRef.current) {
-        fetchControllerRef.current.abort();
+        try {
+          fetchControllerRef.current.abort();
+        } catch (e) {
+          console.warn('[Local] Error aborting fetch controller:', e);
+        }
         fetchControllerRef.current = null;
       }
+      
+      // Clean up LLM resources if needed
+      try {
+        if (llm && typeof llm === 'object' && 'unload' in llm) {
+          console.log('[Local] Attempting to unload LLM...');
+          (llm as any).unload?.();
+        }
+      } catch (error) {
+        // Ignore cleanup errors - they're not critical
+        console.warn('[Local] LLM cleanup error (non-critical):', error);
+      }
     };
-  }, []);
+  }, [llm]);
 
   // Update conversation ID ref when it changes
   useEffect(() => {
@@ -251,25 +395,73 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Only update stream from LLM response when in LOCAL mode and LLM is initialized
     // This prevents interfering with cloud streaming
-    if(llm && isLocal && shouldInitializeLLM && 'response' in llm && (llm as any).response) {
-      const filteredResponse = filterSpecialTokens((llm as any).response);
-      setStream(filteredResponse);
-    } else if (!isLocal) {
-      // Clear local response when switching to cloud to prevent stale data
-      // Note: Don't clear stream entirely as cloud sets it directly
+    try {
+      // Guard: Only access LLM if it exists and is a valid object
+      if (!llm || typeof llm !== 'object') {
+        return;
+      }
+      
+      if(llm && isLocal && shouldInitializeLLM && 'response' in llm && (llm as any).response) {
+        const filteredResponse = filterSpecialTokens((llm as any).response);
+        setStream(filteredResponse);
+      } else if (!isLocal) {
+        // Clear local response when switching to cloud to prevent stale data
+        // Note: Don't clear stream entirely as cloud sets it directly
+      }
+    } catch (error) {
+      console.error('[Local] Error updating stream from LLM:', error);
+      // Don't crash, just log the error - likely a cleanup error
+      if (String(error).toLowerCase().includes('unload')) {
+        console.warn('[Local] Unload error caught - ignoring cleanup issue');
+      }
     }
   }, [llm, isLocal, shouldInitializeLLM, (llm as any)?.response]);
   
   // Log LLM state changes for debugging (disabled when llm is null or not initialized)
   useEffect(() => {
+    // Guard: Only access LLM if it exists and is a valid object
+    if (!llm || typeof llm !== 'object') {
+      return;
+    }
+    
     if (llm && isLocal && shouldInitializeLLM) {
-      // console.log('[Local] LLM state update:', {
-      //   isReady: (llm as any).isReady,
-      //   downloadProgress: (llm as any).downloadProgress,
-      //   isGenerating: (llm as any).isGenerating,
-      //   error: (llm as any).error,
-      //   allProps: Object.keys(llm)
-      // });
+      try {
+        // Check for errors in LLM state
+        if ((llm as any).error) {
+          console.error('[Local] LLM has error:', (llm as any).error);
+          const errorMsg = (llm as any).error?.message || String((llm as any).error);
+          
+          // Check if it's the content-length error (harmless)
+          if (!errorMsg.toLowerCase().includes('content-length') && 
+              !errorMsg.toLowerCase().includes('unload')) {
+            // Show error to user for non-harmless errors
+            Alert.alert(
+              'Local Model Error',
+              `The local model encountered an error: ${errorMsg}\n\nYou can switch to cloud models to continue.`,
+              [
+                { text: 'Use Cloud', onPress: () => setIsLocal(false) },
+                { text: 'Try Again', onPress: () => setShouldInitializeLLM(false) }
+              ]
+            );
+          }
+        }
+        
+        // console.log('[Local] LLM state update:', {
+        //   isReady: (llm as any).isReady,
+        //   downloadProgress: (llm as any).downloadProgress,
+        //   isGenerating: (llm as any).isGenerating,
+        //   error: (llm as any).error,
+        //   allProps: Object.keys(llm)
+        // });
+      } catch (error) {
+        console.error('[Local] Error checking LLM state:', error);
+        // Ignore unload errors
+        if (!String(error).toLowerCase().includes('unload')) {
+          CrashReporter.report(error as Error, 'LLM state check', {
+            modelId: selectedLocalModel?.id
+          });
+        }
+      }
     }
   }, [llm, isLocal, shouldInitializeLLM]);
 
@@ -317,6 +509,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         is_local_model: true,
         conversation_id: currentConversationId || '',
       }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
+      
+      // Check if model source is valid
+      if (!hasValidModelSource) {
+        console.error('[Local] Invalid model source');
+        Alert.alert(
+          'Model Error',
+          'The selected local model is not available. Please select a different model from settings or switch to cloud models.',
+          [
+            { 
+              text: 'Use Cloud Instead', 
+              onPress: () => setIsLocal(false),
+              style: 'cancel'
+            },
+            { text: 'OK' }
+          ]
+        );
+        
+        // Track failure (non-blocking)
+        mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
+          model_used: selectedLocalModel?.id || 'unknown',
+          is_local_model: true,
+          error_message: 'Invalid model source',
+        }).catch(() => {});
+        return;
+      }
       
       // Check if device supports local LLM
       if (!deviceSupportsLocalLLM) {
