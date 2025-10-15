@@ -64,24 +64,24 @@ export const LOCAL_MODELS: LocalModel[] = [
     name: 'Qwen2.5-0.5B',
     displayName: 'Qwen 2.5 0.5B',
     modelSource: QWEN2_5_0_5B,
-    description: 'Balanced model for various tasks',
+    description: 'Balanced model for various tasks - Most stable',
     size: '~500MB',
     minIOSVersion: 17,
     minAndroidVersion: 33,
     requiresHighEnd: false,
-    recommended: false
+    recommended: true
   },
   {
     id: 'llama-3.2-1b',
     name: 'Llama-3.2-1B',
     displayName: 'Llama 3.2 1B',
     modelSource: LLAMA3_2_1B,
-    description: 'Best balance of performance and quality',
+    description: 'Good performance but may have stability issues on some devices',
     size: '~1.2GB',
     minIOSVersion: 17,
     minAndroidVersion: 33,
     requiresHighEnd: false,
-    recommended: true
+    recommended: false
   },
   {
     id: 'qwen2.5-1.5b',
@@ -109,7 +109,7 @@ export const LOCAL_MODELS: LocalModel[] = [
   }
 ];
 
-export const DEFAULT_LOCAL_MODEL_ID = 'llama-3.2-1b'; // Best performing model for most devices
+export const DEFAULT_LOCAL_MODEL_ID = 'qwen2.5-0.5b'; // Most stable and reliable model for all devices
 
 /**
  * Get supported local models based on device capabilities
@@ -147,19 +147,19 @@ export const getLocalModelById = (id: string): LocalModel | undefined => {
 export const getRecommendedLocalModel = (): LocalModel => {
   const supportedModels = getSupportedLocalModels();
   
-  // First, try to find the marked recommended model (Llama 3.2 1B)
+  // First, try to find the marked recommended model (Qwen 2.5 0.5B)
   const recommended = supportedModels.find(m => m.recommended);
   if (recommended) {
     return recommended;
   }
   
-  // If Llama not supported, prioritize by performance/size
-  // Order of preference: Qwen 2.5 1.5B > Qwen 0.5B > Hammer2 > SmolLM2 360M > SmolLM2 135M
+  // Fallback priority: stability first, then capability
+  // Order of preference: Qwen 0.5B > Hammer2 > SmolLM2 360M > Qwen 1.5B > SmolLM2 135M
   const preferenceOrder = [
-    'qwen2.5-1.5b',
     'qwen2.5-0.5b', 
     'hammer2-0.5b',
     'smollm2-360m',
+    'qwen2.5-1.5b',
     'smollm2-135m'
   ];
   

@@ -123,7 +123,6 @@ const Page = () => {
   }, []);
 
   const handleSignOut = async () => {
-    await createNewConversation()
     signOut()
   }
 

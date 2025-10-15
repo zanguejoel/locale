@@ -1,8 +1,8 @@
 import { ApiResponse, ApisauceInstance, create } from 'apisauce';
 import { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 export const API_URL_DEV = "https://api-alpha.odysseytech.ai";
-// export const API_URL_PROD = "https://api.odysseytech.ai";
-export const API_URL_PROD = API_URL_DEV;
+export const API_URL_PROD = "https://api.odysseytech.ai";
+// export const API_URL_PROD = API_URL_DEV;
 // Types and Interfaces
 interface Config {
   MAX_RETRIES: number;

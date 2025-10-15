@@ -30,6 +30,15 @@ import { getLocalModelById } from '@/constants/LocalModels';
 import { getDefaultLocalModelId } from './useDefaultLocalModel';
 import { filterSpecialTokens } from '@/utils/ChatStream';
 import { Message, Role } from '@/utils/Interfaces';
+import {
+  safeExecuTorchGenerate,
+  getExecuTorchState,
+  isExecuTorchReady,
+  getExecuTorchResponse,
+  formatExecuTorchState,
+  isRecoverableError,
+  isFatalError,
+} from '@/utils/ExecuTorchWrapper';
 
 export interface UseLocalModelOptions {
   currentConversationId: string | null;
@@ -291,15 +300,16 @@ export function useLocalModel(options: UseLocalModelOptions): UseLocalModelRetur
     
     if (llm && isLocal && shouldInitializeLLM) {
       try {
-        if ((llm as any).error) {
-          console.error('[Local] LLM has error:', (llm as any).error);
-          const errorMsg = (llm as any).error?.message || String((llm as any).error);
+        const state = getExecuTorchState(llm);
+        
+        if (state.hasError && state.errorMessage) {
+          console.error('[Local] LLM has error:', state.errorMessage);
           
-          if (!errorMsg.toLowerCase().includes('content-length') && 
-              !errorMsg.toLowerCase().includes('unload')) {
+          // Skip alerts for recoverable errors
+          if (!isRecoverableError(state.errorMessage)) {
             Alert.alert(
               'Local Model Error',
-              `The local model encountered an error: ${errorMsg}\n\nYou can switch to cloud models to continue.`,
+              `The local model encountered an error: ${state.errorMessage}\n\nYou can switch to cloud models to continue.`,
               [
                 { text: 'Use Cloud', onPress: () => setIsLocal(false) },
                 { text: 'Try Again', onPress: () => setShouldInitializeLLM(false) }
@@ -309,7 +319,7 @@ export function useLocalModel(options: UseLocalModelOptions): UseLocalModelRetur
         }
       } catch (error) {
         console.error('[Local] Error checking LLM state:', error);
-        if (!String(error).toLowerCase().includes('unload')) {
+        if (!isRecoverableError(error)) {
           CrashReporter.report(error as Error, 'LLM state check', {
             modelId: selectedLocalModel?.id
           });
@@ -453,38 +463,59 @@ export function useLocalModel(options: UseLocalModelOptions): UseLocalModelRetur
           await new Promise(resolve => setTimeout(resolve, 100));
         });
         
-        // Wrap LLM generation with comprehensive error handling
+        // Use ExecuTorch wrapper for safe generation
         let result;
         try {
-          console.log('[Local] Calling llm.generate()...');
-          result = await (llm as any).generate(contextMessages);
-          console.log('[Local] llm.generate() completed successfully');
+          console.log('[Local] Model state before generation:');
+          console.log(formatExecuTorchState(llm));
           
-          // Check if result is valid
-          if (!result || typeof result !== 'string') {
-            throw new Error(`Invalid result from LLM: ${typeof result}`);
+          // Use wrapper to handle ExecuTorch quirks (streaming, undefined results, etc.)
+          const generationResult = await safeExecuTorchGenerate(llm, contextMessages);
+          
+          if (!generationResult.success) {
+            console.error('[Local] Generation failed:', generationResult.error);
+            throw new Error(generationResult.error || 'Unknown generation error');
           }
           
+          // For streaming models, response may be empty initially and populated later
+          if (generationResult.isStreaming) {
+            console.log('[Local] Streaming mode detected - response will be updated via llm.response');
+            
+            // Get the latest streamed response (may still be in progress)
+            const currentResponse = getExecuTorchResponse(llm);
+            result = currentResponse || generationResult.response || '';
+            
+            console.log('[Local] Current streamed response length:', result.length);
+          } else {
+            // Non-streaming mode - we have the full response
+            result = generationResult.response || '';
+            console.log('[Local] Direct response received, length:', result.length);
+          }
+          
+          // Mark model as used successfully
           DownloadedModelsTracker.updateLastUsed(selectedLocalModel.id);
         } catch (llmError: any) {
           console.error('[Local] ExecuTorch generation error:', llmError);
+          
+          const errorMessage = llmError?.message || String(llmError);
           
           // Report to crash reporter with ExecuTorch context
           CrashReporter.report(llmError as Error, 'ExecuTorch generation', {
             modelId: selectedLocalModel?.id,
             contextLength: contextMessages.length,
             errorType: llmError?.name || 'Unknown',
-            errorMessage: llmError?.message || String(llmError),
+            errorMessage: errorMessage,
+            modelState: getExecuTorchState(llm)
           });
           
-          // Check if this is a fatal ExecuTorch error
-          const errorMsg = String(llmError).toLowerCase();
-          const isFatalError = errorMsg.includes('crash') || 
-                              errorMsg.includes('fatal') ||
-                              errorMsg.includes('abort') ||
-                              errorMsg.includes('segmentation');
+          // Check if this is a recoverable error (can skip alert)
+          if (isRecoverableError(llmError)) {
+            console.warn('[Local] Recoverable error, not showing alert:', errorMessage);
+            throw llmError; // Re-throw to be handled by outer catch
+          }
           
-          if (isFatalError) {
+          // Check if this is a fatal ExecuTorch error
+          if (isFatalError(llmError)) {
             console.error('[Local] FATAL ExecuTorch error detected - disabling local models');
             
             // Auto-switch to cloud mode
@@ -500,6 +531,66 @@ export function useLocalModel(options: UseLocalModelOptions): UseLocalModelRetur
                 );
               }
             }, 100);
+          } else {
+            // Check for undefined/empty result errors
+            const errorMsg = errorMessage.toLowerCase();
+            const isUndefinedResultError = errorMsg.includes('undefined') || 
+                                          errorMsg.includes('returned no response') ||
+                                          errorMsg.includes('no response');
+            
+            if (isUndefinedResultError) {
+              // Suggest model reinitialization for undefined results
+              console.warn('[Local] Model returned undefined - checking for repeated failures');
+              
+              // Check if this is a repeated issue with this model
+              const hasRepeatedIssues = CrashReporter.hasRepeatedUndefinedResults(selectedLocalModel?.id);
+              
+              if (hasRepeatedIssues) {
+                console.error('[Local] Repeated undefined results detected for model:', selectedLocalModel?.id);
+                console.log(CrashReporter.getDiagnosticInfo());
+                
+                setTimeout(() => {
+                  if (isMountedRef.current) {
+                    Alert.alert(
+                      'Model Consistently Failing',
+                      `The ${selectedLocalModel?.displayName || 'local model'} is consistently returning invalid responses. This may indicate:\n\n` +
+                      `• Insufficient device memory\n` +
+                      `• Corrupted model download\n` +
+                      `• Device compatibility issue\n\n` +
+                      `We recommend using cloud models for now.`,
+                      [
+                        { 
+                          text: 'Switch to Cloud', 
+                          onPress: () => {
+                            setIsLocal(false);
+                            CrashReporter.clearCrashHistory();
+                          },
+                          style: 'default'
+                        },
+                        { text: 'Keep Trying', style: 'cancel' }
+                      ]
+                    );
+                  }
+                }, 100);
+              } else {
+                setTimeout(() => {
+                  if (isMountedRef.current) {
+                    Alert.alert(
+                      'Model Issue Detected',
+                      'The local model appears to be in a bad state. Try switching to cloud mode and then back to local mode to reinitialize the model.',
+                      [
+                        { 
+                          text: 'Switch to Cloud', 
+                          onPress: () => setIsLocal(false),
+                          style: 'cancel'
+                        },
+                        { text: 'Try Again' }
+                      ]
+                    );
+                  }
+                }, 100);
+              }
+            }
           }
           
           throw llmError; // Re-throw to be handled by outer catch
@@ -549,11 +640,11 @@ export function useLocalModel(options: UseLocalModelOptions): UseLocalModelRetur
             [{ text: 'OK' }]
           );
         } else {
-          Alert.alert(
+          /* Alert.alert(
             'Generation Error',
             `Failed to generate response with ${modelName}.\n\nPlease try again or switch to cloud models.`,
             [{ text: 'OK' }]
-          );
+          ); */
         }
       } finally {
         console.log('[Local] ❌ Setting isSending = false in finally block');

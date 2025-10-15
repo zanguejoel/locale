@@ -132,6 +132,42 @@ export class CrashReporter {
     storage.delete('crash_reports');
     this.crashes = [];
   }
+  
+  /**
+   * Check if we're seeing repeated undefined results from a model
+   */
+  static hasRepeatedUndefinedResults(modelId: string): boolean {
+    const recentCrashes = this.crashes.filter(crash => {
+      const isUndefinedError = crash.error.toLowerCase().includes('undefined') || 
+                              crash.error.toLowerCase().includes('returned no response');
+      return isUndefinedError && crash.modelId === modelId;
+    });
+    
+    return recentCrashes.length >= 2;
+  }
+  
+  /**
+   * Get diagnostic info for debugging
+   */
+  static getDiagnosticInfo(): string {
+    const history = this.getCrashHistory();
+    const recentCrashes = this.crashes;
+    
+    let info = `=== Crash Diagnostic Info ===\n`;
+    info += `Recent crashes in window: ${recentCrashes.length}\n`;
+    info += `Total crash history: ${history.length}\n`;
+    info += `Local models disabled: ${this.isLocalModelsDisabled()}\n\n`;
+    
+    if (recentCrashes.length > 0) {
+      info += `Recent crashes:\n`;
+      recentCrashes.forEach((crash, i) => {
+        info += `${i + 1}. [${crash.timestamp}] ${crash.context}: ${crash.error}\n`;
+        if (crash.modelId) info += `   Model: ${crash.modelId}\n`;
+      });
+    }
+    
+    return info;
+  }
 }
 
 /**
