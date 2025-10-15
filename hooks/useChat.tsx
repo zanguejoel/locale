@@ -207,10 +207,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isSending, streamWorking, intermediate]);
   
   // ============ Effective Sending State ============
-  // Safety mechanism: Keep isSending true while we have intermediate state or stream
+  // Safety mechanism: Keep isSending true while we have intermediate state
+  // Note: stream is NOT included here as it persists after sending completes
   const effectiveIsSending = useMemo(() => 
-    isSending || !!intermediate || (!!stream && stream.length > 0),
-    [isSending, intermediate, stream]
+    isSending || !!intermediate,
+    [isSending, intermediate]
   );
 
 
@@ -906,8 +907,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       messageStartTimeRef.current = 0; // Reset for next message
       
       // Don't reset additionalData here - it needs to persist in the message
+      // Don't reset stream here - it's used for display and doesn't affect input state
       console.log('[Cloud] Send message completed, clearing states');
     }
+    
   }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream]);
 
   const fetchConversation = useCallback(async (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => {

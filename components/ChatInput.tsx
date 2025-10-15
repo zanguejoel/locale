@@ -386,6 +386,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
             onChangeText={onChangeText}
             value={message}
             multiline={true}
+            numberOfLines={4}
             onContentSizeChange={handleContentSizeChange}
             textAlignVertical="center"
             returnKeyType="default"
