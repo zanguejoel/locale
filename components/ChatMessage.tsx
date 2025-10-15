@@ -1007,15 +1007,15 @@ const ChatMessage = memo(({
           {intermediate ? (
             <View style={styles.intermediateContainer}>
               <View style={styles.intermediateIconContainer}>
-                {intermediate.toLowerCase().includes('image') || intermediate.toLowerCase().includes('generating') ? (
-                  <Ionicons name="images" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
-                ) : intermediate.toLowerCase().includes('video') ? (
-                  <Ionicons name="videocam" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
-                ) : intermediate.toLowerCase().includes('search') ? (
-                  <Ionicons name="search" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
-                ) : (
-                  <LoadingDots />
-                )}
+                  {intermediate.toLowerCase().includes('image') || intermediate.toLowerCase().includes('generating') ? (
+                    <Ionicons name="images" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                  ) : intermediate.toLowerCase().includes('video') ? (
+                    <Ionicons name="videocam" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                  ) : intermediate.toLowerCase().includes('search') ? (
+                    <Ionicons name="search" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                  ) : (
+                    <LoadingDots />
+                  )}
               </View>
               <AnimatedText text={intermediate?.toString()} />
             </View>

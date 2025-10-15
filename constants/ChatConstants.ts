@@ -77,7 +77,7 @@ export const CHAT_MESSAGE = {
   
   /** Loading dots configuration */
   LOADING_DOTS: {
-    SIZE: 7,
+    SIZE: 10,
     SPACING: 3,
     TRANSLATE_Y: -8,
   },

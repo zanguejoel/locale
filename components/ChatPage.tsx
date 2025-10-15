@@ -451,8 +451,9 @@ const ChatPage = () => {
     const isLastBotMessage = item.role === Role.Bot && index === 0;
     const hasNoContent = !item.content || item.content.trim() === '';
     
-    // Unified loading state: show loading dots ONLY on the last bot message while sending and has no content
-    const showLoading = isLastBotMessage && isSending && hasNoContent;
+    // Show loading state on the last bot message while sending
+    // This includes: loading dots (when no content) OR intermediate state (during streaming)
+    const showLoading = isLastBotMessage && isSending && (hasNoContent || !!intermediate);
     
     // Show date separator if last message or different day from next (inverted)
     const showDateSeparator = 
@@ -652,7 +653,7 @@ const ChatPage = () => {
               onScroll={handleScroll}
               estimatedItemSize={200}
               scrollEventThrottle={16}
-              extraData={isSending}
+              extraData={{ isSending, intermediate }}
               inverted
               maintainVisibleContentPosition={{
                 minIndexForVisible: 0,

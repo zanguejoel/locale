@@ -158,11 +158,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const streamControllerRef = useRef<AbortController | null>(null);
   const fetchControllerRef = useRef<AbortController | null>(null);
   
-  // ============ Message Timing ============
-  const lastMessageUpdateTimeRef = useRef(0);
-  const messageStartTimeRef = useRef(0);
-  const MESSAGE_UPDATE_THROTTLE_MS = 50;
-  
   // ============ Message History Management ============
   const appendToMessageHistory = useCallback((message: string, role: Role) => {
     try {
@@ -265,35 +260,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  // ============ Message Update Handler (Throttled) ============
+  // ============ Message Update Handler ============
   useEffect(() => {
-    // console.log('[useChat] Updating message - stream length:', stream?.length, 'additionalData:', additionalData);
-    
-    const now = Date.now();
-    const timeSinceLastUpdate = now - lastMessageUpdateTimeRef.current;
-    
-    // Record message start time for new messages
-    if (isSending && stream.length === 0 && additionalData?.length === 0 && !intermediate) {
-      const timeSinceMessageStart = now - messageStartTimeRef.current;
-      if (messageStartTimeRef.current === 0 || timeSinceMessageStart > 2000) {
-        messageStartTimeRef.current = now;
-      }
-    }
-    
-    // Always show intermediate state immediately (no throttling)
-    // Always show additional_data immediately (no throttling)
-    const shouldUpdateImmediately = intermediate || additionalData?.length > 0;
-    
-    // Throttle regular stream updates to prevent excessive re-renders
-    if (!shouldUpdateImmediately && 
-        timeSinceLastUpdate < MESSAGE_UPDATE_THROTTLE_MS && 
-        stream.length > 0) {
-      // Will update on next throttle window
-      return;
-    }
-    
-    lastMessageUpdateTimeRef.current = now;
-    
+    // Update the last bot message with streaming content
+    // No throttling - update immediately for smooth streaming
     setMessages(prev => updateLastItem(prev, message => {
       const updatedMessage = {
         ...message,
@@ -303,7 +273,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Update additional_data if we have new data, otherwise preserve existing
       if (additionalData?.length > 0) {
         updatedMessage.additional_data = additionalData;
-        // console.log('[useChat] Setting additional_data on message:', additionalData);
       } else if (message.additional_data) {
         // Preserve existing additional_data
         updatedMessage.additional_data = message.additional_data;
@@ -311,7 +280,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return updatedMessage;
     }));
-  }, [stream, additionalData, isSending, intermediate]);
+  }, [stream, additionalData]);
 
   // Helper function to abort current stream and wait for cleanup
   const abortCurrentStream = useCallback(async () => {
@@ -504,12 +473,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   ) => {
     // console.log('[Cloud] Starting cloud message send:', { message, messageType, operation, options });
-    
-    // Prevent duplicate sends while already sending
-    if (isSending) {
-      console.log('[Cloud] Already sending a message, ignoring duplicate call');
-      return;
-    }
     
     // Start timing for response
     const responseStartTime = Date.now();
@@ -863,7 +826,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Reset streaming states on abort
         setStreamWorking(false);
         setIntermediate('');
-        messageStartTimeRef.current = 0;
         return;
       }
       
@@ -904,7 +866,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setChatLoading(false);
       setStreamWorking(false); // Reset stream working state
       setIntermediate(''); // Clear intermediate state to stop loading indicator
-      messageStartTimeRef.current = 0; // Reset for next message
       
       // Don't reset additionalData here - it needs to persist in the message
       // Don't reset stream here - it's used for display and doesn't affect input state
@@ -973,7 +934,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isSendingRef.current = false;
     setIsSending(false);
     setAdditionalData([]);
-    messageStartTimeRef.current = 0; // Reset message timer
     
     fetchControllerRef.current = new AbortController();
     const fetchConvId = conversationId; // Capture for closure
@@ -1102,7 +1062,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAdditionalData([]); // Reset additional data when clearing chat
     setChatError(null); // Clear any errors
     setCurrentConversationId(null); // Clear conversation ID to prevent refetch
-    messageStartTimeRef.current = 0; // Reset message timer
   }, [abortCurrentStream]);
 
   const deleteConversation = useCallback(async (conversationId: string): Promise<boolean> => {
