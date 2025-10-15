@@ -55,6 +55,7 @@ export const CustomDrawerContent = (props: any) => {
         isLocal,
         createNewConversation,
         resetChat,
+        clearAllConversations,
         isLocalLLMSupported
     } = useChat();
 
@@ -305,12 +306,26 @@ export const CustomDrawerContent = (props: any) => {
         try {
             setLocalLoading(true);
             
+            // Clear all conversation history when switching between cloud and local modes
+            // This removes any preservation logic and ensures a clean break
+            if (newIsLocal !== isLocal) {
+                // Delete current conversation if it exists
+                if (currentConversationId) {
+                    await deleteConversation(currentConversationId);
+                }
+                
+                // Clear all conversations to remove any trace of history
+                await clearAllConversations();
+                
+                // Reset chat state completely
+                resetChat();
+            }
+            
             if (newIsLocal) {
-                // For local mode, navigate to new conversation (Option B: navigate cleanly)
+                // For local mode, switch to local and navigate to new conversation
                 const wasAlreadyLocal = isLocal;
                 
                 // Defer state update to avoid blocking UI
-                // Use setTimeout to break up the work
                 await new Promise(resolve => setTimeout(resolve, 50));
                 
                 // Update state to local mode FIRST (before navigation)
@@ -321,12 +336,11 @@ export const CustomDrawerContent = (props: any) => {
                     // Small delay before navigation to ensure state is updated
                     await new Promise(resolve => setTimeout(resolve, 100));
                     
-                    // Navigate to new conversation - this will naturally clear the view
-                    // without calling resetChat() which caused the race condition
+                    // Navigate to new conversation with completely clean slate
                     router.push('/(chat)/new');
                 }
             } else if (newIsLocal !== isLocal) {
-                // For cloud mode, create new conversation when switching FROM local mode
+                // For cloud mode, switch to cloud and create new conversation
                 setIsLocal(false);
                 
                 // Small delay to ensure state update propagates

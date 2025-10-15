@@ -28,12 +28,12 @@ export const LOCAL_MODELS: LocalModel[] = [
     name: 'SmolLM2-135M',
     displayName: 'SmolLM2 135M',
     modelSource: SMOLLM2_1_135M,
-    description: 'Ultra-lightweight model for basic conversations',
+    description: 'Ultra-lightweight default model - optimized for performance and compatibility',
     size: '~135MB',
     minIOSVersion: 17,
     minAndroidVersion: 33,
     requiresHighEnd: false,
-    recommended: false
+    recommended: true
   },
   {
     id: 'smollm2-360m',
@@ -64,12 +64,12 @@ export const LOCAL_MODELS: LocalModel[] = [
     name: 'Qwen2.5-0.5B',
     displayName: 'Qwen 2.5 0.5B',
     modelSource: QWEN2_5_0_5B,
-    description: 'Balanced model for various tasks - Most stable',
+    description: 'Balanced model for various tasks - Good stability',
     size: '~500MB',
     minIOSVersion: 17,
     minAndroidVersion: 33,
     requiresHighEnd: false,
-    recommended: true
+    recommended: false
   },
   {
     id: 'llama-3.2-1b',
@@ -109,7 +109,7 @@ export const LOCAL_MODELS: LocalModel[] = [
   }
 ];
 
-export const DEFAULT_LOCAL_MODEL_ID = 'qwen2.5-0.5b'; // Most stable and reliable model for all devices
+export const DEFAULT_LOCAL_MODEL_ID = 'smollm2-135m'; // Ultra-lightweight optimized model for all devices
 
 /**
  * Get supported local models based on device capabilities
@@ -147,20 +147,20 @@ export const getLocalModelById = (id: string): LocalModel | undefined => {
 export const getRecommendedLocalModel = (): LocalModel => {
   const supportedModels = getSupportedLocalModels();
   
-  // First, try to find the marked recommended model (Qwen 2.5 0.5B)
+  // First, try to find the marked recommended model (SmolLM2 135M)
   const recommended = supportedModels.find(m => m.recommended);
   if (recommended) {
     return recommended;
   }
   
-  // Fallback priority: stability first, then capability
-  // Order of preference: Qwen 0.5B > Hammer2 > SmolLM2 360M > Qwen 1.5B > SmolLM2 135M
+  // Fallback priority: performance and compatibility first
+  // Order of preference: SmolLM2 135M > SmolLM2 360M > Hammer2 > Qwen 0.5B > Qwen 1.5B
   const preferenceOrder = [
-    'qwen2.5-0.5b', 
-    'hammer2-0.5b',
+    'smollm2-135m',
     'smollm2-360m',
-    'qwen2.5-1.5b',
-    'smollm2-135m'
+    'hammer2-0.5b',
+    'qwen2.5-0.5b',
+    'qwen2.5-1.5b'
   ];
   
   for (const modelId of preferenceOrder) {

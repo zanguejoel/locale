@@ -196,13 +196,13 @@ const contextMessages = conversationHistory.slice(-MAX_CONTEXT_MESSAGES);
 
 **Cloud → Local:**
 - ✅ Creates a NEW local conversation
-- ✅ Cloud conversation history is PRESERVED (can switch back to it)
+- ❌ Cloud conversation history is CLEARED (no preservation)
 - ✅ Starts with empty chat for local mode
 - ℹ️ Model downloads on first message (if not already downloaded)
 
 **Local → Cloud:**
 - ✅ Creates a NEW cloud conversation (saved to server)
-- ✅ Local conversation is PRESERVED (can switch back if in same session)
+- ❌ Local conversation is CLEARED (no preservation)
 - ✅ Starts with empty chat for cloud mode
 - ℹ️ Cloud models available immediately (no download)
 
@@ -219,24 +219,29 @@ const contextMessages = conversationHistory.slice(-MAX_CONTEXT_MESSAGES);
 ### **Mode Switch Flow:**
 
 **Cloud → Local:**
-1. Set mode to local: `setIsLocal(true)`
-2. Navigate to new conversation: `router.push('/(chat)/new')`
-3. Clear old conversation in navigation effect: `resetChat()`
-4. Abort any ongoing cloud stream
-5. Initialize ExecuTorch library: `shouldInitializeLLM = true`
-6. Download model if not present (shows progress)
-7. Test model readiness with "Hi" message
-8. Ready to accept user messages
+1. Delete current conversation: `deleteConversation()`
+2. Clear all conversation history: `clearAllConversations()`
+3. Reset chat state: `resetChat()`
+4. Set mode to local: `setIsLocal(true)`
+5. Navigate to new conversation: `router.push('/(chat)/new')`
+6. Abort any ongoing cloud stream
+7. Initialize ExecuTorch library: `shouldInitializeLLM = true`
+8. Download model if not present (shows progress)
+9. Test model readiness with "Hi" message
+10. Ready to accept user messages
 
 **Local → Cloud:**
-1. Set mode to cloud: `setIsLocal(false)`
-2. Create new server-side conversation
-3. Navigate to new conversation: `router.push('/(chat)/{id}')`
-4. Abort any local generation
-5. Clean up all local state flags
-6. Stop polling intervals
-7. Set `shouldInitializeLLM = false`
-8. Ready to accept user messages immediately
+1. Delete current conversation: `deleteConversation()`
+2. Clear all conversation history: `clearAllConversations()`
+3. Reset chat state: `resetChat()`
+4. Set mode to cloud: `setIsLocal(false)`
+5. Create new server-side conversation
+6. Navigate to new conversation: `router.push('/(chat)/{id}')`
+7. Abort any local generation
+8. Clean up all local state flags
+9. Stop polling intervals
+10. Set `shouldInitializeLLM = false`
+11. Ready to accept user messages immediately
 
 ---
 
