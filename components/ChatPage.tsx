@@ -79,6 +79,8 @@ const ChatPage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [cancelRecording, setCancelRecording] = useState<() => void>(() => () => {});
+  // Track if user has manually scrolled up - used for free scrolling during streaming
+  // When true, the app won't auto-scroll to bottom, allowing users to read older messages
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
   
   // New feature states
@@ -641,6 +643,13 @@ const ChatPage = () => {
           )}
           {messages.length > 0 && (
           <CustomView style={{ flex: 1 }}>
+            {/* 
+              FlashList configured for FREE SCROLLING during streaming:
+              - No maintainVisibleContentPosition: Users can scroll anywhere during streaming
+              - inverted: Newest messages at bottom (index 0 = newest)
+              - Users can read older messages while new content streams in
+              - "Streaming..." button appears when scrolled up during streaming
+            */}
             <FlashList
               contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}
               showsVerticalScrollIndicator={false}
@@ -655,10 +664,6 @@ const ChatPage = () => {
               scrollEventThrottle={16}
               extraData={{ isSending, intermediate }}
               inverted
-              maintainVisibleContentPosition={{
-                minIndexForVisible: 0,
-                autoscrollToTopThreshold: 10
-              }}
               onEndReachedThreshold={0.5}
               onEndReached={() => {
                 // Load more messages when scrolling to top (older messages)
@@ -673,11 +678,13 @@ const ChatPage = () => {
             <TouchableOpacity
               style={[styles.scrollButton, styles.touchTarget]}
               onPress={scrollToBottom}
-              accessibilityLabel="Scroll to bottom"
+              accessibilityLabel="Scroll to latest message"
               accessibilityRole="button"
               activeOpacity={0.6}
             >
-              <Text style={styles.textScrollDown}>New messages</Text>
+              <Text style={styles.textScrollDown}>
+                {isSending ? 'Streaming...' : 'New messages'}
+              </Text>
               <Ionicons name="chevron-down" size={16} color={Colors.common.grey} />
             </TouchableOpacity>
           )}
@@ -743,9 +750,11 @@ const ChatPage = () => {
             setFiles={setFiles}
             fetchMessages={handleFetchMessages}
             onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
-              // Scroll to bottom when sending a new message
-              setUserHasScrolledUp(false);
-              scrollToBottom();
+              // Only auto-scroll if user hasn't manually scrolled up
+              // This allows users to stay where they are if they're reading older messages
+              if (!userHasScrolledUp) {
+                scrollToBottom();
+              }
               return isLocal ? handleSendLocalMessage(message) : sendMessage(message, type, operation, additionalData, options);
             }}
             isLoading={isSending}

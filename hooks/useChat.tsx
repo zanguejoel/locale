@@ -263,7 +263,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ============ Message Update Handler ============
   useEffect(() => {
     // Update the last bot message with streaming content
-    // No throttling - update immediately for smooth streaming
+    // Word-by-word streaming - each word triggers an update for smooth display
+    // This runs on every word addition to ensure smooth word-by-word streaming
+    if (!stream && additionalData?.length === 0) {
+      // Skip update if no content to show
+      return;
+    }
+    
+    console.log(`[useChat] 📝 Updating message with stream content (${stream.length} chars total) - WORD-BY-WORD`);
+    
     setMessages(prev => updateLastItem(prev, message => {
       const updatedMessage = {
         ...message,

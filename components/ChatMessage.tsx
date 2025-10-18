@@ -1020,7 +1020,7 @@ const ChatMessage = memo(({
               <AnimatedText text={intermediate?.toString()} />
             </View>
           ) : (
-            <View style={[styles.intermediateContainer, {backgroundColor: 'transparent', borderWidth: 0}]}>
+            <View style={styles.intermediateContainer}>
               <View style={styles.intermediateIconContainer}>
                 <LoadingDots />
               </View>
@@ -1125,7 +1125,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     maxWidth: '100%',
   },
   streamingContent: {
-    opacity: 0.95,
+    // Clean design - full opacity for streaming content
+    opacity: 1,
   },
   markdownContainer: {
     width: '100%',
@@ -1143,11 +1144,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     width: '100%',
   },
   botContent: {
-    backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    // Clean, borderless design for bot messages
+    backgroundColor: 'transparent',
     borderBottomLeftRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS,
-    borderWidth: 1,
-    borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-    ...shadows.sm,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    // No shadows for clean look
   },
   userContent: {
     backgroundColor: theme.colors.primary, // Solid background for efficient shadow calculation
@@ -1526,12 +1528,13 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   intermediateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.isDark ? 'rgba(138, 43, 226, 0.1)' : 'rgba(138, 43, 226, 0.05)',
-    paddingHorizontal: 16,
+    // Clean, borderless design for intermediate state
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0, // Remove horizontal padding for cleaner look
     paddingVertical: 12,
     borderRadius: CHAT_MESSAGE.MESSAGE_BORDER_RADIUS,
-    borderWidth: 1,
-    borderColor: theme.isDark ? 'rgba(138, 43, 226, 0.3)' : 'rgba(138, 43, 226, 0.2)',
+    borderWidth: 0,
+    borderColor: 'transparent',
     maxWidth: '100%',
   },
   intermediateIconContainer: {
