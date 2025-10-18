@@ -12,7 +12,7 @@ import {
   Image,
 } from "react-native";
 
-import { getErrorMessage } from "@/utils/ErrorValidation";
+import { getErrorMessage, VALIDATION_PATTERNS, VALIDATION_MESSAGES } from "@/utils/ErrorValidation";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from "@/hooks/useTheme";
@@ -55,10 +55,24 @@ const ChangePassword = () => {
   ];
 
   const handleSavePassword = async () => {
-    if (formData.newPassword !== formData.confirmNewPassword) {
-      Alert.alert("Error", "New passwords do not match");
+    // Validate password format
+    if (!VALIDATION_PATTERNS.PASSWORD.test(formData.newPassword)) {
+      Alert.alert("Invalid Password", VALIDATION_MESSAGES.PASSWORD);
       return;
     }
+
+    // Check if new password is same as old password
+    if (formData.newPassword === formData.currentPassword) {
+      Alert.alert("Error", VALIDATION_MESSAGES.PASSWORD_SAME_AS_OLD);
+      return;
+    }
+
+    // Validate confirm password
+    if (formData.newPassword !== formData.confirmNewPassword) {
+      Alert.alert("Error", VALIDATION_MESSAGES.PASSWORDS_MATCH);
+      return;
+    }
+
     try {
       setLoading(true);
       await changePassword(

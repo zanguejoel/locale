@@ -199,6 +199,7 @@ const ForgotPassword = () => {
             autoCapitalize="none"
             keyboardType="numeric"
             returnKeyType="go"
+            containerStyle={{width: '100%'}}
             onSubmitEditing={handleValidCode}
             blurOnSubmit={true}
             autoFocus={true}

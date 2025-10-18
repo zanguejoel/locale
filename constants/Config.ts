@@ -101,7 +101,7 @@ export const UI = {
  * Feature Flags
  */
 export const FEATURES = {
-  LOCAL_LLM_ENABLED: true,
+  LOCAL_LLM_ENABLED: false, // Disabled for this release - will be enabled in next version
   AUDIO_MESSAGES_ENABLED: true,
   IMAGE_UPLOAD_ENABLED: true,
   DOCUMENT_UPLOAD_ENABLED: true,

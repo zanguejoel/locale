@@ -39,6 +39,7 @@ import {
   isRecoverableError,
   isFatalError,
 } from '@/utils/ExecuTorchWrapper';
+import { FEATURES } from '@/constants/Config';
 
 export interface UseLocalModelOptions {
   currentConversationId: string | null;
@@ -75,7 +76,8 @@ export function useLocalModel(options: UseLocalModelOptions): UseLocalModelRetur
     appendToMessageHistory,
   } = options;
 
-  // ============ State Management ============
+  // ============ Feature Flag Check ============
+  // If local LLM feature is disabled, always force cloud mode
   const [isLocal, setIsLocal] = useState(false);
   const [localModelDownloadProgress, setLocalModelDownloadProgress] = useState(0);
   const [isLocalModelReady, setIsLocalModelReady] = useState(false);
@@ -159,6 +161,15 @@ export function useLocalModel(options: UseLocalModelOptions): UseLocalModelRetur
 
   // ============ ExecuTorch Initialization ============
   useEffect(() => {
+    // Prevent initialization if feature is disabled
+    if (!FEATURES.LOCAL_LLM_ENABLED) {
+      if (isLocal) {
+        console.warn('[Local] Local LLM feature is disabled - switching to cloud mode');
+        setIsLocal(false);
+      }
+      return;
+    }
+    
     if (isLocal && deviceSupportsLocalLLM && !shouldInitializeLLM && hasValidModelSource) {
       // Check if local models are temporarily disabled due to crash loop
       if (CrashReporter.isLocalModelsDisabled()) {
@@ -855,20 +866,35 @@ export function useLocalModel(options: UseLocalModelOptions): UseLocalModelRetur
     );
   }, []);
 
+  // ============ Safeguard setIsLocal ============
+  // Wrap setIsLocal to prevent enabling local mode when feature is disabled
+  const safeSetIsLocal = useCallback((value: boolean) => {
+    if (value && !FEATURES.LOCAL_LLM_ENABLED) {
+      console.warn('[Local] Attempted to enable local mode, but feature is disabled');
+      Alert.alert(
+        'Feature Unavailable',
+        'Local models are temporarily disabled in this version. This feature will be available in the next update.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    setIsLocal(value);
+  }, []);
+
   // ============ Memoized Return Value ============
   // CRITICAL: Memoize the return object to prevent infinite loops in parent components
   // Without this, every render creates a new object, causing parent's useMemo to invalidate
   return useMemo(() => ({
     isLocal,
-    setIsLocal,
-    isLocalLLMSupported: deviceSupportsLocalLLM,
+    setIsLocal: safeSetIsLocal,
+    isLocalLLMSupported: deviceSupportsLocalLLM && FEATURES.LOCAL_LLM_ENABLED, // Also disable if feature flag is off
     localModelDownloadProgress,
     isLocalModelReady,
     handleSendLocalMessage,
     clearLocalModel,
   }), [
     isLocal,
-    setIsLocal, // setState function (stable, but included for completeness)
+    safeSetIsLocal, // Wrapped setState function
     deviceSupportsLocalLLM,
     localModelDownloadProgress,
     isLocalModelReady,

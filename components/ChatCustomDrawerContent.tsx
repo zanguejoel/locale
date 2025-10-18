@@ -34,6 +34,7 @@ import { isLlamaModel } from '@/constants/Models';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ModelFileManager } from '@/utils/ModelFileManager';
 import { CrashReporter } from '@/utils/CrashReporter';
+import { FEATURES } from '@/constants/Config';
 
 
 export const CustomDrawerContent = (props: any) => {
@@ -687,11 +688,13 @@ export const CustomDrawerContent = (props: any) => {
 
             <View style={styles.headerContainer}>
             
-           
-                <ModelToggle onSelectModel={handleModelSwitch} initialState={isLocal} disableLocal={!isLocalLLMSupported} />
+                {/* Only show ModelToggle if local LLM feature is enabled */}
+                {FEATURES.LOCAL_LLM_ENABLED && (
+                    <ModelToggle onSelectModel={handleModelSwitch} initialState={isLocal} disableLocal={!isLocalLLMSupported} />
+                )}
         
-                {/* Only show search and history title for cloud mode */}
-                {!isLocal && (
+                {/* Show search and history title for cloud mode (or always if local models disabled) */}
+                {(!isLocal || !FEATURES.LOCAL_LLM_ENABLED) && (
                     <>
                         <View style={styles.searchContainer}>
                             <View style={styles.searchSection}>
@@ -756,8 +759,8 @@ export const CustomDrawerContent = (props: any) => {
 
             {!isShowData ? <></> :
                 <View style={{ flex: 1 }}>
-                    {isLocal ? (
-                        // Local mode - show info message instead of conversation list
+                    {(isLocal && FEATURES.LOCAL_LLM_ENABLED) ? (
+                        // Local mode - show info message instead of conversation list (only if feature enabled)
                         <View style={styles.localModeInfoContainer}>
                             <Ionicons name="phone-portrait-outline" size={60} color={theme.colors.primary} />
                             <Text style={styles.localModeTitle}>Local Mode</Text>
