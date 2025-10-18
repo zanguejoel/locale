@@ -147,6 +147,53 @@ const LoadingDots = memo(() => {
   );
 });
 
+// Streaming indicator cursor that appears at the end of streaming content
+const StreamingCursor = memo(() => {
+  const theme = useTheme();
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacityAnim, {
+          toValue: 0.3,
+          duration: 530,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 530,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      ])
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+      opacityAnim.stopAnimation();
+    };
+  }, [opacityAnim]);
+
+  return (
+    <Animated.Text
+      style={{
+        color: theme.colors.primary,
+        fontSize: 16,
+        marginLeft: 2,
+        opacity: opacityAnim,
+        fontWeight: 'bold',
+      }}
+      accessibilityLabel="Streaming in progress"
+    >
+      ▊
+    </Animated.Text>
+  );
+});
+
 const ChatMessage = memo(({
   content,
   role,
@@ -722,15 +769,20 @@ const ChatMessage = memo(({
                   >
                     {/* Text content first for bot */}
                     {content && !isAudio(content) && (
-                      <Animated.View
-                        style={[
-                          styles.markdownContainer,
-                          streamingContent && { transform: [] },
-                          streamingContent && { backgroundColor: `transparent` },
-                        ]}
-                      >
-                        <MarkdownDisplay>{content}</MarkdownDisplay>
-                      </Animated.View>
+                      <View style={styles.botMessageWrapper}>
+                        <Animated.View
+                          style={[
+                            styles.markdownContainer,
+                            streamingContent && { transform: [] },
+                            streamingContent && { backgroundColor: `transparent` },
+                            isSending && { width: 'auto', flex: 1 }, // Allow space for dot when streaming
+                          ]}
+                        >
+                          <MarkdownDisplay>{content}</MarkdownDisplay>
+                        </Animated.View>
+                        {/* Show streaming cursor when actively sending */}
+                        {isSending && <StreamingCursor />}
+                      </View>
                     )}
                     
                     {/* Render media after text for bot messages */}
@@ -903,15 +955,20 @@ const ChatMessage = memo(({
             >
               {/* Text content first for bot */}
               {content && !isAudio(content) && (
-                <Animated.View
-                  style={[
-                    styles.markdownContainer,
-                    streamingContent && { transform: [] },
-                    streamingContent && { backgroundColor: `transparent` },
-                  ]}
-                >
-                  <MarkdownDisplay>{content}</MarkdownDisplay>
-                </Animated.View>
+                <View style={styles.botMessageWrapper}>
+                  <Animated.View
+                    style={[
+                      styles.markdownContainer,
+                      streamingContent && { transform: [] },
+                      streamingContent && { backgroundColor: `transparent` },
+                      isSending && { width: 'auto', flex: 1 }, // Allow space for dot when streaming
+                    ]}
+                  >
+                    <MarkdownDisplay>{content}</MarkdownDisplay>
+                  </Animated.View>
+                  {/* Show streaming cursor when actively sending */}
+                  {isSending && <StreamingCursor />}
+                </View>
               )}
               
               {/* Render media after text for bot messages */}
@@ -1131,6 +1188,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   markdownContainer: {
     width: '100%',
     alignSelf: 'flex-start',
+  },
+  botMessageWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    width: '100%',
+    flexWrap: 'nowrap',
   },
   mediaInMessage: {
     marginBottom: 8,

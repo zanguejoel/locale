@@ -527,13 +527,6 @@ const ChatPage = () => {
 
   const CustomView = Platform.OS === 'ios' ? PanGestureHandler : View
 
-  const KeyboardVisibleStyle = {
-    position: 'absolute' as const,
-    bottom: 0,
-    left: 0,
-    right: 0
-  }
-
   // File preview is handled via FilePreviewModal in ChatInput
 
   return (
@@ -607,11 +600,9 @@ const ChatPage = () => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        style={[
-          styles.keyboardAvoidingView,
-          isSending && KeyboardVisibleStyle,
-        ]}
+        style={styles.keyboardAvoidingView}
       >
+        {/* Pinned Messages Bar - Outside main content area */}
         {pinnedMessages.length > 0 && (
           <PinnedMessagesBar
             pinnedMessages={pinnedMessages}
@@ -619,6 +610,8 @@ const ChatPage = () => {
             onUnpin={handleMessagePin}
           />
         )}
+        
+        {/* Main Message List Container - Takes all available space */}
         <View style={styles.page} onLayout={onLayout}>
           {/* Enhanced Empty State */}
           {messages.length === 0 && !isLoadingMessages && (
@@ -660,10 +653,11 @@ const ChatPage = () => {
               keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"
               onScroll={handleScroll}
-              estimatedItemSize={200}
+              estimatedItemSize={150}
               scrollEventThrottle={16}
               extraData={{ isSending, intermediate }}
               inverted
+              // Pagination
               onEndReachedThreshold={0.5}
               onEndReached={() => {
                 // Load more messages when scrolling to top (older messages)
@@ -671,6 +665,12 @@ const ChatPage = () => {
                   // You can implement pagination here
                 }
               }}
+              // Memory optimization - Different recycling for user/bot messages
+              getItemType={(item) => {
+                return item.role === Role.User ? 'user' : 'bot';
+              }}
+              // Drawing optimization
+              drawDistance={500}
             />
           </CustomView>
           )}
@@ -689,62 +689,71 @@ const ChatPage = () => {
             </TouchableOpacity>
           )}
         </View>
-        {isLocal && (
-          <LocalModelDownloadProgress 
-            progress={localModelDownloadProgress} 
-            isReady={isLocalModelReady} 
-          />
-        )}
-        <VoiceRecordingUI 
-          isRecording={isRecording}
-          onCancel={cancelRecording}
-        />
-        {replyToMessage && (
-          <View style={styles.replyContainer}>
-            <ThreadReplyIndicator
-              replyToMessageId={replyToMessage.id}
-              replyToContent={replyToMessage.content}
-              replyToRole={replyToMessage.role}
-              onClear={() => setReplyToMessage(null)}
+        
+        {/* Bottom Section - Fixed Elements (Outside scrollable area) */}
+        <View style={styles.bottomSection}>
+          {/* Local Model Progress */}
+          {isLocal && (
+            <LocalModelDownloadProgress 
+              progress={localModelDownloadProgress} 
+              isReady={isLocalModelReady} 
             />
-          </View>
-        )}
-        
-        {/* Attachment Preview */}
-        {files.length > 0 && (
-          <View style={styles.attachmentPreviewContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-              {files.map((file, index) => (
-                <View key={`file-${index}`} style={styles.attachmentPreview}>
-                  <Image
-                    source={{ uri: file.uri }}
-                    style={styles.attachmentPreviewImage}
-                    resizeMode="cover"
-                  />
-                  <TouchableOpacity
-                    style={styles.removeAttachmentButton}
-                    onPress={() => {
-                      setFiles(files.filter((_, i) => i !== index));
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                    accessibilityLabel="Remove attachment"
-                    accessibilityRole="button"
-                  >
-                    <Ionicons name="close-circle" size={24} color={theme.colors.red} />
-                  </TouchableOpacity>
-                  <View style={styles.attachmentInfo}>
-                    <Ionicons name="image" size={16} color="#FFFFFF" />
-                    <Text style={styles.attachmentName} numberOfLines={1}>
-                      {file.name || 'Attachment'}
-                    </Text>
+          )}
+          
+          {/* Voice Recording UI */}
+          <VoiceRecordingUI 
+            isRecording={isRecording}
+            onCancel={cancelRecording}
+          />
+          
+          {/* Reply To Message */}
+          {replyToMessage && (
+            <View style={styles.replyContainer}>
+              <ThreadReplyIndicator
+                replyToMessageId={replyToMessage.id}
+                replyToContent={replyToMessage.content}
+                replyToRole={replyToMessage.role}
+                onClear={() => setReplyToMessage(null)}
+              />
+            </View>
+          )}
+          
+          {/* Attachment Preview */}
+          {files.length > 0 && (
+            <View style={styles.attachmentPreviewContainer}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                {files.map((file, index) => (
+                  <View key={`file-${index}`} style={styles.attachmentPreview}>
+                    <Image
+                      source={{ uri: file.uri }}
+                      style={styles.attachmentPreviewImage}
+                      resizeMode="cover"
+                    />
+                    <TouchableOpacity
+                      style={styles.removeAttachmentButton}
+                      onPress={() => {
+                        setFiles(files.filter((_, i) => i !== index));
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                      accessibilityLabel="Remove attachment"
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="close-circle" size={24} color={theme.colors.red} />
+                    </TouchableOpacity>
+                    <View style={styles.attachmentInfo}>
+                      <Ionicons name="image" size={16} color="#FFFFFF" />
+                      <Text style={styles.attachmentName} numberOfLines={1}>
+                        {file.name || 'Attachment'}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-        
-        <View style={[styles.inputBlurContainer]}>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+          
+          {/* Chat Input - Always at Bottom */}
+          <View style={styles.inputBlurContainer}>
           <ChatInput
             files={files}
             setFiles={setFiles}
@@ -766,6 +775,7 @@ const ChatPage = () => {
             messages={messages}
             conversationTitle={id ? `Conversation ${id}` : 'Chat'}
           />
+          </View>
         </View>
       </KeyboardAvoidingView>
 
@@ -883,11 +893,16 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     textAlign: 'center',
   },
   page: {
-    flex: 1,
+    flex: 1, // Takes all available space above the input
   },
   keyboardAvoidingView: {
     flex: 1,
     backgroundColor: 'transparent', // Let gradient show through
+  },
+  bottomSection: {
+    // Container for all bottom fixed elements (input, attachments, etc.)
+    // No flex - natural height based on content
+    width: '100%',
   },
   inputBlurContainer: {
     width: '100%',

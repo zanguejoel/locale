@@ -24,7 +24,7 @@ type SetStreamFunction = (value: string | ((prev: string) => string)) => void;
 // - 80ms  = Slow (deliberate, easy to follow)
 // - 100ms+ = Very slow (emphasizes each word)
 // ============================================================
-const WORD_DELAY_MS = 0; // Delay between words in milliseconds
+const WORD_DELAY_MS = 10; // Delay between words in milliseconds
 
 export const processStream = async (
   response: ReadableStream<Uint8Array> | null,
