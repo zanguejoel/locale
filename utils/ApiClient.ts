@@ -1,5 +1,8 @@
 import { ApiResponse, ApisauceInstance, create } from 'apisauce';
 import { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { getToken, saveTokenWithExpiry, clearAllTokens, isTokenExpired } from './SecureTokenManager';
+import { storage } from '@/hooks/useMMKVStorage';
+
 export const API_URL_DEV = "https://api-alpha.odysseytech.ai";
 // export const API_URL_PROD = "https://api.odysseytech.ai";
 export const API_URL_PROD = API_URL_DEV;
@@ -28,6 +31,19 @@ interface ApiError {
   __cached?: boolean;
   response?: AxiosResponse;
   config?: AxiosRequestConfig;
+}
+
+// Refresh Token API Types
+export interface RefreshTokenRequest {
+  token: string;
+  user_id: number;
+  client: string;
+}
+
+export interface RefreshTokenResponse {
+  token: string;
+  expires_at: string;
+  message: string;
 }
 
 type HttpMethod = 'get' | 'post' | 'put' | 'delete';
@@ -104,6 +120,8 @@ class ApiClient {
   private retryCount: Map<string, number>;
   private api: ApisauceInstance;
   private cleanupInterval: NodeJS.Timeout | null = null;
+  private isRefreshing: boolean = false;
+  private refreshPromise: Promise<string> | null = null;
 
   constructor(baseURL: string = API_URL_PROD) {
     this.cache = new LRUCache(CONFIG.CACHE_SIZE);
@@ -126,6 +144,26 @@ class ApiClient {
     this.api.axiosInstance.interceptors.request.use(
       async (config: InternalAxiosRequestConfig) => {
         try {
+          // Check if token is expired before making request (except for auth endpoints)
+          const isAuthEndpoint = config.url?.includes('/auth/login') || 
+                                 config.url?.includes('/auth/register') ||
+                                 config.url?.includes('/auth/refresh-token') ||
+                                 config.url?.includes('/auth/forgot-password');
+          
+          if (!isAuthEndpoint && config.headers?.['Authorization']) {
+            const expired = await isTokenExpired();
+            if (expired) {
+              console.log('[ApiClient] Token expired before request, attempting refresh');
+              try {
+                const newToken = await this.refreshToken();
+                config.headers['Authorization'] = newToken;
+              } catch (error) {
+                console.error('[ApiClient] Proactive refresh failed, rejecting request');
+                return Promise.reject(new Error('SESSION_EXPIRED'));
+              }
+            }
+          }
+
           if (this.isCacheable(config)) {
             const cachedResponse = this.getCachedResponse(config);
             if (cachedResponse) {
@@ -134,7 +172,7 @@ class ApiClient {
           }
           return config;
         } catch (error) {
-          // console.error('Cache interceptor error:', error);
+          // console.error('Request interceptor error:', error);
           return config;
         }
       },
@@ -175,6 +213,80 @@ class ApiClient {
 
   public setAuthToken(token: string): void {
     this.api.setHeader('Authorization', token);
+  }
+
+  /**
+   * Refresh authentication token
+   * Prevents concurrent refresh requests by using a shared promise
+   * @returns New token string
+   */
+  public async refreshToken(): Promise<string> {
+    // Prevent concurrent refresh requests
+    if (this.isRefreshing && this.refreshPromise) {
+      console.log('[ApiClient] Token refresh already in progress, waiting...');
+      return this.refreshPromise;
+    }
+
+    this.isRefreshing = true;
+    this.refreshPromise = this._performTokenRefresh();
+
+    try {
+      const newToken = await this.refreshPromise;
+      return newToken;
+    } finally {
+      this.isRefreshing = false;
+      this.refreshPromise = null;
+    }
+  }
+
+  /**
+   * Internal method to perform the actual token refresh
+   * @private
+   */
+  private async _performTokenRefresh(): Promise<string> {
+    try {
+      const currentToken = await getToken();
+      const userString = storage.getString('user');
+      
+      if (!currentToken || !userString) {
+        throw new Error('No token or user found');
+      }
+
+      const userData = JSON.parse(userString);
+      
+      if (!userData.user_id) {
+        throw new Error('User ID not found');
+      }
+
+      console.log('[ApiClient] Refreshing token for user:', userData.user_id);
+      
+      const response = await this.api.post<RefreshTokenResponse>('/auth/refresh-token', {
+        token: currentToken,
+        user_id: userData.user_id,
+        client: 'APP'
+      });
+
+      if (!response.ok || !response.data) {
+        console.error('[ApiClient] Token refresh failed:', response.problem, response.data);
+        const errorData = response.data as any;
+        throw new Error(errorData?.detail || 'Token refresh failed');
+      }
+
+      const { token: newToken, expires_at } = response.data;
+      
+      // Save new token and expiry
+      await saveTokenWithExpiry(newToken, expires_at);
+      this.setAuthToken(newToken);
+      
+      console.log('[ApiClient] Token refreshed successfully, expires:', expires_at);
+      return newToken;
+      
+    } catch (error: any) {
+      console.error('[ApiClient] Token refresh error:', error);
+      // Clear tokens on refresh failure
+      await clearAllTokens();
+      throw error;
+    }
   }
 
   private getCacheKey(request: AxiosRequestConfig): string {
@@ -260,6 +372,28 @@ class ApiClient {
 
     const requestConfig = error.config;
     if (!requestConfig) return Promise.reject(error);
+
+    // Handle 401 Unauthorized - attempt token refresh
+    if (error.response?.status === 401 && !requestConfig.url?.includes('/auth/refresh-token')) {
+      try {
+        console.log('[ApiClient] 401 error detected - attempting token refresh');
+        const newToken = await this.refreshToken();
+        
+        // Retry original request with new token
+        requestConfig.headers = requestConfig.headers || {};
+        requestConfig.headers['Authorization'] = newToken;
+        
+        console.log('[ApiClient] Retrying request with refreshed token');
+        return this.api.axiosInstance(requestConfig);
+        
+      } catch (refreshError) {
+        console.error('[ApiClient] Token refresh failed - session expired');
+        // Token refresh failed - user needs to re-login
+        const sessionExpiredError = new Error('SESSION_EXPIRED');
+        (sessionExpiredError as any).originalError = refreshError;
+        return Promise.reject(sessionExpiredError);
+      }
+    }
 
     const currentRetryCount = this.retryCount.get(this.getCacheKey(requestConfig)) || 0;
 

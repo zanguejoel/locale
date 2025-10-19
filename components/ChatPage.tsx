@@ -565,7 +565,7 @@ const ChatPage = () => {
         />
       )}
       
-      <OfflineBanner isLocal={isLocal} />
+      {/* <OfflineBanner isLocal={isLocal} /> */}
       {showSearch && (
         <MessageSearchBar
           onSearch={handleSearch}
@@ -691,7 +691,7 @@ const ChatPage = () => {
         </View>
         
         {/* Bottom Section - Fixed Elements (Outside scrollable area) */}
-        <View style={styles.bottomSection}>
+        <View style={[styles.bottomSection, { paddingBottom: insets.bottom }]}>
           {/* Local Model Progress */}
           {isLocal && (
             <LocalModelDownloadProgress 
@@ -753,7 +753,6 @@ const ChatPage = () => {
           )}
           
           {/* Chat Input - Always at Bottom */}
-          <View style={styles.inputBlurContainer}>
           <ChatInput
             files={files}
             setFiles={setFiles}
@@ -775,7 +774,6 @@ const ChatPage = () => {
             messages={messages}
             conversationTitle={id ? `Conversation ${id}` : 'Chat'}
           />
-          </View>
         </View>
       </KeyboardAvoidingView>
 
@@ -901,15 +899,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   bottomSection: {
     // Container for all bottom fixed elements (input, attachments, etc.)
-    // No flex - natural height based on content
+    // Fixed to bottom with proper safe area padding
     width: '100%',
-  },
-  inputBlurContainer: {
-    width: '100%',
-    height: 90,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
+    backgroundColor: theme.colors.background,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
   },
   logo: {
     width: 180,

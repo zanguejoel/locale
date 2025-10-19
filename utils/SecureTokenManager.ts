@@ -7,6 +7,7 @@ import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
+const TOKEN_EXPIRY_KEY = 'auth_token_expiry';
 
 /**
  * Save authentication token to secure storage
@@ -84,16 +85,6 @@ export const deleteRefreshToken = async (): Promise<void> => {
   }
 };
 
-/**
- * Clear all authentication data
- * Call this on logout or when switching accounts
- */
-export const clearAllTokens = async (): Promise<void> => {
-  await Promise.all([
-    deleteToken(),
-    deleteRefreshToken(),
-  ]);
-};
 
 /**
  * Check if user has a valid token stored
@@ -102,5 +93,99 @@ export const clearAllTokens = async (): Promise<void> => {
 export const hasStoredToken = async (): Promise<boolean> => {
   const token = await getToken();
   return token !== null && token.length > 0;
+};
+
+/**
+ * Save authentication token with expiry date
+ * @param token Auth token
+ * @param expiresAt ISO date string for when token expires
+ */
+export const saveTokenWithExpiry = async (token: string, expiresAt: string): Promise<void> => {
+  try {
+    await Promise.all([
+      SecureStore.setItemAsync(TOKEN_KEY, token),
+      SecureStore.setItemAsync(TOKEN_EXPIRY_KEY, expiresAt)
+    ]);
+  } catch (error) {
+    // console.error('Failed to save token with expiry:', error);
+    throw new Error('Failed to save authentication token with expiry');
+  }
+};
+
+/**
+ * Get token expiry date from secure storage
+ * @returns ISO date string or null if not found
+ */
+export const getTokenExpiry = async (): Promise<string | null> => {
+  try {
+    return await SecureStore.getItemAsync(TOKEN_EXPIRY_KEY);
+  } catch (error) {
+    // console.error('Failed to retrieve token expiry:', error);
+    return null;
+  }
+};
+
+/**
+ * Delete token expiry from secure storage
+ */
+export const deleteTokenExpiry = async (): Promise<void> => {
+  try {
+    await SecureStore.deleteItemAsync(TOKEN_EXPIRY_KEY);
+  } catch (error) {
+    // console.error('Failed to delete token expiry:', error);
+  }
+};
+
+/**
+ * Check if token is expired
+ * @returns true if token is expired or expiry not found
+ */
+export const isTokenExpired = async (): Promise<boolean> => {
+  try {
+    const expiry = await getTokenExpiry();
+    if (!expiry) return true;
+    
+    const expiryDate = new Date(expiry);
+    const now = new Date();
+    
+    // Token is expired if current time is past expiry
+    return now >= expiryDate;
+  } catch (error) {
+    // console.error('Failed to check token expiry:', error);
+    return true; // Assume expired on error
+  }
+};
+
+/**
+ * Check if token is near expiry (within 24 hours)
+ * @returns true if token expires within 24 hours or expiry not found
+ */
+export const isTokenNearExpiry = async (): Promise<boolean> => {
+  try {
+    const expiry = await getTokenExpiry();
+    if (!expiry) return true;
+    
+    const expiryDate = new Date(expiry);
+    const now = new Date();
+    const hoursDiff = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    // Refresh if expires within 24 hours
+    return hoursDiff < 24;
+  } catch (error) {
+    // console.error('Failed to check token expiry:', error);
+    return true; // Assume expired on error
+  }
+};
+
+/**
+ * Clear all authentication data including expiry
+ * Enhanced version that also clears token expiry
+ */
+export const clearAllTokens = async (): Promise<void> => {
+  await Promise.all([
+    deleteToken(),
+    deleteRefreshToken(),
+    deleteTokenExpiry(),
+  ]);
 };
 

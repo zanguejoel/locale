@@ -1,7 +1,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import { OAUTH_CONFIG, generateOAuthState, API_BASE_URL } from '@/constants/OAuthConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { saveToken, deleteToken, getToken } from './SecureTokenManager';
+import { saveToken, deleteToken, getToken, saveTokenWithExpiry, clearAllTokens } from './SecureTokenManager';
 import { Platform } from 'react-native';
 
 export type OAuthProvider = 'google' | 'microsoft';
@@ -153,8 +153,11 @@ class OAuthService {
       const message = urlObj.searchParams.get('message');
 
       if (status === 'success' && token) {
-        // Store token securely
-        await saveToken(token);
+        // Store token securely with 30-day expiry (backend default)
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        await saveTokenWithExpiry(token, expiresAt);
+        console.log('[OAuth] Token saved with expiry:', expiresAt);
+        
         if (userId) {
           await AsyncStorage.setItem('user_id', userId);
         }
@@ -193,8 +196,8 @@ class OAuthService {
    */
   async signOut(provider?: OAuthProvider) {
     try {
-      // Clean up stored data
-      await deleteToken();
+      // Clean up stored data including token expiry
+      await clearAllTokens();
       await AsyncStorage.removeItem('user_id');
       await AsyncStorage.removeItem('oauth_state');
       await AsyncStorage.removeItem('oauth_provider');

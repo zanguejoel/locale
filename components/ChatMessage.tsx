@@ -338,25 +338,51 @@ const ChatMessage = memo(({
 
   // Function to handle copying the message content
   const handleCopyText = useCallback(() => {
-    Clipboard.setString(content);
+    let textToCopy = content;
+    
+    // For user messages with media, check prompt field or content
+    if (role === Role.User && (imageData || files?.length)) {
+      if (prompt) {
+        textToCopy = prompt;
+      } else if (content && !isFilePath(content)) {
+        textToCopy = content;
+      } else {
+        textToCopy = '';
+      }
+    }
+    
+    Clipboard.setString(textToCopy);
     // Optional feedback to user
     if (Platform.OS === 'ios') {
       AccessibilityInfo.announceForAccessibility('Message copied to clipboard');
     } else {
       Alert.alert('Copied', 'Message copied to clipboard');
     }
-  }, [content]);
+  }, [content, role, prompt, imageData, files]);
 
   // Function to handle sharing the message content
   const handleShareText = useCallback(async () => {
     try {
+      let textToShare = content;
+      
+      // For user messages with media, check prompt field or content
+      if (role === Role.User && (imageData || files?.length)) {
+        if (prompt) {
+          textToShare = prompt;
+        } else if (content && !isFilePath(content)) {
+          textToShare = content;
+        } else {
+          textToShare = '';
+        }
+      }
+      
       const result = await Share.share({
-        message: content,
+        message: textToShare,
       });
     } catch (error) {
       // console.error('Error sharing message:', error);
     }
-  }, [content]);
+  }, [content, role, prompt, imageData, files]);
 
   // Function to show the text context menu
   const showTextContextMenu = useCallback(() => {
@@ -438,6 +464,45 @@ const ChatMessage = memo(({
       return content
     }
   }
+
+  // Helper function to check if content is a file path
+  const isFilePath = (text: string): boolean => {
+    if (!text) return false;
+    return text.startsWith('file://') || 
+           text.startsWith('/') || 
+           text.includes('CoreSimulator') ||
+           text.includes('Library/Caches');
+  };
+
+  // Helper function to extract filename from path
+  const getFileNameFromPath = (path: string): string => {
+    if (!path) return '';
+    const parts = path.split('/');
+    const fileName = parts[parts.length - 1];
+    // Remove any query parameters or hash
+    return fileName.split('?')[0].split('#')[0];
+  };
+
+  // Get the display text for user messages
+  const getDisplayText = (): string => {
+    // For user messages with media files:
+    // Priority: prompt field > content (if not a file path) > empty
+    if (role === Role.User && (imageData || files?.length)) {
+      // If we have a prompt field, use it
+      if (prompt) {
+        return prompt;
+      }
+      // If content is not a file path, use it (it might be the prompt text)
+      if (content && !isFilePath(content)) {
+        return content;
+      }
+      // No text prompt - just show the file
+      return '';
+    }
+    
+    // For non-file messages, return content normally
+    return content;
+  };
 
   // Render generated images and videos from additional_data
   const renderAdditionalData = () => {
@@ -692,7 +757,7 @@ const ChatMessage = memo(({
                       onLongPress={showTextContextMenu}
                       onPress={handlePress}
                       accessible={true}
-                      accessibilityLabel={`Your message: ${content}`}
+                      accessibilityLabel={`Your message: ${getDisplayText()}`}
                       accessibilityRole="text"
                       testID="markdown-container"
                     >
@@ -718,31 +783,34 @@ const ChatMessage = memo(({
                       })()}
                       
                       {/* Text content */}
-                      {content && !isAudio(content) && (
-                        <Animated.View
-                          style={[
-                            styles.markdownContainer,
-                            streamingContent && { transform: [] },
-                            streamingContent && { backgroundColor: `transparent` },
-                          ]}
-                        >
-                          <View style={styles.userTextWrapper}>
-                            <MarkdownDisplay additionalStyles={{
-                              body: { color: '#FFFFFF' },
-                              heading1: { color: '#FFFFFF' },
-                              heading2: { color: '#FFFFFF' },
-                              heading3: { color: '#FFFFFF' },
-                              heading4: { color: '#FFFFFF' },
-                              heading5: { color: '#FFFFFF' },
-                              heading6: { color: '#FFFFFF' },
-                              paragraph: { color: '#FFFFFF' },
-                              text: { color: '#FFFFFF' },
-                            }}>
-                              {content}
-                            </MarkdownDisplay>
-                          </View>
-                        </Animated.View>
-                      )}
+                      {(() => {
+                        const displayText = getDisplayText();
+                        return displayText && !isAudio(displayText) && (
+                          <Animated.View
+                            style={[
+                              styles.markdownContainer,
+                              streamingContent && { transform: [] },
+                              streamingContent && { backgroundColor: `transparent` },
+                            ]}
+                          >
+                            <View style={styles.userTextWrapper}>
+                              <MarkdownDisplay additionalStyles={{
+                                body: { color: '#FFFFFF' },
+                                heading1: { color: '#FFFFFF' },
+                                heading2: { color: '#FFFFFF' },
+                                heading3: { color: '#FFFFFF' },
+                                heading4: { color: '#FFFFFF' },
+                                heading5: { color: '#FFFFFF' },
+                                heading6: { color: '#FFFFFF' },
+                                paragraph: { color: '#FFFFFF' },
+                                text: { color: '#FFFFFF' },
+                              }}>
+                                {displayText}
+                              </MarkdownDisplay>
+                            </View>
+                          </Animated.View>
+                        );
+                      })()}
                       
                       {/* Audio content within message bubble */}
                       {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
@@ -878,7 +946,7 @@ const ChatMessage = memo(({
                 onLongPress={showTextContextMenu}
                 onPress={handlePress}
                 accessible={true}
-                accessibilityLabel={`Your message: ${content}`}
+                accessibilityLabel={`Your message: ${getDisplayText()}`}
                 accessibilityRole="text"
                 testID="markdown-container"
               >
@@ -904,31 +972,34 @@ const ChatMessage = memo(({
                 })()}
                 
                 {/* Text content */}
-                {content && !isAudio(content) && (
-                  <Animated.View
-                    style={[
-                      styles.markdownContainer,
-                      streamingContent && { transform: [] },
-                      streamingContent && { backgroundColor: `transparent` },
-                    ]}
-                  >
-                    <View style={styles.userTextWrapper}>
-                      <MarkdownDisplay additionalStyles={{
-                        body: { color: '#FFFFFF' },
-                        heading1: { color: '#FFFFFF' },
-                        heading2: { color: '#FFFFFF' },
-                        heading3: { color: '#FFFFFF' },
-                        heading4: { color: '#FFFFFF' },
-                        heading5: { color: '#FFFFFF' },
-                        heading6: { color: '#FFFFFF' },
-                        paragraph: { color: '#FFFFFF' },
-                        text: { color: '#FFFFFF' },
-                      }}>
-                        {content}
-                      </MarkdownDisplay>
-                    </View>
-                  </Animated.View>
-                )}
+                {(() => {
+                  const displayText = getDisplayText();
+                  return displayText && !isAudio(displayText) && (
+                    <Animated.View
+                      style={[
+                        styles.markdownContainer,
+                        streamingContent && { transform: [] },
+                        streamingContent && { backgroundColor: `transparent` },
+                      ]}
+                    >
+                      <View style={styles.userTextWrapper}>
+                        <MarkdownDisplay additionalStyles={{
+                          body: { color: '#FFFFFF' },
+                          heading1: { color: '#FFFFFF' },
+                          heading2: { color: '#FFFFFF' },
+                          heading3: { color: '#FFFFFF' },
+                          heading4: { color: '#FFFFFF' },
+                          heading5: { color: '#FFFFFF' },
+                          heading6: { color: '#FFFFFF' },
+                          paragraph: { color: '#FFFFFF' },
+                          text: { color: '#FFFFFF' },
+                        }}>
+                          {displayText}
+                        </MarkdownDisplay>
+                      </View>
+                    </Animated.View>
+                  );
+                })()}
                 
                 {/* Audio content within message bubble */}
                 {(isAudio(content) || files?.[0]?.file_type === 'voice') && (

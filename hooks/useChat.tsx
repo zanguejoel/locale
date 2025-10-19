@@ -113,14 +113,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // ============ Debugging & Lifecycle Management ============
   const mountTimeRef = useRef(Date.now());
-  const lastRenderLogRef = useRef(0);
   
-  // Throttle render logs to prevent log spam (log at most every 1 second)
-  const now = Date.now();
-  if (now - lastRenderLogRef.current > 1000) {
-    console.log('[ChatProvider] Rendering - mount time:', mountTimeRef.current, 'age:', now - mountTimeRef.current, 'ms');
-    lastRenderLogRef.current = now;
-  }
   
   const { user } = useAuth();
   
@@ -270,7 +263,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     
-    console.log(`[useChat] 📝 Updating message with stream content (${stream.length} chars total) - WORD-BY-WORD`);
+    // console.log(`[useChat] 📝 Updating message with stream content (${stream.length} chars total) - WORD-BY-WORD`);
     
     setMessages(prev => updateLastItem(prev, message => {
       const updatedMessage = {
@@ -480,13 +473,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }>;
     }
   ) => {
-    // console.log('[Cloud] Starting cloud message send:', { message, messageType, operation, options });
-    
     // Start timing for response
     const responseStartTime = Date.now();
     
     // Set sending state FIRST (both state and ref for immediate UI update)
-    console.log('[Cloud] ✅ Setting isSending = true at start of sendMessage');
     isSendingRef.current = true;
     setIsSending(true);
     
@@ -501,7 +491,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setMessages(prev => [
       ...prev,
-      { role: Role.User, content: messageType === 'image' ? additionalData : message || '', imageData: message },
+      { 
+        role: Role.User, 
+        content: ['image', 'video', 'audio', 'file'].includes(messageType) ? additionalData : message || '', 
+        imageData: ['image', 'video', 'audio', 'file'].includes(messageType) ? message : undefined,
+        prompt: additionalData || undefined, // Store the prompt text for display
+      },
       { role: Role.Bot, content: '' }, // Empty content - will show loading dots until stream starts
     ]);
 
@@ -516,8 +511,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Multi-file upload (new approach)
     if (filesToUpload.length > 0) {
-      console.log('[Cloud] Processing', filesToUpload.length, 'files for upload');
-      
       for (let i = 0; i < filesToUpload.length; i++) {
         const file = filesToUpload[i];
         try {
@@ -668,46 +661,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Add generation options if provided
-    console.log('[Cloud] ════════════════════════════════════');
-    console.log('[Cloud] Generation options:', JSON.stringify(options, null, 2));
-    console.log('[Cloud] - webSearch:', options?.webSearch);
-    console.log('[Cloud] - generateImage:', options?.generateImage);
-    console.log('[Cloud] - generateVideo:', options?.generateVideo);
-    console.log('[Cloud] ════════════════════════════════════');
-    
     if (options?.webSearch) {
       formData.append('web_search', 'true');
-      console.log('[Cloud] Added web_search to request');
     }
     
     if (options?.generateVideo && options.generateVideo !== 'none') {
       formData.append('generate_video', options.generateVideo);
-      console.log('[Cloud] ✅ Added generate_video:', options.generateVideo);
-      console.log('[Cloud] Valid models: aws_nova_reel, google_veo2, google_veo3, google_veo3_audio');
-      
-      // Validate model name
-      const validModels = ['aws_nova_reel', 'google_veo2', 'google_veo3', 'google_veo3_audio'];
-      if (!validModels.includes(options.generateVideo)) {
-        console.warn('[Cloud] ⚠️ INVALID VIDEO MODEL:', options.generateVideo);
-        console.warn('[Cloud] Backend expects one of:', validModels.join(', '));
-      }
-    } else {
-      console.log('[Cloud] No video generation (generateVideo is none or missing)');
     }
     
     if (options?.generateImage && options.generateImage !== 'none') {
       formData.append('generate_image', options.generateImage);
-      console.log('[Cloud] Added generate_image:', options.generateImage);
       if (options.imageProvider) {
         formData.append('image_provider', options.imageProvider);
-        console.log('[Cloud] Added image_provider:', options.imageProvider);
       }
       if (options.imageModel) {
         formData.append('image_model', options.imageModel);
-        console.log('[Cloud] Added image_model:', options.imageModel);
       }
-    } else {
-      console.log('[Cloud] ⚠️ No image generation option set or generateImage is "none"');
     }
 
     // Abort any previous stream with proper synchronization
@@ -715,32 +684,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const newController = new AbortController();
     streamControllerRef.current = newController;
-    console.log('[Cloud] Created new AbortController for request');
     
     try {
       // Get token from secure storage
       const token = await getToken();
-      // console.log('[Cloud] Token exists:', !!token);
       
       if (!token) {
-        // console.error('[Cloud] No token found');
         Alert.alert('Error', 'Authentication required. Please sign in again.');
         isSendingRef.current = false;
         setIsSending(false);
         setChatLoading(false);
         return;
       }
-      
-      // Log token info (first/last 10 chars for debugging without exposing full token)
-      // console.log('[Cloud] Token preview:', token.substring(0, 10) + '...' + token.substring(token.length - 10));
-      // console.log('[Cloud] Token length:', token.length);
-
-      // console.log('[Cloud] Sending fetch request to:', `${BASE_URL}/chat`);
-      console.log('[Cloud] Making fetch request with options:', {
-        generateImage: options?.generateImage,
-        imageProvider: options?.imageProvider,
-        hasSignal: !!newController.signal,
-      });
       
       const _response = await fetch(`${BASE_URL}/chat`, {
         method: 'POST',
@@ -758,10 +713,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Ensure streaming is enabled
         cache: 'no-cache',
       });
-      console.log('[Cloud] Fetch completed with status:', _response.status);
-      // console.log('[Cloud] Fetch response status:', _response.status, 'ok:', _response.ok);
-      // console.log('[Cloud] Response headers:', Object.fromEntries(_response.headers.entries()));
-      // console.log('[Cloud] Response body exists:', !!_response.body);
       
       if (!_response.ok) {
         const errorMessage = await _response.text();
@@ -789,7 +740,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      console.log('[Cloud] Starting processStream...');
       const res = await processStream(
         _response.body,
         setStream,
@@ -798,21 +748,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStreamWorking,
         setAdditionalData
       );
-      console.log('[Cloud] processStream completed successfully');
-      console.log('[Cloud] Final result:', JSON.stringify(res, null, 2));
       
       // Handle additional_data after streaming completes
       if (res?.data?.additional_data) {
-        console.log('[Cloud] Processing additional_data:', res.data.additional_data);
-        
         // Update last message with additional_data
         // DON'T create separate messages for videos - they're already in files[]
         setMessages(prev => updateLastItem(prev, message => ({
           ...message,
           additional_data: res?.data?.additional_data || []
         })));
-      } else {
-        console.log('[Cloud] ⚠️ No additional_data in final result');
       }
       
       // Track successful response
@@ -868,7 +812,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       // Always clean up streaming state
       streamControllerRef.current = null;
-      console.log('[Cloud] ❌ Setting isSending = false in finally block');
       isSendingRef.current = false;
       setIsSending(false);
       setChatLoading(false);
@@ -877,7 +820,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Don't reset additionalData here - it needs to persist in the message
       // Don't reset stream here - it's used for display and doesn't affect input state
-      console.log('[Cloud] Send message completed, clearing states');
     }
     
   }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream]);

@@ -188,9 +188,6 @@ importers:
       react-native-audio-api:
         specifier: ^0.5.2
         version: 0.5.7(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.26)(react@18.3.1))(react@18.3.1)
-      react-native-context-menu-view:
-        specifier: ^1.16.0
-        version: 1.20.0(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.26)(react@18.3.1))(react@18.3.1)
       react-native-executorch:
         specifier: ^0.5.8
         version: 0.5.8(@babel/core@7.28.4)(@expo/metro-runtime@4.0.1(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.26)(react@18.3.1)))(react-native-webview@13.12.5(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.26)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.26)(react@18.3.1))(react@18.3.1)
@@ -5162,12 +5159,6 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
-
-  react-native-context-menu-view@1.20.0:
-    resolution: {integrity: sha512-g1EYZiPaJWjeq7GWeL9TaYSnKmL9/hiDE7Arvj8r8fLip/l+BvS+BRtblX9qk9VpQdDWyd6L6A4yL2sz6+ohQw==}
-    peerDependencies:
-      react: ^16.8.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-native: '>=0.60.0-rc.0 <1.0.x'
 
   react-native-drawer-layout@4.1.13:
     resolution: {integrity: sha512-WeTBUmPJ/ss2r2+Tuxr8Xl3u6/AM5vTg1mlt/+/4qu6vQM+szwR6RQXchB4wxI1OLROBiqYxKlmaZ2tooCZGog==}
@@ -12679,11 +12670,6 @@ snapshots:
   react-is@19.2.0: {}
 
   react-native-audio-api@0.5.7(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.26)(react@18.3.1))(react@18.3.1):
-    dependencies:
-      react: 18.3.1
-      react-native: 0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.26)(react@18.3.1)
-
-  react-native-context-menu-view@1.20.0(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.26)(react@18.3.1))(react@18.3.1):
     dependencies:
       react: 18.3.1
       react-native: 0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@18.0.0(typescript@5.3.3))(@types/react@18.3.26)(react@18.3.1)

@@ -2,12 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import useMMKVStorage, { storage } from './useMMKVStorage';
 import api from '@/utils/ApiClient';
 import { User } from '@/constants/Types';
-import { saveToken, getToken, deleteToken } from '@/utils/SecureTokenManager';
+import { saveToken, getToken, deleteToken, saveTokenWithExpiry, clearAllTokens, isTokenExpired } from '@/utils/SecureTokenManager';
 import { createSecureSession, getSecureSession } from '@/utils/SecureSession';
 import { formatAuthHeader } from '@/utils/AuthHelpers';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { AuthEvent } from '@/types/mixpanel';
 import OAuthService, { OAuthResult } from '@/utils/OAuthService';
+import { Alert } from 'react-native';
 
 export interface FormData {
   firstName: string;
@@ -65,16 +66,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         // Retrieve token from secure storage
         const token = await getToken();
-        if (token) {
-          api.setAuthToken(token);
-          setIsSignedIn(true);
-        } else {
+        if (!token) {
+          console.log('[Auth] No token found, signing out');
           setIsSignedIn(false);
+          return;
         }
+
+        // Check if token is already expired
+        const expired = await isTokenExpired();
+        if (expired) {
+          console.log('[Auth] Token already expired, signing out user');
+          Alert.alert(
+            'Session Expired',
+            'Your session has expired. Please sign in again.',
+            [
+              {
+                text: 'OK',
+                onPress: async () => {
+                  await clearAllTokens();
+                  setUser(null);
+                  setIsSignedIn(false);
+                }
+              }
+            ]
+          );
+          return;
+        }
+
+        // Token is valid
+        api.setAuthToken(token);
+        setIsSignedIn(true);
       }
     };
     initAuth();
   }, [user]);
+
+  // Handle API session expiration errors
+  useEffect(() => {
+    // Global error handler for API errors
+    const handleGlobalError = (error: any) => {
+      if (error?.message === 'SESSION_EXPIRED') {
+        console.log('[Auth] Session expired detected, signing out user');
+        
+        // Show alert to user
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please sign in again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                signOut();
+              }
+            }
+          ]
+        );
+      }
+    };
+
+    // Note: This is a placeholder for global error handling
+    // You may want to implement a proper event emitter system
+    // or integrate with your existing error handling infrastructure
+    
+    return () => {
+      // Cleanup if needed
+    };
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -117,8 +174,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Store token securely with error handling
       try {
-        await saveToken(response.data.token);
+        // Backend tokens expire in 30 days by default
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        await saveTokenWithExpiry(response.data.token, expiresAt);
         api.setAuthToken(response.data.token);
+        console.log('[Auth] Token saved with expiry:', expiresAt);
       } catch (storageError) {
         console.error('[Auth] Token storage failed:', storageError);
         throw new Error('Failed to securely store credentials');
@@ -592,8 +652,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Reset Mixpanel user
     await mixpanelService.reset();
     
-    // Delete token from secure storage
-    await deleteToken();
+    // Clear all tokens including expiry
+    await clearAllTokens();
     setUser(null);
     setIsSignedIn(false);
   };

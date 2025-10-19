@@ -89,7 +89,7 @@ export const processStream = async (
     while (pendingWords.length > 0) {
       const word = pendingWords.shift();
       if (word !== undefined) {
-        console.log(`[ChatStream] 📝 Displaying word: "${word}"`);
+        // console.log(`[ChatStream] 📝 Displaying word: "${word}"`);
         setStream((prev) => prev + word);
         
         // Add delay between words for smooth streaming effect

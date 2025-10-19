@@ -216,7 +216,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
       
       // Send first file URI with message type, options will contain all files
       onShouldSend(files[0].uri, fileType, null, message, options);
-      fetchMessages?.();
+      // Don't call fetchMessages - sendMessage already handles state correctly
       setFiles?.([]);
     } else {
       onShouldSend(message, 'text', null, '', options);
@@ -244,7 +244,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        quality: 1,
+        quality: 0.6,
       });
 
       if (!result.canceled && setFiles) {
@@ -282,7 +282,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
 
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
-        quality: 1,
+        quality: 0.6,
       });
 
       if (!result.canceled && setFiles) {
@@ -438,33 +438,32 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
       />
 
       {/* iOS Keyboard Accessory View */}
-      <KeyboardAccessoryView
+      {/* <KeyboardAccessoryView
         inputAccessoryViewID={INPUT_ACCESSORY_VIEW_ID}
         onDismiss={() => {
           Keyboard.dismiss();
           inputRef.current?.blur();
         }}
-      />
+      /> */}
     </View>
   );
 };
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: 'transparent'
+    width: '100%',
+    backgroundColor: 'transparent',
   },
   inputContainer: {
     paddingTop: 10,
-   // borderTopLeftRadius: 24,
-    //borderTopRightRadius: 24,
-    overflow: 'hidden',
+    paddingBottom: 5,
+    backgroundColor: 'transparent',
   },
   row: {
-    paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
+    paddingBottom: 8,
   },
   messageInput: {
     flex: 1,
