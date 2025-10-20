@@ -74,6 +74,10 @@ interface ChatMessageProps extends Message {
   onPin?: () => void;
   isPinned?: boolean;
   canRetry?: boolean;
+  // Feedback handlers
+  onLike?: () => void;
+  onDislike?: () => void;
+  reaction?: 'like' | 'dislike' | null;
 }
 
 const contextItems = [
@@ -234,6 +238,9 @@ const ChatMessage = memo(({
   onPin,
   isPinned = false,
   canRetry = false,
+  onLike,
+  onDislike,
+  reaction,
 }: ChatMessageProps) => {
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -1189,7 +1196,33 @@ const ChatMessage = memo(({
       label: string;
       onPress: () => void;
       color: string;
+      isActive?: boolean;
     }> = [];
+    
+    // Like/Dislike actions - only for bot messages
+    if (role === Role.Bot) {
+      if (onLike) {
+        actions.push({
+          key: 'like',
+          icon: reaction === 'like' ? 'thumbs-up' : 'thumbs-up-outline',
+          label: 'Like',
+          onPress: onLike,
+          color: reaction === 'like' ? '#10b981' : theme.colors.textSecondary, // Green when active
+          isActive: reaction === 'like',
+        });
+      }
+      
+      if (onDislike) {
+        actions.push({
+          key: 'dislike',
+          icon: reaction === 'dislike' ? 'thumbs-down' : 'thumbs-down-outline',
+          label: 'Dislike',
+          onPress: onDislike,
+          color: reaction === 'dislike' ? '#ef4444' : theme.colors.textSecondary, // Red when active
+          isActive: reaction === 'dislike',
+        });
+      }
+    }
     
     // Copy action - available for all messages
     if (onCopy) {

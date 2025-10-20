@@ -490,6 +490,19 @@ class ApiClient {
     return this.api.post('/auth/close-account', { code, email });
   }
 
+  // Chat Feedback Methods
+  public async submitChatFeedback(
+    chatId: string,
+    reaction: 'like' | 'dislike',
+    feedback?: string
+  ): Promise<ApiResponse<any>> {
+    return this.api.post('/chat-review', {
+      chat_id: String(chatId), // Ensure it's always a string for the backend
+      reaction,
+      feedback: feedback || '',
+    });
+  }
+
   /**
    * Cleanup method to stop intervals and clear cache
    * Call this when the app is being destroyed or backgrounded for extended periods

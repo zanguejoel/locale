@@ -43,6 +43,7 @@ export interface Message {
   timestamp?: Date | string;
   status?: MessageStatus;
   id?: string;
+  chat_id?: string; // UUID identifier for the message (used by backend)
   imageData?: string;
   additional_data?: AdditionalData[];
   // New features
@@ -53,6 +54,9 @@ export interface Message {
   replyToMessageId?: string; // For thread/reply system
   replyToContent?: string;
   replyToRole?: Role;
+  // Feedback (like/dislike)
+  reaction?: 'like' | 'dislike' | null;
+  feedback?: string; // Optional text feedback
 }
 
 export interface Chat {

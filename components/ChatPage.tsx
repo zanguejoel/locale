@@ -46,6 +46,7 @@ import { SelectedFile } from '@/components/FilePreviewModal';
 import CreditPurchaseModal from '@/components/CreditPurchaseModal';
 import ArtifactViewerModal from '@/components/artifacts/ArtifactViewerModal';
 import { Artifact } from '@/utils/ArtifactTypes';
+import apiClient from '@/utils/ApiClient';
 
 // Helper function to get time-based greeting
 const getGreeting = (firstName: string = 'there') => {
@@ -481,6 +482,70 @@ const ChatPage = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
+  const handleLikeMessage = useCallback(async (messageId: string, currentReaction?: 'like' | 'dislike' | null) => {
+    // Don't do anything if already liked
+    if (currentReaction === 'like') return;
+    
+    // Validate chat_id - should be a UUID or at least not be a temporary msg- ID
+    if (!messageId || String(messageId).startsWith('msg-')) {
+      Alert.alert('Error', 'Cannot submit feedback - message not synced yet');
+      return;
+    }
+    
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      const response = await apiClient.submitChatFeedback(String(messageId), 'like');
+      
+      if (response.ok && response.data) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        // Refresh messages to show the updated reaction
+        if (id) {
+          fetchMessages(id);
+        }
+      } else {
+        const errorMsg = response.data?.detail || response.problem || 'Failed to submit feedback';
+        Alert.alert('Error', errorMsg);
+      }
+    } catch (error) {
+      console.error('Error submitting like:', error);
+      Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+    }
+  }, [id, fetchMessages]);
+
+  const handleDislikeMessage = useCallback(async (messageId: string, currentReaction?: 'like' | 'dislike' | null) => {
+    // Don't do anything if already disliked
+    if (currentReaction === 'dislike') return;
+    
+    // Validate chat_id - should be a UUID or at least not be a temporary msg- ID
+    if (!messageId || String(messageId).startsWith('msg-')) {
+      Alert.alert('Error', 'Cannot submit feedback - message not synced yet');
+      return;
+    }
+    
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      const response = await apiClient.submitChatFeedback(String(messageId), 'dislike');
+      
+      if (response.ok && response.data) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        // Refresh messages to show the updated reaction
+        if (id) {
+          fetchMessages(id);
+        }
+      } else {
+        const errorMsg = response.data?.detail || response.problem || 'Failed to submit feedback';
+        Alert.alert('Error', errorMsg);
+      }
+    } catch (error) {
+      console.error('Error submitting dislike:', error);
+      Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+    }
+  }, [id, fetchMessages]);
+
   const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => {
     // In inverted list with reversed array, index 0 is the newest message
     const isLastBotMessage = item.role === Role.Bot && index === 0;
@@ -546,6 +611,8 @@ const ChatPage = () => {
               onRetry={() => handleRetryMessage(item.content)}
               isPinned={isPinned}
               canRetry={canRetry}
+              onLike={() => handleLikeMessage(item.chat_id || item.id || `${index}`, item.reaction)}
+              onDislike={() => handleDislikeMessage(item.chat_id || item.id || `${index}`, item.reaction)}
             />
             {item.reactions && item.reactions.length > 0 && (
               <MessageReactions
