@@ -3,6 +3,8 @@ export interface ModelCapabilities {
   search?: boolean;
   pdf?: boolean;
   reasoning?: boolean;
+  imageGeneration?: boolean; // Can generate images (default: true if undefined)
+  videoGeneration?: boolean; // Can generate videos (default: true if undefined)
 }
 
 export interface Model {
@@ -27,7 +29,9 @@ export const models: Model[] = [
       vision: true,
       search: true,
       pdf: true,
-      reasoning: false
+      reasoning: false,
+      imageGeneration: false,
+      videoGeneration: false
     }
   },
   {
@@ -40,7 +44,9 @@ export const models: Model[] = [
       vision: true,
       search: true,
       pdf: true,
-      reasoning: false
+      reasoning: false,
+      imageGeneration: false,
+      videoGeneration: false
     }
   },
   {
@@ -53,7 +59,9 @@ export const models: Model[] = [
       vision: true,
       search: true,
       pdf: true,
-      reasoning: false
+      reasoning: false,
+      imageGeneration: false,
+      videoGeneration: false
     }
   },
  
@@ -447,5 +455,20 @@ export const isLlamaModel = (modelId: string): boolean => {
   return model.name.toLowerCase().includes('llama') || 
          model.id.toLowerCase().includes('llama') ||
          model.displayName.toLowerCase().includes('llama');
+};
+
+// Helper function to check if a model can generate images and/or videos
+export const canGenerateMedia = (modelId: string): { image: boolean; video: boolean } => {
+  const model = getModelById(modelId);
+  if (!model) {
+    // Default to true if model not found
+    return { image: true, video: true };
+  }
+  
+  // Default to true if capability is undefined
+  return {
+    image: model.capabilities.imageGeneration !== false,
+    video: model.capabilities.videoGeneration !== false
+  };
 };
 

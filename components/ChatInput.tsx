@@ -21,6 +21,7 @@ import { handleError } from '@/utils/ErrorHandler';
 import KeyboardAccessoryView from './KeyboardAccessoryView';
 import AttachmentsModal from './AttachmentsModal';
 import { SelectedFile } from './FilePreviewModal'; // Only importing type
+import { canGenerateMedia } from '@/constants/Models';
 
 
 
@@ -37,9 +38,10 @@ export type Props = {
   isLocal?: boolean; // To show/hide generation options
   messages?: any[]; // For export functionality
   conversationTitle?: string; // For export functionality
+  currentModelId?: string; // Current selected model ID to check generation capabilities
 };
 
-const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoading, onRecordingStateChange, isLocal = false, messages = [], conversationTitle }: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoading, onRecordingStateChange, isLocal = false, messages = [], conversationTitle, currentModelId }: Props) => {
   const [message, setMessage] = useState('');
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -51,6 +53,9 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+
+  // Check current model's media generation capabilities
+  const mediaCapabilities = currentModelId ? canGenerateMedia(currentModelId) : { image: true, video: true };
 
   // Generation options state
   const [generationOptions, setGenerationOptions] = useState<GenerationOptionsState>({
@@ -71,6 +76,28 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
       onRecordingStateChange(isRecording, cancelRecording);
     }
   }, [isRecording]);
+
+  // Auto-disable image/video generation when switching to a model that doesn't support them
+  useEffect(() => {
+    // Only apply restrictions for cloud models (not local)
+    if (isLocal) return;
+
+    const needsUpdate = 
+      (!mediaCapabilities.image && generationOptions.generateImage !== 'none') ||
+      (!mediaCapabilities.video && generationOptions.generateVideo !== 'none');
+
+    if (needsUpdate) {
+      setGenerationOptions(prev => ({
+        ...prev,
+        generateImage: mediaCapabilities.image ? prev.generateImage : 'none',
+        generateVideo: mediaCapabilities.video ? prev.generateVideo : 'none',
+      }));
+      
+      // Show a subtle haptic feedback when options are auto-disabled
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [currentModelId, mediaCapabilities.image, mediaCapabilities.video, isLocal]);
+
   const startRecording = async () => {
     // Haptic feedback on recording start
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -437,6 +464,8 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
         isLocal={isLocal}
         generationOptions={generationOptions}
         onGenerationOptionsChange={setGenerationOptions}
+        canGenerateImage={mediaCapabilities.image}
+        canGenerateVideo={mediaCapabilities.video}
       />
 
       {/* iOS Keyboard Accessory View */}

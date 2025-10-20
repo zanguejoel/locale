@@ -26,6 +26,8 @@ interface AttachmentsModalProps {
   isLocal?: boolean;
   generationOptions?: GenerationOptionsState;
   onGenerationOptionsChange?: (options: GenerationOptionsState) => void;
+  canGenerateImage?: boolean; // Whether current model supports image generation
+  canGenerateVideo?: boolean; // Whether current model supports video generation
 }
 
 const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
@@ -37,6 +39,8 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
   isLocal = false,
   generationOptions,
   onGenerationOptionsChange,
+  canGenerateImage = true,
+  canGenerateVideo = true,
 }) => {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -248,28 +252,50 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
               <TouchableOpacity
                 style={[
                   styles.singleLineCard,
-                  generationOptions.generateImage !== 'none' && styles.singleLineCardActive
+                  generationOptions.generateImage !== 'none' && styles.singleLineCardActive,
+                  !canGenerateImage && styles.disabledCard
                 ]}
                 onPress={() => {
+                  if (!canGenerateImage) return;
                   // Always use 'always' mode when enabling image generation
                   const nextValue = generationOptions.generateImage === 'none' ? 'always' : 'none';
                   handleImageGenerationChange(nextValue);
                 }}
-                activeOpacity={0.7}
+                activeOpacity={canGenerateImage ? 0.7 : 1}
+                disabled={!canGenerateImage}
                 accessibilityLabel="Toggle image generation"
                 accessibilityRole="switch"
-                accessibilityState={{ checked: generationOptions.generateImage !== 'none' }}
+                accessibilityState={{ 
+                  checked: generationOptions.generateImage !== 'none',
+                  disabled: !canGenerateImage 
+                }}
               >
-                <View style={[styles.iconBadge, { backgroundColor: theme.isDark ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.15)' }]}>
+                <View style={[styles.iconBadge, { 
+                  backgroundColor: theme.isDark ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.15)',
+                  opacity: canGenerateImage ? 1 : 0.5
+                }]}>
                   <Ionicons name="image" size={18} color="#a855f7" />
                 </View>
-                <Text style={styles.optionTitle}>Image Generation</Text>
+                <Text style={[
+                  styles.optionTitle,
+                  !canGenerateImage && styles.disabledText
+                ]}>Image Generation</Text>
+                {!canGenerateImage && (
+                  <Ionicons 
+                    name="lock-closed" 
+                    size={16} 
+                    color={theme.colors.textSecondary} 
+                    style={{ marginRight: 8, opacity: 0.6 }}
+                  />
+                )}
                 <Switch
                   value={generationOptions.generateImage !== 'none'}
                   onValueChange={(value) => {
+                    if (!canGenerateImage) return;
                     // Always use 'always' mode when enabling
                     handleImageGenerationChange(value ? 'always' : 'none');
                   }}
+                  disabled={!canGenerateImage}
                   trackColor={{ 
                     false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
                     true: '#a855f7' 
@@ -331,26 +357,48 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
             <TouchableOpacity
               style={[
                 styles.singleLineCard,
-                generationOptions.generateVideo !== 'none' && styles.singleLineCardActive
+                generationOptions.generateVideo !== 'none' && styles.singleLineCardActive,
+                !canGenerateVideo && styles.disabledCard
               ]}
               onPress={() => {
+                if (!canGenerateVideo) return;
                 const nextValue = generationOptions.generateVideo === 'none' ? 'google_veo3' : 'none';
                 handleVideoGenerationChange(nextValue);
               }}
-              activeOpacity={0.7}
+              activeOpacity={canGenerateVideo ? 0.7 : 1}
+              disabled={!canGenerateVideo}
               accessibilityLabel="Toggle video generation"
               accessibilityRole="switch"
-              accessibilityState={{ checked: generationOptions.generateVideo !== 'none' }}
+              accessibilityState={{ 
+                checked: generationOptions.generateVideo !== 'none',
+                disabled: !canGenerateVideo 
+              }}
             >
-              <View style={[styles.iconBadge, { backgroundColor: theme.isDark ? 'rgba(236, 72, 153, 0.2)' : 'rgba(236, 72, 153, 0.15)' }]}>
+              <View style={[styles.iconBadge, { 
+                backgroundColor: theme.isDark ? 'rgba(236, 72, 153, 0.2)' : 'rgba(236, 72, 153, 0.15)',
+                opacity: canGenerateVideo ? 1 : 0.5
+              }]}>
                 <Ionicons name="videocam" size={18} color="#ec4899" />
               </View>
-              <Text style={styles.optionTitle}>Video Generation</Text>
+              <Text style={[
+                styles.optionTitle,
+                !canGenerateVideo && styles.disabledText
+              ]}>Video Generation</Text>
+              {!canGenerateVideo && (
+                <Ionicons 
+                  name="lock-closed" 
+                  size={16} 
+                  color={theme.colors.textSecondary} 
+                  style={{ marginRight: 8, opacity: 0.6 }}
+                />
+              )}
               <Switch
                 value={generationOptions.generateVideo !== 'none'}
                 onValueChange={(value) => {
+                  if (!canGenerateVideo) return;
                   handleVideoGenerationChange(value ? 'google_veo3' : 'none');
                 }}
+                disabled={!canGenerateVideo}
                 trackColor={{ 
                   false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
                   true: '#ec4899' 
@@ -402,6 +450,26 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
                     </TouchableOpacity>
                   </View>
                 </View>
+              </View>
+            )}
+
+            {/* Info Banner for Disabled Features */}
+            {(!canGenerateImage || !canGenerateVideo) && (
+              <View style={styles.infoBanner}>
+                <Ionicons 
+                  name="information-circle-outline" 
+                  size={18} 
+                  color={theme.colors.textSecondary}
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.infoBannerText}>
+                  {!canGenerateImage && !canGenerateVideo 
+                    ? 'Image and video generation are not available for the selected model.'
+                    : !canGenerateImage 
+                    ? 'Image generation is not available for the selected model.'
+                    : 'Video generation is not available for the selected model.'
+                  }
+                </Text>
               </View>
             )}
           </>
@@ -642,6 +710,32 @@ const getStyles = (theme: Theme, insets: { bottom: number }) =>
     },
     inlineButtonTextActive: {
       color: '#FFFFFF',
+    },
+    // Disabled states
+    disabledCard: {
+      opacity: 0.5,
+      backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)',
+    },
+    disabledText: {
+      opacity: 0.6,
+    },
+    // Info banner for disabled features
+    infoBanner: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
+      borderRadius: 12,
+      padding: 14,
+      marginTop: 8,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: theme.isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
+    },
+    infoBannerText: {
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 18,
+      color: theme.colors.textSecondary,
     },
     // AI Options view styles
     scrollContent: {

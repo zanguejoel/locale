@@ -173,3 +173,13 @@ export const getRecommendedLocalModel = (): LocalModel => {
   // Fallback to first available or first in list
   return supportedModels[0] || LOCAL_MODELS[0];
 };
+
+/**
+ * Check if a local model can generate images and/or videos
+ * Note: Local models run on-device and cannot generate images or videos
+ * This function is provided for consistency with cloud model capabilities
+ */
+export const canLocalModelGenerateMedia = (_modelId: string): { image: boolean; video: boolean } => {
+  // Local models running on-device cannot generate images or videos
+  return { image: false, video: false };
+};

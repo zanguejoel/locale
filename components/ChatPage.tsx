@@ -920,6 +920,7 @@ const ChatPage = () => {
             }}
             messages={messages}
             conversationTitle={id ? `Conversation ${id}` : 'Chat'}
+            currentModelId={isLocal ? selectedLocalModel?.id : selectedCloudModel?.id}
           />
         </View>
       </KeyboardAvoidingView>
