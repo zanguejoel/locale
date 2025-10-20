@@ -26,6 +26,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ContextMenu from 'zeego/context-menu';
 import { useCallback, useEffect, useRef } from 'react';
 import { Audio, Video } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 
 import { Ionicons } from '@expo/vector-icons';
 
@@ -68,6 +69,11 @@ interface ChatMessageProps extends Message {
   // Artifact props
   onArtifactPress?: (artifact: Artifact, allMessageArtifacts?: Artifact[]) => void;
   artifacts?: Artifact[];
+  // Action handlers
+  onCopy?: () => void;
+  onPin?: () => void;
+  isPinned?: boolean;
+  canRetry?: boolean;
 }
 
 const contextItems = [
@@ -224,6 +230,10 @@ const ChatMessage = memo(({
   isOnlyInGroup = false,
   onArtifactPress,
   artifacts: providedArtifacts,
+  onCopy,
+  onPin,
+  isPinned = false,
+  canRetry = false,
 }: ChatMessageProps) => {
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -1168,6 +1178,78 @@ const ChatMessage = memo(({
   // Check if we have streaming content to show alongside intermediate state
   const hasStreamingContent = content && content.length > 0 && content !== '...' && content.trim() !== '';
   
+  // Render action icons below message
+  const renderActionIcons = () => {
+    // Don't show actions while loading or sending
+    if (isLoading || isSending) return null;
+    
+    const actions: Array<{
+      key: string;
+      icon: any;
+      label: string;
+      onPress: () => void;
+      color: string;
+    }> = [];
+    
+    // Copy action - available for all messages
+    if (onCopy) {
+      actions.push({
+        key: 'copy',
+        icon: 'copy-outline',
+        label: 'Copy',
+        onPress: onCopy,
+        color: theme.colors.primary,
+      });
+    }
+    
+    // Pin action - available for all messages
+    if (onPin) {
+      actions.push({
+        key: 'pin',
+        icon: isPinned ? 'pin' : 'pin-outline',
+        label: isPinned ? 'Unpin' : 'Pin',
+        onPress: onPin,
+        color: isPinned ? theme.colors.orange : theme.colors.textSecondary,
+      });
+    }
+    
+    // Retry action - only for failed user messages
+    if (canRetry && onRetry && role === Role.User) {
+      actions.push({
+        key: 'retry',
+        icon: 'refresh-outline',
+        label: 'Retry',
+        onPress: onRetry,
+        color: theme.colors.orange,
+      });
+    }
+    
+    if (actions.length === 0) return null;
+    
+    return (
+      <View style={[styles.actionIconsContainer, role === Role.User ? styles.actionIconsUser : styles.actionIconsBot]}>
+        {actions.map((action) => (
+          <TouchableOpacity
+            key={action.key}
+            style={styles.actionIconButton}
+            onPress={async () => {
+              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              action.onPress();
+            }}
+            activeOpacity={0.6}
+            accessibilityLabel={action.label}
+            accessibilityRole="button"
+          >
+            <Ionicons name={action.icon} size={16} color={action.color} />
+            <Text style={[styles.actionIconLabel, { color: action.color }]}>
+              {action.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+  
   return (
     <Animated.View
       style={containerStyle}
@@ -1215,6 +1297,10 @@ const ChatMessage = memo(({
           <View style={styles.messageContent} testID="message-content">
             {renderContent()}
           </View>
+          
+          {/* Action Icons */}
+          {renderActionIcons()}
+          
           {/* Only show timestamp on last message in group or standalone messages */}
           {(timestamp || status) && (isLastInGroup || isOnlyInGroup) && (
             <View style={[styles.metaContainer, role === Role.User ? styles.metaUser : styles.metaBot]}>
@@ -1728,6 +1814,35 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   artifactsContainer: {
     marginTop: 12,
     gap: 8,
+  },
+  // Action Icons Styles
+  actionIconsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  actionIconsUser: {
+    justifyContent: 'flex-end',
+  },
+  actionIconsBot: {
+    justifyContent: 'flex-start',
+  },
+  actionIconButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    minHeight: 28,
+  },
+  actionIconLabel: {
+    fontSize: 11,
+    fontWeight: '500',
   },
 });
 

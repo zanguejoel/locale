@@ -516,11 +516,11 @@ const ChatPage = () => {
           role={item.role}
           content={item.content}
           onCopy={() => handleCopyMessage(item.content)}
-          onDelete={() => handleDeleteMessage(item.id || `${index}`)}
+          // onDelete={() => handleDeleteMessage(item.id || `${index}`)}
           onRetry={() => handleRetryMessage(item.content)}
-          onEdit={() => handleEditMessage(item.id || `${index}`)}
+          // onEdit={() => handleEditMessage(item.id || `${index}`)}
           onPin={() => handleMessagePin(item.id || `${index}`)}
-          onReply={() => handleReplyToMessage(item.id || `${index}`)}
+          // onReply={() => handleReplyToMessage(item.id || `${index}`)}
           canRetry={canRetry}
           isPinned={isPinned}
         >
@@ -541,6 +541,11 @@ const ChatPage = () => {
               isLastInGroup={isLastInGroup}
               isOnlyInGroup={isOnlyInGroup}
               onArtifactPress={handleArtifactPress}
+              onCopy={() => handleCopyMessage(item.content)}
+              onPin={() => handleMessagePin(item.id || `${index}`)}
+              onRetry={() => handleRetryMessage(item.content)}
+              isPinned={isPinned}
+              canRetry={canRetry}
             />
             {item.reactions && item.reactions.length > 0 && (
               <MessageReactions

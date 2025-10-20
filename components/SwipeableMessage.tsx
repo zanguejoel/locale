@@ -157,20 +157,8 @@ export const SwipeableMessage: React.FC<SwipeableMessageProps> = ({
     );
   };
 
-  return (
-    <Swipeable
-      ref={swipeableRef}
-      renderRightActions={renderRightActions}
-      renderLeftActions={renderLeftActions}
-      overshootRight={false}
-      overshootLeft={false}
-      friction={2}
-      rightThreshold={40}
-      leftThreshold={40}
-    >
-      {children}
-    </Swipeable>
-  );
+  // Swipe functionality disabled - actions now shown as icons below messages
+  return <>{children}</>;
 };
 
 const getStyles = (theme: Theme) => StyleSheet.create({
