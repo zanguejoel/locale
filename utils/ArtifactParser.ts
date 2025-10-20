@@ -156,8 +156,102 @@ export const extractArtifactsFromMessage = (
 };
 
 /**
- * Remove artifact tags from content for display
+ * Content segment type - either text or artifact
+ */
+export type ContentSegment = 
+  | { type: 'text'; content: string }
+  | { type: 'artifact'; artifact: Artifact; originalTag: string };
+
+/**
+ * Parse content into segments (text and artifacts in order)
+ * This preserves the original position of artifacts in the content
+ */
+export const parseContentSegments = (
+  content: string,
+  messageId: string
+): ContentSegment[] => {
+  if (!content) {
+    console.log('[ArtifactParser] No content to parse into segments');
+    return [];
+  }
+
+  const segments: ContentSegment[] = [];
+  const artifactRegex = /<jmeArtifact\s+([^>]+)>([\s\S]*?)<\/jmeArtifact>/g;
+  
+  let lastIndex = 0;
+  let artifactIndex = 0;
+  let match;
+
+  console.log('[ArtifactParser] Parsing content into segments');
+
+  while ((match = artifactRegex.exec(content)) !== null) {
+    const fullMatch = match[0]; // Full <jmeArtifact>...</jmeArtifact> tag
+    const attributeString = match[1];
+    const artifactContent = match[2];
+    const matchStart = match.index;
+
+    // Add text segment before this artifact (if any)
+    if (matchStart > lastIndex) {
+      const textContent = content.substring(lastIndex, matchStart).trim();
+      if (textContent) {
+        segments.push({
+          type: 'text',
+          content: textContent,
+        });
+        console.log('[ArtifactParser] Added text segment (length:', textContent.length, ')');
+      }
+    }
+
+    // Parse artifact attributes
+    const typeMatch = attributeString.match(/type=["']([^"']+)["']/);
+    const titleMatch = attributeString.match(/title=["']([^"']+)["']/);
+    const languageMatch = attributeString.match(/language=["']([^"']+)["']/);
+
+    if (typeMatch && titleMatch) {
+      const artifact: Artifact = {
+        id: `${messageId}-artifact-${artifactIndex}`,
+        type: typeMatch[1] as ArtifactType,
+        title: titleMatch[1],
+        content: artifactContent,
+        language: languageMatch?.[1],
+        timestamp: Date.now(),
+        messageId,
+        isStreaming: false,
+      };
+
+      segments.push({
+        type: 'artifact',
+        artifact,
+        originalTag: fullMatch,
+      });
+      
+      console.log('[ArtifactParser] Added artifact segment:', artifact.title);
+      artifactIndex++;
+    }
+
+    lastIndex = match.index + fullMatch.length;
+  }
+
+  // Add remaining text after last artifact (if any)
+  if (lastIndex < content.length) {
+    const textContent = content.substring(lastIndex).trim();
+    if (textContent) {
+      segments.push({
+        type: 'text',
+        content: textContent,
+      });
+      console.log('[ArtifactParser] Added final text segment (length:', textContent.length, ')');
+    }
+  }
+
+  console.log('[ArtifactParser] Total segments:', segments.length);
+  return segments;
+};
+
+/**
+ * Remove artifact tags from content for display (legacy)
  * Used to show the text content without artifact markup
+ * NOTE: This is kept for backward compatibility but parseContentSegments is preferred
  */
 export const stripArtifactTags = (content: string): string => {
   if (!content) return '';
@@ -184,4 +278,3 @@ export const extractCodeContent = (content: string): string => {
   // Remove leading/trailing backticks if present
   return content.replace(/```(\w*)\n/, '').replace(/```$/, '');
 };
-

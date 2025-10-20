@@ -40,7 +40,7 @@ import { shadows } from '@/constants/Shadows';
 import { isAudio, isImage } from '@/utils/FileTypeHelpers';
 import { CHAT_MESSAGE } from '@/constants/ChatConstants';
 import { handleErrorSilent } from '@/utils/ErrorHandler';
-import { extractArtifactsFromMessage, stripArtifactTags } from '@/utils/ArtifactParser';
+import { extractArtifactsFromMessage, stripArtifactTags, parseContentSegments, ContentSegment } from '@/utils/ArtifactParser';
 import ArtifactIndicator from './artifacts/ArtifactIndicator';
 import { Artifact } from '@/utils/ArtifactTypes';
 
@@ -245,29 +245,26 @@ const ChatMessage = memo(({
   const theme = useTheme();
   const styles = getStyles(theme);
 
-  // Extract artifacts from content directly (simpler approach for MVP)
-  const messageArtifacts = useMemo(() => {
-    // Always extract from content for bot messages - this is simpler and more reliable
+  // Parse content into segments (text and artifacts) to preserve original positions
+  const contentSegments = useMemo(() => {
+    // Parse into segments for bot messages - preserves artifact positions
     if (role === Role.Bot && content) {
-      const extracted = extractArtifactsFromMessage(content, 'message-' + (timestamp || Date.now()));
-      if (extracted.length > 0) {
-        console.log('[ChatMessage] ✅ Extracted artifacts from content:', extracted.length);
-        console.log('[ChatMessage] Artifacts:', extracted.map(a => ({ id: a.id, title: a.title, type: a.type })));
-      } else {
-        console.log('[ChatMessage] No artifacts found in content');
+      const segments = parseContentSegments(content, 'message-' + (timestamp || Date.now()));
+      if (segments.length > 0) {
+        const artifactCount = segments.filter(s => s.type === 'artifact').length;
+        console.log('[ChatMessage] ✅ Parsed content into', segments.length, 'segments (', artifactCount, 'artifacts)');
       }
-      return extracted;
+      return segments;
     }
-    return [];
+    return [{ type: 'text' as const, content }];
   }, [content, role, timestamp]);
 
-  // Strip artifact tags from content for display
-  const displayContent = useMemo(() => {
-    if (role === Role.Bot && messageArtifacts.length > 0) {
-      return stripArtifactTags(content);
-    }
-    return content;
-  }, [content, role, messageArtifacts]);
+  // Extract all artifacts from segments for external use (e.g., passing to parent)
+  const messageArtifacts = useMemo(() => {
+    return contentSegments
+      .filter((seg): seg is Extract<ContentSegment, { type: 'artifact' }> => seg.type === 'artifact')
+      .map(seg => seg.artifact);
+  }, [contentSegments]);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -762,6 +759,33 @@ const ChatMessage = memo(({
     );
   };
 
+  // Render content segments inline (text and artifacts in original order)
+  const renderContentSegments = () => {
+    return contentSegments.map((segment, index) => {
+      if (segment.type === 'text') {
+        // Render text segment
+        const textContent = segment.content;
+        if (!textContent || textContent.trim() === '') return null;
+        
+        return (
+          <View key={`text-${index}`} style={styles.segmentContainer}>
+            <MarkdownDisplay>{textContent}</MarkdownDisplay>
+          </View>
+        );
+      } else {
+        // Render artifact indicator inline
+        return (
+          <View key={`artifact-${index}`} style={styles.segmentContainer}>
+            <ArtifactIndicator
+              artifact={segment.artifact}
+              onPress={() => onArtifactPress?.(segment.artifact, messageArtifacts)}
+            />
+          </View>
+        );
+      }
+    });
+  };
+
   const renderContent = () => {
 
 
@@ -844,15 +868,15 @@ const ChatMessage = memo(({
                           >
                             <View style={styles.userTextWrapper}>
                               <MarkdownDisplay additionalStyles={{
-                                body: { color: '#FFFFFF' },
+                                body: { color: '#FFFFFF', lineHeight: 28 },
                                 heading1: { color: '#FFFFFF' },
                                 heading2: { color: '#FFFFFF' },
                                 heading3: { color: '#FFFFFF' },
                                 heading4: { color: '#FFFFFF' },
                                 heading5: { color: '#FFFFFF' },
                                 heading6: { color: '#FFFFFF' },
-                                paragraph: { color: '#FFFFFF' },
-                                text: { color: '#FFFFFF' },
+                                paragraph: { color: '#FFFFFF', lineHeight: 28 },
+                                text: { color: '#FFFFFF', lineHeight: 28 },
                               }}>
                                 {displayText}
                               </MarkdownDisplay>
@@ -884,8 +908,8 @@ const ChatMessage = memo(({
                     accessibilityRole="text"
                     testID="markdown-container"
                   >
-                    {/* Text content first for bot */}
-                    {displayContent && !isAudio(displayContent) && (
+                    {/* Render content segments inline (text and artifacts in original order) */}
+                    {contentSegments.length > 0 && !isAudio(content) && (
                       <View style={styles.botMessageWrapper}>
                         <Animated.View
                           style={[
@@ -895,7 +919,7 @@ const ChatMessage = memo(({
                             isSending && { width: 'auto', flex: 1 }, // Allow space for dot when streaming
                           ]}
                         >
-                          <MarkdownDisplay>{displayContent}</MarkdownDisplay>
+                          {renderContentSegments()}
                         </Animated.View>
                         {/* Show streaming cursor when actively sending */}
                         {isSending && <StreamingCursor />}
@@ -953,19 +977,6 @@ const ChatMessage = memo(({
                 </ContextMenu.Item>
               </ContextMenu.Content>
             </ContextMenu.Root>
-          )}
-          
-          {/* Render artifact indicators */}
-          {messageArtifacts.length > 0 && (
-            <View style={styles.artifactsContainer}>
-              {messageArtifacts.map((artifact) => (
-                <ArtifactIndicator
-                  key={artifact.id}
-                  artifact={artifact}
-                  onPress={() => onArtifactPress?.(artifact, messageArtifacts)}
-                />
-              ))}
-            </View>
           )}
           
           {/* Render AI-generated content (additional_data) - shown outside message bubble */}
@@ -1046,15 +1057,15 @@ const ChatMessage = memo(({
                     >
                       <View style={styles.userTextWrapper}>
                         <MarkdownDisplay additionalStyles={{
-                          body: { color: '#FFFFFF' },
+                          body: { color: '#FFFFFF', lineHeight: 28 },
                           heading1: { color: '#FFFFFF' },
                           heading2: { color: '#FFFFFF' },
                           heading3: { color: '#FFFFFF' },
                           heading4: { color: '#FFFFFF' },
                           heading5: { color: '#FFFFFF' },
                           heading6: { color: '#FFFFFF' },
-                          paragraph: { color: '#FFFFFF' },
-                          text: { color: '#FFFFFF' },
+                          paragraph: { color: '#FFFFFF', lineHeight: 28 },
+                          text: { color: '#FFFFFF', lineHeight: 28 },
                         }}>
                           {displayText}
                         </MarkdownDisplay>
@@ -1086,8 +1097,8 @@ const ChatMessage = memo(({
               accessibilityRole="text"
               testID="markdown-container"
             >
-              {/* Text content first for bot */}
-              {displayContent && !isAudio(displayContent) && (
+              {/* Render content segments inline (text and artifacts in original order) */}
+              {contentSegments.length > 0 && !isAudio(content) && (
                 <View style={styles.botMessageWrapper}>
                   <Animated.View
                     style={[
@@ -1097,7 +1108,7 @@ const ChatMessage = memo(({
                       isSending && { width: 'auto', flex: 1 }, // Allow space for dot when streaming
                     ]}
                   >
-                    <MarkdownDisplay>{displayContent}</MarkdownDisplay>
+                    {renderContentSegments()}
                   </Animated.View>
                   {/* Show streaming cursor when actively sending */}
                   {isSending && <StreamingCursor />}
@@ -1470,6 +1481,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   userText: {
     color: '#FFFFFF', // White text on primary blue background
     fontWeight: '500',
+    lineHeight: 28,
   },
   loadingVideo: {
     position: 'absolute',
@@ -1847,6 +1859,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   artifactsContainer: {
     marginTop: 12,
     gap: 8,
+  },
+  segmentContainer: {
+    width: '100%',
+    marginBottom: 4,
   },
   // Action Icons Styles
   actionIconsContainer: {
