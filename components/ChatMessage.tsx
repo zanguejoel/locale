@@ -654,7 +654,8 @@ const ChatMessage = memo(({
           >
             <Pressable
               onLongPress={onLongPress}
-              onPress={handlePress}
+              // ✅ REMOVED onPress={handlePress} to allow Link navigation to work
+              // The Link component handles the press for fullscreen navigation
               accessible={true}
               accessibilityLabel={`Image preview. ${prompt}`}
               accessibilityRole="image"

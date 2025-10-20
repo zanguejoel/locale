@@ -226,7 +226,8 @@ const GeneratedImageItem: React.FC<GeneratedImageItemProps> = ({
         asChild
       >
         <TouchableOpacity
-          onPress={handleImagePress}
+          // ✅ REMOVED onPress={handleImagePress} to allow Link navigation to fullscreen
+          // The Link component handles the press automatically for fullscreen view
           activeOpacity={0.9}
           accessibilityLabel={`Generated image ${index + 1} of ${totalImages}`}
           accessibilityRole="image"
