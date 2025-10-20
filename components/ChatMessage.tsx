@@ -34,10 +34,11 @@ import Feather from '@expo/vector-icons/Feather';
 import AnimatedText from './AnimatedText';
 
 import AudioPlayer from './AudioPlayer';
+import DocumentPreview from './DocumentPreview';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { shadows } from '@/constants/Shadows';
-import { isAudio, isImage } from '@/utils/FileTypeHelpers';
+import { isAudio, isImage, isDocument } from '@/utils/FileTypeHelpers';
 import { CHAT_MESSAGE } from '@/constants/ChatConstants';
 import { handleErrorSilent } from '@/utils/ErrorHandler';
 import { extractArtifactsFromMessage, stripArtifactTags, parseContentSegments, ContentSegment } from '@/utils/ArtifactParser';
@@ -463,7 +464,7 @@ const ChatMessage = memo(({
         await soundRef.current.unloadAsync();
 
         await soundRef.current.loadAsync(
-          { uri: content || files?.[0]?.s3_url || '' },
+          { uri: content || imageData || files?.[0]?.s3_url || '' },
           { progressUpdateIntervalMillis: 1 }
         );
         await soundRef.current.playAsync();
@@ -759,6 +760,34 @@ const ChatMessage = memo(({
     );
   };
 
+  const renderDocument = () => {
+    // Get document info from files array or imageData
+    const fileUri = files?.[0]?.s3_url || imageData || content;
+    const fileName = files?.[0]?.name || getFileNameFromPath(fileUri) || 'Document';
+    const fileSize = (files?.[0] as any)?.size; // Type assertion for size property
+    const mimeType = files?.[0]?.file_type || files?.[0]?.data_type;
+
+    const handleDocumentPress = () => {
+      // TODO: Implement document opening/downloading
+      Alert.alert('Document', `Open ${fileName}`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open', onPress: () => console.log('Open document:', fileUri) },
+      ]);
+    };
+
+    return (
+      <DocumentPreview
+        fileName={fileName}
+        fileSize={fileSize}
+        fileUri={fileUri}
+        mimeType={mimeType}
+        role={role}
+        onPress={handleDocumentPress}
+        onLongPress={onLongPress}
+      />
+    );
+  };
+
   // Render content segments inline (text and artifacts in original order)
   const renderContentSegments = () => {
     return contentSegments.map((segment, index) => {
@@ -808,9 +837,8 @@ const ChatMessage = memo(({
     if (ContextMenu) {
       return (
         <>
-          {(!isAudio(content)) && (
-            <ContextMenu.Root>
-              <ContextMenu.Trigger>
+          <ContextMenu.Root>
+            <ContextMenu.Trigger>
                 {role === Role.User ? (
                   // User message with gradient - includes text and media
                   <LinearGradient
@@ -886,9 +914,16 @@ const ChatMessage = memo(({
                       })()}
                       
                       {/* Audio content within message bubble */}
-                      {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+                      {(isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice') && (
                         <View style={styles.audioInMessage}>
                           {renderAudio()}
+                        </View>
+                      )}
+                      
+                      {/* Document content within message bubble */}
+                      {(isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document') && (
+                        <View style={styles.documentInMessage}>
+                          {renderDocument()}
                         </View>
                       )}
                     </Pressable>
@@ -909,7 +944,7 @@ const ChatMessage = memo(({
                     testID="markdown-container"
                   >
                     {/* Render content segments inline (text and artifacts in original order) */}
-                    {contentSegments.length > 0 && !isAudio(content) && (
+                    {contentSegments.length > 0 && !isAudio(content) && !isAudio(imageData || '') && (
                       <View style={styles.botMessageWrapper}>
                         <Animated.View
                           style={[
@@ -948,9 +983,16 @@ const ChatMessage = memo(({
                     })()}
                     
                     {/* Audio content within message bubble */}
-                    {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+                    {(isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice') && (
                       <View style={styles.audioInMessage}>
                         {renderAudio()}
+                      </View>
+                    )}
+                    
+                    {/* Document content within message bubble */}
+                    {(isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document') && (
+                      <View style={styles.documentInMessage}>
+                        {renderDocument()}
                       </View>
                     )}
                   </Pressable>
@@ -977,7 +1019,6 @@ const ChatMessage = memo(({
                 </ContextMenu.Item>
               </ContextMenu.Content>
             </ContextMenu.Root>
-          )}
           
           {/* Render AI-generated content (additional_data) - shown outside message bubble */}
           {(() => {
@@ -1075,9 +1116,16 @@ const ChatMessage = memo(({
                 })()}
                 
                 {/* Audio content within message bubble */}
-                {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+                {(isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice') && (
                   <View style={styles.audioInMessage}>
                     {renderAudio()}
+                  </View>
+                )}
+                
+                {/* Document content within message bubble */}
+                {(isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document') && (
+                  <View style={styles.documentInMessage}>
+                    {renderDocument()}
                   </View>
                 )}
               </Pressable>
@@ -1098,7 +1146,7 @@ const ChatMessage = memo(({
               testID="markdown-container"
             >
               {/* Render content segments inline (text and artifacts in original order) */}
-              {contentSegments.length > 0 && !isAudio(content) && (
+              {contentSegments.length > 0 && !isAudio(content) && !isAudio(imageData || '') && (
                 <View style={styles.botMessageWrapper}>
                   <Animated.View
                     style={[
@@ -1137,9 +1185,16 @@ const ChatMessage = memo(({
               })()}
               
               {/* Audio content within message bubble */}
-              {(isAudio(content) || files?.[0]?.file_type === 'voice') && (
+              {(isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice') && (
                 <View style={styles.audioInMessage}>
                   {renderAudio()}
+                </View>
+              )}
+              
+              {/* Document content within message bubble */}
+              {(isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document') && (
+                <View style={styles.documentInMessage}>
+                  {renderDocument()}
                 </View>
               )}
             </Pressable>
@@ -1448,6 +1503,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   audioInMessage: {
     width: '100%',
+  },
+  documentInMessage: {
+    width: '100%',
+    marginTop: 8,
   },
   userTextWrapper: {
     width: '100%',

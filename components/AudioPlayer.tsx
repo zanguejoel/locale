@@ -1,18 +1,19 @@
-import React from 'react';
-import { View, Pressable, StyleSheet, Platform } from 'react-native';
-import { AntDesign, Entypo } from '@expo/vector-icons';
+import React, { useEffect, useRef } from 'react';
+import { View, Pressable, StyleSheet, Platform, Text, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Waveform from './ui/Waveform/Waveform';
 import { Role } from '@/utils/Interfaces';
 import Colors from '@/constants/Colors';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface AudioPlayerProps {
     handleSeek: (progress: number) => void;
     duration: number;
     position: number;
     handlePress: () => void;
-    onLongPress?: () => void; // Make optional since it might be undefined
+    onLongPress?: () => void;
     role: Role;
     playAudio: () => void;
     isPlaying: boolean;
@@ -30,8 +31,41 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
 }) => {
     const theme = useTheme();
     const styles = getStyles(theme);
+    const pulseAnim = useRef(new Animated.Value(1)).current;
 
     const progress = duration > 0 ? position / duration : 0;
+
+    // Format time as MM:SS
+    const formatTime = (ms: number) => {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    // Pulse animation for playing state
+    useEffect(() => {
+        if (isPlaying) {
+            const animation = Animated.loop(
+                Animated.sequence([
+                    Animated.timing(pulseAnim, {
+                        toValue: 1.1,
+                        duration: 800,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(pulseAnim, {
+                        toValue: 1,
+                        duration: 800,
+                        useNativeDriver: true,
+                    }),
+                ])
+            );
+            animation.start();
+            return () => animation.stop();
+        } else {
+            pulseAnim.setValue(1);
+        }
+    }, [isPlaying, pulseAnim]);
 
     return (
         <Pressable
@@ -39,7 +73,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
             onPress={handlePress}
             style={[
                 styles.contentContainer,
-                styles.customPlayer,
                 role === Role.Bot ? styles.botContent : styles.userContent,
             ]}
             accessible
@@ -47,18 +80,51 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
             accessibilityRole="button"
             testID="audio-player-container"
         >
-            <Pressable style={styles.audioPlayer} onPress={playAudio} testID="audio-play-button">
-                {!isPlaying ? (
-                    <View style={styles.audioPlayer}>
-                        <AntDesign name="caretright" size={17} color={theme.colors.chatIcons} />
-                    </View>
-                ) : (
-                    <View style={styles.audioPlayer}>
-                        <Entypo name="controller-paus" size={17} color={theme.colors.chatIcons} />
-                    </View>
-                )}
+            {/* Play/Pause Button with modern circular design */}
+            <Pressable 
+                style={styles.playButtonContainer} 
+                onPress={playAudio} 
+                testID="audio-play-button"
+            >
+                <Animated.View style={[
+                    styles.playButton,
+                    role === Role.User && styles.playButtonUser,
+                    { transform: [{ scale: pulseAnim }] }
+                ]}>
+                    {!isPlaying ? (
+                        <Ionicons 
+                            name="play" 
+                            size={20} 
+                            color={role === Role.User ? '#FFFFFF' : theme.colors.primary} 
+                            style={styles.playIcon}
+                        />
+                    ) : (
+                        <Ionicons 
+                            name="pause" 
+                            size={20} 
+                            color={role === Role.User ? '#FFFFFF' : theme.colors.primary} 
+                        />
+                    )}
+                </Animated.View>
             </Pressable>
-            <Waveform onSeek={handleSeek} progress={progress} />
+
+            {/* Waveform and duration container */}
+            <View style={styles.waveformContainer}>
+                <Waveform 
+                    onSeek={handleSeek} 
+                    progress={progress} 
+                    isPlaying={isPlaying}
+                    role={role}
+                />
+                <View style={styles.durationContainer}>
+                    <Text style={[
+                        styles.durationText,
+                        role === Role.User && styles.durationTextUser
+                    ]}>
+                        {formatTime(position)} / {formatTime(duration)}
+                    </Text>
+                </View>
+            </View>
         </Pressable>
     );
 };
@@ -66,42 +132,72 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
 export default AudioPlayer;
 
 const getStyles = (theme: Theme) => StyleSheet.create({
-    audioPlayer: {
+    contentContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 8,
-        marginRight: 4,
-        width: 30
-    },
-    contentContainer: {
-        borderRadius: 15,
-        paddingHorizontal: 12,
-        maxWidth: '100%',
-        backgroundColor: 'transparent', // Default background for efficient shadow calculation
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        minWidth: 260,
+        maxWidth: 320,
+        gap: 12,
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.2,
-                shadowRadius: 2,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 8,
             },
             android: {
-                elevation: 2,
+                elevation: 3,
             },
         }),
     },
     botContent: {
-        backgroundColor: `${Colors.common.greyLight}20`,
-        borderBottomLeftRadius: 4,
+        backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
     },
     userContent: {
-        backgroundColor: `${Colors.common.primary}20`,
-        borderBottomRightRadius: 4,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
     },
-    customPlayer: {
+    playButtonContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    playButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    },
+    playButtonUser: {
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    playIcon: {
+        marginLeft: 2, // Optical alignment for play icon
+    },
+    waveformContainer: {
+        flex: 1,
+        gap: 8,
+    },
+    durationContainer: {
         flexDirection: 'row',
-        width: 210,
-        paddingVertical: 8,
+        justifyContent: 'flex-end',
+        marginTop: 4,
+    },
+    durationText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: theme.colors.textSecondary,
+        opacity: 0.8,
+        fontVariant: ['tabular-nums'],
+        letterSpacing: 0.3,
+    },
+    durationTextUser: {
+        color: 'rgba(255, 255, 255, 0.9)',
     },
 });

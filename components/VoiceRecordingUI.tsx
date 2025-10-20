@@ -155,10 +155,10 @@ export const VoiceRecordingUI: React.FC<VoiceRecordingUIProps> = ({
       </View>
 
       {/* Slide to cancel hint */}
-      <View style={styles.footer}>
+      {/* <View style={styles.footer}>
         <Ionicons name="chevron-back" size={16} color={theme.colors.textSecondary} />
         <Text style={styles.cancelHint}>Slide to cancel</Text>
-      </View>
+      </View> */}
     </Animated.View>
   );
 };
@@ -166,7 +166,7 @@ export const VoiceRecordingUI: React.FC<VoiceRecordingUIProps> = ({
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 10,
+    bottom: 100,
     left: 16,
     right: 16,
     backgroundColor: theme.colors.card,

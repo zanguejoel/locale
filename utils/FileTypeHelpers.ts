@@ -159,6 +159,31 @@ export function isVideo(fileOrUri: string): boolean {
 }
 
 /**
+ * Check if a file or URI is a document (PDF, Word, Excel, etc.)
+ */
+export function isDocument(fileOrUri: string): boolean {
+  if (!fileOrUri) return false;
+  
+  const extension = fileOrUri.split('.').pop()?.toLowerCase() || '';
+  const documentExtensions = [
+    // Documents
+    'pdf', 'doc', 'docx', 'odt', 'rtf', 'txt', 'md',
+    // Spreadsheets
+    'xls', 'xlsx', 'csv', 'ods',
+    // Presentations
+    'ppt', 'pptx', 'odp', 'key',
+    // Archives
+    'zip', 'rar', '7z', 'tar', 'gz', 'bz2',
+    // Code files
+    'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'swift', 'go', 'rs', 'php', 'rb', 'css', 'html', 'json', 'xml', 'yaml', 'yml'
+  ];
+  
+  return documentExtensions.includes(extension) || 
+         fileOrUri.includes('application/') ||
+         fileOrUri.includes('text/');
+}
+
+/**
  * Format file size in human-readable format
  */
 export function formatFileSize(bytes: number | undefined): string {
@@ -220,6 +245,7 @@ export default {
   isImage,
   isAudio,
   isVideo,
+  isDocument,
   formatFileSize,
   validateFileSize,
   validateTotalSize,
