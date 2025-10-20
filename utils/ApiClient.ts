@@ -6,6 +6,11 @@ import { storage } from '@/hooks/useMMKVStorage';
 export const API_URL_DEV = "https://api-alpha.odysseytech.ai";
 // export const API_URL_PROD = "https://api.odysseytech.ai";
 export const API_URL_PROD = API_URL_DEV;
+
+// Event listeners for session expiration
+type SessionExpiredListener = () => void;
+const sessionExpiredListeners: Set<SessionExpiredListener> = new Set();
+// export const API_URL_PROD = API_URL_DEV;
 // Types and Interfaces
 interface Config {
   MAX_RETRIES: number;
@@ -139,6 +144,30 @@ class ApiClient {
     this.setupResponseTransform();
   }
 
+  /**
+   * Subscribe to session expiration events
+   * @param listener Callback to invoke when session expires
+   * @returns Unsubscribe function
+   */
+  public onSessionExpired(listener: SessionExpiredListener): () => void {
+    sessionExpiredListeners.add(listener);
+    return () => sessionExpiredListeners.delete(listener);
+  }
+
+  /**
+   * Notify all listeners that the session has expired
+   */
+  private notifySessionExpired(): void {
+    console.log('[ApiClient] Notifying session expired to', sessionExpiredListeners.size, 'listeners');
+    sessionExpiredListeners.forEach(listener => {
+      try {
+        listener();
+      } catch (error) {
+        console.error('[ApiClient] Error in session expired listener:', error);
+      }
+    });
+  }
+
   private setupInterceptors(): void {
     // Request interceptor
     this.api.axiosInstance.interceptors.request.use(
@@ -159,6 +188,7 @@ class ApiClient {
                 config.headers['Authorization'] = newToken;
               } catch (error) {
                 console.error('[ApiClient] Proactive refresh failed, rejecting request');
+                this.notifySessionExpired();
                 return Promise.reject(new Error('SESSION_EXPIRED'));
               }
             }
@@ -285,6 +315,8 @@ class ApiClient {
       console.error('[ApiClient] Token refresh error:', error);
       // Clear tokens on refresh failure
       await clearAllTokens();
+      // Notify listeners that session has expired
+      this.notifySessionExpired();
       throw error;
     }
   }
@@ -388,6 +420,8 @@ class ApiClient {
         
       } catch (refreshError) {
         console.error('[ApiClient] Token refresh failed - session expired');
+        // Notify listeners (if not already notified by refreshToken method)
+        this.notifySessionExpired();
         // Token refresh failed - user needs to re-login
         const sessionExpiredError = new Error('SESSION_EXPIRED');
         (sessionExpiredError as any).originalError = refreshError;

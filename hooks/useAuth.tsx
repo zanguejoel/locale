@@ -49,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const isMountedRef = useRef(true);
+  const isHandlingSessionExpiration = useRef(false);
 
   // Set initial loading state only once on mount
   useEffect(() => {
@@ -103,33 +104,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Handle API session expiration errors
   useEffect(() => {
-    // Global error handler for API errors
-    const handleGlobalError = (error: any) => {
-      if (error?.message === 'SESSION_EXPIRED') {
-        console.log('[Auth] Session expired detected, signing out user');
-        
-        // Show alert to user
-        Alert.alert(
-          'Session Expired',
-          'Your session has expired. Please sign in again.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                signOut();
-              }
-            }
-          ]
-        );
-      }
-    };
-
-    // Note: This is a placeholder for global error handling
-    // You may want to implement a proper event emitter system
-    // or integrate with your existing error handling infrastructure
+    console.log('[Auth] Setting up session expiration listener');
     
+    // Subscribe to session expiration events from ApiClient
+    const unsubscribe = api.onSessionExpired(async () => {
+      // Prevent multiple simultaneous session expiration handlers
+      if (isHandlingSessionExpiration.current) {
+        console.log('[Auth] Already handling session expiration, skipping');
+        return;
+      }
+      
+      isHandlingSessionExpiration.current = true;
+      console.log('[Auth] Session expired event received from ApiClient');
+      
+      // Track session expiration (non-blocking)
+      mixpanelService.trackAuth(AuthEvent.LOGOUT, {
+        reason: 'session_expired',
+      }).catch(err => console.warn('[Mixpanel] Tracking failed:', err));
+      
+      // Reset Mixpanel user (non-blocking)
+      mixpanelService.reset().catch(err => console.warn('[Mixpanel] Reset failed:', err));
+      
+      // Clear auth state immediately
+      await clearAllTokens();
+      
+      if (isMountedRef.current) {
+        setUser(null);
+        setIsSignedIn(false);
+      }
+      
+      // Show alert to user (after state is cleared)
+      Alert.alert(
+        'Session Expired',
+        'Your session has expired. Please sign in again.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              isHandlingSessionExpiration.current = false;
+            }
+          }
+        ],
+        { 
+          cancelable: false,
+          onDismiss: () => {
+            isHandlingSessionExpiration.current = false;
+          }
+        }
+      );
+    });
+
     return () => {
-      // Cleanup if needed
+      console.log('[Auth] Cleaning up session expiration listener');
+      unsubscribe();
     };
   }, []);
 

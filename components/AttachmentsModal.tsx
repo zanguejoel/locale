@@ -15,6 +15,7 @@ import { Theme } from '@/constants/Types';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { GenerationOptionsState } from './GenerationOptions';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AttachmentsModalProps {
   visible: boolean;
@@ -38,7 +39,8 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
   onGenerationOptionsChange,
 }) => {
   const theme = useTheme();
-  const styles = getStyles(theme);
+  const insets = useSafeAreaInsets();
+  const styles = getStyles(theme, insets);
 
   const handleOptionPress = async (action: () => void) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -506,39 +508,43 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        {Platform.OS === 'ios' ? (
-          <BlurView intensity={50} tint={theme.isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
-            <View style={styles.blurContent} />
-          </BlurView>
-        ) : (
-          <View style={styles.androidOverlay} />
-        )}
-
+      <View style={styles.container}>
         <TouchableOpacity
-          style={styles.modalContent}
+          style={styles.overlay}
           activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
+          onPress={onClose}
         >
-          <View style={styles.modalCard}>
-            {renderUnifiedView()}
-          </View>
+          {Platform.OS === 'ios' ? (
+            <BlurView intensity={50} tint={theme.isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
+              <View style={styles.blurContent} />
+            </BlurView>
+          ) : (
+            <View style={styles.androidOverlay} />
+          )}
         </TouchableOpacity>
-      </TouchableOpacity>
+
+        <View style={styles.modalContent}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={styles.modalCard}
+          >
+            {renderUnifiedView()}
+          </TouchableOpacity>
+        </View>
+      </View>
     </Modal>
   );
 };
 
-const getStyles = (theme: Theme) =>
+const getStyles = (theme: Theme, insets: { bottom: number }) =>
   StyleSheet.create({
-    overlay: {
+    container: {
       flex: 1,
       justifyContent: 'flex-end',
-     // backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+    },
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
     },
     blurContent: {
       flex: 1,
@@ -548,8 +554,11 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
     },
     modalContent: {
-      padding: 0,
-      paddingBottom: 0,
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      maxHeight: '85%',
     },
     modalCard: {
       backgroundColor: theme.colors.background,
@@ -558,8 +567,7 @@ const getStyles = (theme: Theme) =>
       borderBottomLeftRadius: 0,
       borderBottomRightRadius: 0,
       padding: 20,
-      paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-      height: '80%',
+      paddingBottom: Math.max(insets.bottom, 20),
       ...Platform.select({
         ios: {
           shadowColor: '#000',
@@ -746,7 +754,7 @@ const getStyles = (theme: Theme) =>
     },
     // AI Options view styles
     scrollContent: {
-      maxHeight: 500,
+      flex: 1,
     },
     scrollContentContainer: {
       paddingBottom: 10,

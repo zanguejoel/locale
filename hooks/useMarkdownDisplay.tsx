@@ -391,15 +391,21 @@ const useMarkdownDisplay = () => {
       children,
       additionalStyles = {},
       additionalRules = {},
-    }: MarkdownDisplayProps) => (
-      <Markdown
-        rules={{ ...additionalRules }}
-        onLinkPress={url => handleNavigation(url)}
-        style={{ ...markdownStyles, ...additionalStyles }}
-      >
-        {children}
-      </Markdown>
-    ),
+    }: MarkdownDisplayProps) => {
+      // Escape (c) to prevent conversion to copyright symbol
+      // We'll use a zero-width space to break the pattern
+      const processedChildren = children.replace(/\(c\)/gi, '(c\u200B)');
+      
+      return (
+        <Markdown
+          rules={{ ...customRules, ...additionalRules }}
+          onLinkPress={url => handleNavigation(url)}
+          style={{ ...markdownStyles, ...additionalStyles }}
+        >
+          {processedChildren}
+        </Markdown>
+      );
+    },
     [markdownStyles, customRules],
   );
 

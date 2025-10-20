@@ -131,9 +131,10 @@ const Layout = () => {
     if (user?.email) {
       router.replace("/(chat)/new");
     } else if (!isSignedIn) {
+      console.log('[Layout] User not signed in, redirecting to login');
       router.replace("/login");
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, user, isInitialLoading]);
 
   if (isInitialLoading) {
     return <Slot />;

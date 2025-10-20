@@ -162,7 +162,7 @@ const ErrorBanner: React.FC<ErrorBannerProps> = ({
           defaultAction: {
             text: 'Upgrade',
             onPress: () => {
-              Linking.openURL('https://odysseytech.ai/dashboard/settings?tab=usage');
+              Linking.openURL('https://www.odysseytech.ai/dashboard/settings?tab=usage');
             },
           },
         };
