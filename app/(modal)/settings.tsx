@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from "react";
 import { useChat } from '@/hooks/useChat';
 import { Theme } from '@/constants/Types';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme, ThemeMode, setThemeMode } from '@/hooks/useTheme';
 import useMMKVStorage, { storage } from '@/hooks/useMMKVStorage';
 import { DEFAULT_MODEL_ID, getModelById, isLlamaModel } from '@/constants/Models';
 import ModelSelectorModal from '@/components/modals/ModelSelectorModal/ModelSelectorModal';
@@ -47,27 +47,32 @@ const rawPage = [{
   icon: 'chatbubbles-outline'
 }, {
   id: 5,
+  key: 'theme',
+  title: 'Theme',
+  icon: 'color-palette-outline'
+}, {
+  id: 6,
   key: 'model-manager',
   title: 'Manage Downloaded Models',
   icon: 'folder-open-outline'
 }, /* {
-  id: 6,
+  id: 7,
   key: 'backend-downloads',
   title: 'Use Backend Model Downloads',
   icon: 'cloud-download-outline',
   hasToggle: true
 }, */ {
-  id: 7,
+  id: 8,
   key: 'clear-all-chats',
   title: 'Clear All Chats',
   icon: 'trash-outline'
 }, {
-  id: 8,
+  id: 9,
   key: 'change-password',
   title: 'Change password',
   icon: 'settings-outline'
 }, {
-  id: 9,
+  id: 10,
   key: 'sign_out',
   title: 'Sign Out',
   icon: 'log-out-outline'
@@ -236,6 +241,49 @@ const Page = () => {
     );
   };
 
+  const handleThemeSelection = () => {
+    Alert.alert(
+      'Select Theme',
+      'Choose your preferred theme',
+      [
+        {
+          text: 'System',
+          onPress: async () => {
+            setThemeMode('system');
+            await mixpanelService.trackSettings(SettingsEvent.SETTINGS_ITEM_CLICKED, {
+              item_name: 'Theme',
+              value: 'system'
+            });
+          },
+        },
+        {
+          text: 'Light',
+          onPress: async () => {
+            setThemeMode('light');
+            await mixpanelService.trackSettings(SettingsEvent.SETTINGS_ITEM_CLICKED, {
+              item_name: 'Theme',
+              value: 'light'
+            });
+          },
+        },
+        {
+          text: 'Dark',
+          onPress: async () => {
+            setThemeMode('dark');
+            await mixpanelService.trackSettings(SettingsEvent.SETTINGS_ITEM_CLICKED, {
+              item_name: 'Theme',
+              value: 'dark'
+            });
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
   const handleToggleBackendDownloads = () => {
     const newValue = !backendDownloadsEnabled;
     setBackendDownloadsEnabled(newValue);
@@ -280,6 +328,8 @@ const Page = () => {
         return router.push('/plans-pricing')
       case 'default-model':
         return setIsModelSelectorVisible(true)
+      case 'theme':
+        return handleThemeSelection()
       case 'model-manager':
         return router.push('/model-manager')
       case 'backend-downloads':
@@ -312,6 +362,11 @@ const Page = () => {
             <Text style={styles.menuItemText}>{item.title}</Text>
             {item.key === 'default-model' && selectedModel && (
               <Text style={styles.menuItemSubtext}>{selectedModel.displayName}</Text>
+            )}
+            {item.key === 'theme' && (
+              <Text style={styles.menuItemSubtext}>
+                {theme.themeMode.charAt(0).toUpperCase() + theme.themeMode.slice(1)}
+              </Text>
             )}
             {item.key === 'model-manager' && deviceSupportsLocal && (
               <Text style={styles.menuItemSubtext}>

@@ -12,6 +12,7 @@ export interface GenerationOptionsState {
   imageProvider: string; // 'openai', 'gemini'
   imageModel: string; // 'gpt-image-1', 'gemini-2.5-flash-image-preview'
   generateVideo: string; // 'none', 'aws_nova_reel', 'google_veo2', 'google_veo3', 'google_veo3_audio'
+  enableArtifacts: boolean; // Enable/disable artifact generation
 }
 
 interface GenerationOptionsProps {

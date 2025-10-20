@@ -59,6 +59,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
     imageProvider: 'openai', // Changed from 'stability' to 'openai' (backend supports this)
     imageModel: 'gpt-image-1', // Changed from 'stable-diffusion-xl' to 'gpt-image-1'
     generateVideo: 'none',
+    enableArtifacts: true, // Enable artifacts by default
   });
 
   // Attachments modal state
@@ -199,6 +200,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
         imageModel: generationOptions.imageModel,
       }),
       generateVideo: generationOptions.generateVideo,
+      enableArtifacts: generationOptions.enableArtifacts,
       files: files.length > 0 ? files : undefined, // Pass files array in options
     } : undefined;
     

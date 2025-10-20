@@ -44,6 +44,8 @@ import ErrorBanner from '@/components/ErrorBanner';
 import EnhancedEmptyState from '@/components/EnhancedEmptyState';
 import { SelectedFile } from '@/components/FilePreviewModal';
 import CreditPurchaseModal from '@/components/CreditPurchaseModal';
+import ArtifactViewerModal from '@/components/artifacts/ArtifactViewerModal';
+import { Artifact } from '@/utils/ArtifactTypes';
 
 // Helper function to get time-based greeting
 const getGreeting = (firstName: string = 'there') => {
@@ -93,6 +95,11 @@ const ChatPage = () => {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [errorState, setErrorState] = useState<{ show: boolean; type: 'network' | 'api' | 'permission' | 'model' | 'generic'; message: string } | null>(null);
   const [showCreditPurchaseModal, setShowCreditPurchaseModal] = useState(false);
+  
+  // Artifact modal state
+  const [artifactModalVisible, setArtifactModalVisible] = useState(false);
+  const [selectedArtifacts, setSelectedArtifacts] = useState<Artifact[]>([]);
+  const [selectedArtifactIndex, setSelectedArtifactIndex] = useState(0);
 
 
   // Animation values
@@ -125,7 +132,10 @@ const ChatPage = () => {
     currentConversationId,
     createNewConversation,
     chatError,
-    clearChatError
+    clearChatError,
+    artifacts,
+    currentStreamingArtifact,
+    getArtifactsForMessage,
   } = chat;
 
 
@@ -141,6 +151,29 @@ const ChatPage = () => {
       return fetchMessages(id);
     }
   }, [id, fetchMessages]);
+
+  // Handle artifact press
+  const handleArtifactPress = useCallback((artifact: Artifact, allMessageArtifacts?: Artifact[]) => {
+    console.log('[ChatPage] Artifact pressed:', artifact.title);
+    
+    // Use provided artifacts if available, otherwise just show the single artifact
+    const artifactsToShow = allMessageArtifacts && allMessageArtifacts.length > 0 
+      ? allMessageArtifacts 
+      : [artifact];
+    
+    // Find index of pressed artifact
+    const index = artifactsToShow.findIndex(a => a.id === artifact.id);
+    
+    console.log('[ChatPage] Opening modal with', artifactsToShow.length, 'artifacts, index:', index);
+    
+    setSelectedArtifacts(artifactsToShow);
+    setSelectedArtifactIndex(index !== -1 ? index : 0);
+    setArtifactModalVisible(true);
+  }, []);
+
+  const handleCloseArtifactModal = useCallback(() => {
+    setArtifactModalVisible(false);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -507,6 +540,7 @@ const ChatPage = () => {
               isFirstInGroup={isFirstInGroup}
               isLastInGroup={isLastInGroup}
               isOnlyInGroup={isOnlyInGroup}
+              onArtifactPress={handleArtifactPress}
             />
             {item.reactions && item.reactions.length > 0 && (
               <MessageReactions
@@ -792,6 +826,14 @@ const ChatPage = () => {
           if (id) fetchMessages(id);
         }}
         source={chatError?.type === 'credit' ? 'error_banner' : 'header_badge'}
+      />
+      
+      {/* Artifact Viewer Modal */}
+      <ArtifactViewerModal
+        visible={artifactModalVisible}
+        artifacts={selectedArtifacts}
+        initialIndex={selectedArtifactIndex}
+        onClose={handleCloseArtifactModal}
       />
     </GradientBackground>
   );

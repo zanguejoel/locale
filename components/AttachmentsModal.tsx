@@ -53,6 +53,12 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
     onGenerationOptionsChange({ ...generationOptions, webSearch: !generationOptions.webSearch });
   };
 
+  const handleToggleArtifacts = () => {
+    if (!generationOptions || !onGenerationOptionsChange) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onGenerationOptionsChange({ ...generationOptions, enableArtifacts: !generationOptions.enableArtifacts });
+  };
+
   const handleImageGenerationChange = (value: string) => {
     if (!generationOptions || !onGenerationOptionsChange) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -79,6 +85,11 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
   // Unified view with both attachments and AI options
   const renderUnifiedView = () => (
     <>
+      {/* Drag Handle */}
+      <View style={styles.handleContainer}>
+        <View style={styles.handle} />
+      </View>
+
       <View style={styles.header}>
         <Text style={styles.title}>Attachments & AI</Text>
         <TouchableOpacity
@@ -141,13 +152,19 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
             {/* Divider */}
             <View style={styles.divider} />
 
+            {/* AI Options Header */}
+            <View style={styles.sectionHeader}>
+              <Ionicons name="sparkles" size={18} color={theme.colors.primary} />
+              <Text style={styles.sectionTitle}>AI Options</Text>
+            </View>
+
             {/* Compact AI Options Cards */}
             <View style={styles.aiOptionsGrid}>
               {/* Web Search Toggle */}
               <TouchableOpacity
                 style={[
-                  styles.compactCard,
-                  generationOptions.webSearch && styles.compactCardActive
+                  styles.singleLineCard,
+                  generationOptions.webSearch && styles.singleLineCardActive
                 ]}
                 onPress={handleToggleWebSearch}
                 activeOpacity={0.7}
@@ -155,30 +172,55 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
                 accessibilityRole="switch"
                 accessibilityState={{ checked: generationOptions.webSearch }}
               >
-                <View style={styles.compactCardHeader}>
-                  <View style={[styles.compactIconBadge, { backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)' }]}>
-                    <Ionicons name="search" size={18} color={theme.colors.primary} />
-                  </View>
-                  <Switch
-                    value={generationOptions.webSearch}
-                    onValueChange={handleToggleWebSearch}
-                    trackColor={{ 
-                      false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
-                      true: theme.colors.primary 
-                    }}
-                    thumbColor="#FFFFFF"
-                    ios_backgroundColor={theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
-                  />
+                <View style={[styles.iconBadge, { backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)' }]}>
+                  <Ionicons name="search" size={18} color={theme.colors.primary} />
                 </View>
-                <Text style={styles.compactCardTitle}>Web Search</Text>
-                <Text style={styles.compactCardDescription}>Real-time information</Text>
+                <Text style={styles.optionTitle}>Web Search</Text>
+                <Switch
+                  value={generationOptions.webSearch}
+                  onValueChange={handleToggleWebSearch}
+                  trackColor={{ 
+                    false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
+                    true: theme.colors.primary 
+                  }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
+                />
+              </TouchableOpacity>
+
+              {/* Artifacts Toggle */}
+              <TouchableOpacity
+                style={[
+                  styles.singleLineCard,
+                  generationOptions.enableArtifacts && styles.singleLineCardActive
+                ]}
+                onPress={handleToggleArtifacts}
+                activeOpacity={0.7}
+                accessibilityLabel="Toggle artifacts"
+                accessibilityRole="switch"
+                accessibilityState={{ checked: generationOptions.enableArtifacts }}
+              >
+                <View style={[styles.iconBadge, { backgroundColor: theme.isDark ? 'rgba(147, 51, 234, 0.2)' : 'rgba(147, 51, 234, 0.15)' }]}>
+                  <Ionicons name="cube" size={18} color="#9333ea" />
+                </View>
+                <Text style={styles.optionTitle}>Artifacts</Text>
+                <Switch
+                  value={generationOptions.enableArtifacts}
+                  onValueChange={handleToggleArtifacts}
+                  trackColor={{ 
+                    false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
+                    true: '#9333ea' 
+                  }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
+                />
               </TouchableOpacity>
 
               {/* Image Generation Toggle */}
               <TouchableOpacity
                 style={[
-                  styles.compactCard,
-                  generationOptions.generateImage !== 'none' && styles.compactCardActive
+                  styles.singleLineCard,
+                  generationOptions.generateImage !== 'none' && styles.singleLineCardActive
                 ]}
                 onPress={() => {
                   const nextValue = generationOptions.generateImage === 'none' ? 'auto' : 'none';
@@ -189,28 +231,22 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
                 accessibilityRole="switch"
                 accessibilityState={{ checked: generationOptions.generateImage !== 'none' }}
               >
-                <View style={styles.compactCardHeader}>
-                  <View style={[styles.compactIconBadge, { backgroundColor: theme.isDark ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.15)' }]}>
-                    <Ionicons name="image" size={18} color="#a855f7" />
-                  </View>
-                  <Switch
-                    value={generationOptions.generateImage !== 'none'}
-                    onValueChange={(value) => {
-                      handleImageGenerationChange(value ? 'auto' : 'none');
-                    }}
-                    trackColor={{ 
-                      false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
-                      true: '#a855f7' 
-                    }}
-                    thumbColor="#FFFFFF"
-                    ios_backgroundColor={theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
-                  />
+                <View style={[styles.iconBadge, { backgroundColor: theme.isDark ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.15)' }]}>
+                  <Ionicons name="image" size={18} color="#a855f7" />
                 </View>
-                <Text style={styles.compactCardTitle}>Image Generation</Text>
-                <Text style={styles.compactCardDescription}>
-                  {generationOptions.generateImage === 'none' ? 'Off' : 
-                   generationOptions.generateImage === 'auto' ? 'Auto' : 'Always'}
-                </Text>
+                <Text style={styles.optionTitle}>Image Generation</Text>
+                <Switch
+                  value={generationOptions.generateImage !== 'none'}
+                  onValueChange={(value) => {
+                    handleImageGenerationChange(value ? 'auto' : 'none');
+                  }}
+                  trackColor={{ 
+                    false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
+                    true: '#a855f7' 
+                  }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
+                />
               </TouchableOpacity>
             </View>
 
@@ -292,7 +328,7 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
             {/* Video Generation */}
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
-                <View style={[styles.compactIconBadge, { backgroundColor: theme.isDark ? 'rgba(236, 72, 153, 0.2)' : 'rgba(236, 72, 153, 0.15)' }]}>
+                <View style={[styles.iconBadge, { backgroundColor: theme.isDark ? 'rgba(236, 72, 153, 0.2)' : 'rgba(236, 72, 153, 0.15)' }]}>
                   <Ionicons name="videocam" size={18} color="#ec4899" />
                 </View>
                 <View>
@@ -476,7 +512,7 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
         onPress={onClose}
       >
         {Platform.OS === 'ios' ? (
-          <BlurView intensity={80} tint={theme.isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
+          <BlurView intensity={50} tint={theme.isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
             <View style={styles.blurContent} />
           </BlurView>
         ) : (
@@ -502,7 +538,7 @@ const getStyles = (theme: Theme) =>
     overlay: {
       flex: 1,
       justifyContent: 'flex-end',
-      backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+     // backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
     },
     blurContent: {
       flex: 1,
@@ -512,14 +548,18 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
     },
     modalContent: {
-      padding: 16,
-      paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+      padding: 0,
+      paddingBottom: 0,
     },
     modalCard: {
       backgroundColor: theme.colors.background,
-      borderRadius: 24,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
       padding: 20,
-      maxHeight: '85%',
+      paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+      height: '80%',
       ...Platform.select({
         ios: {
           shadowColor: '#000',
@@ -531,6 +571,18 @@ const getStyles = (theme: Theme) =>
           elevation: 8,
         },
       }),
+    },
+    // Drag Handle
+    handleContainer: {
+      alignItems: 'center',
+      paddingVertical: 8,
+      marginBottom: 8,
+    },
+    handle: {
+      width: 40,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
     },
     header: {
       flexDirection: 'row',
@@ -579,46 +631,54 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
       marginVertical: 20,
     },
+    // Section Header
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 16,
+      paddingHorizontal: 4,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
     // Compact AI Options Cards
     aiOptionsGrid: {
-      flexDirection: 'row',
+      flexDirection: 'column',
       gap: 12,
-      marginBottom: 16,
+      marginBottom: 20,
     },
-    compactCard: {
-      flex: 1,
+    // Single Line Cards (Icon + Title + Switch)
+    singleLineCard: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-      borderRadius: 16,
-      padding: 14,
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
       borderWidth: 1.5,
       borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+      gap: 12,
     },
-    compactCardActive: {
+    singleLineCardActive: {
       borderColor: theme.colors.primary + '40',
       backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.05)',
     },
-    compactCardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 10,
-    },
-    compactIconBadge: {
+    iconBadge: {
       width: 36,
       height: 36,
       borderRadius: 10,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    compactCardTitle: {
-      fontSize: 15,
+    optionTitle: {
+      flex: 1,
+      fontSize: 16,
       fontWeight: '600',
       color: theme.colors.text,
-      marginBottom: 4,
-    },
-    compactCardDescription: {
-      fontSize: 12,
-      color: theme.colors.textSecondary,
     },
     // Expanded Section for Image Options
     expandedSection: {

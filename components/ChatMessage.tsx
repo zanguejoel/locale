@@ -39,6 +39,9 @@ import { shadows } from '@/constants/Shadows';
 import { isAudio, isImage } from '@/utils/FileTypeHelpers';
 import { CHAT_MESSAGE } from '@/constants/ChatConstants';
 import { handleErrorSilent } from '@/utils/ErrorHandler';
+import { extractArtifactsFromMessage, stripArtifactTags } from '@/utils/ArtifactParser';
+import ArtifactIndicator from './artifacts/ArtifactIndicator';
+import { Artifact } from '@/utils/ArtifactTypes';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -62,6 +65,9 @@ interface ChatMessageProps extends Message {
   isFirstInGroup?: boolean;
   isLastInGroup?: boolean;
   isOnlyInGroup?: boolean;
+  // Artifact props
+  onArtifactPress?: (artifact: Artifact, allMessageArtifacts?: Artifact[]) => void;
+  artifacts?: Artifact[];
 }
 
 const contextItems = [
@@ -215,10 +221,36 @@ const ChatMessage = memo(({
   additional_data,
   isFirstInGroup = false,
   isLastInGroup = false,
-  isOnlyInGroup = false
+  isOnlyInGroup = false,
+  onArtifactPress,
+  artifacts: providedArtifacts,
 }: ChatMessageProps) => {
   const theme = useTheme();
   const styles = getStyles(theme);
+
+  // Extract artifacts from content directly (simpler approach for MVP)
+  const messageArtifacts = useMemo(() => {
+    // Always extract from content for bot messages - this is simpler and more reliable
+    if (role === Role.Bot && content) {
+      const extracted = extractArtifactsFromMessage(content, 'message-' + (timestamp || Date.now()));
+      if (extracted.length > 0) {
+        console.log('[ChatMessage] ✅ Extracted artifacts from content:', extracted.length);
+        console.log('[ChatMessage] Artifacts:', extracted.map(a => ({ id: a.id, title: a.title, type: a.type })));
+      } else {
+        console.log('[ChatMessage] No artifacts found in content');
+      }
+      return extracted;
+    }
+    return [];
+  }, [content, role, timestamp]);
+
+  // Strip artifact tags from content for display
+  const displayContent = useMemo(() => {
+    if (role === Role.Bot && messageArtifacts.length > 0) {
+      return stripArtifactTags(content);
+    }
+    return content;
+  }, [content, role, messageArtifacts]);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -836,7 +868,7 @@ const ChatMessage = memo(({
                     testID="markdown-container"
                   >
                     {/* Text content first for bot */}
-                    {content && !isAudio(content) && (
+                    {displayContent && !isAudio(displayContent) && (
                       <View style={styles.botMessageWrapper}>
                         <Animated.View
                           style={[
@@ -846,7 +878,7 @@ const ChatMessage = memo(({
                             isSending && { width: 'auto', flex: 1 }, // Allow space for dot when streaming
                           ]}
                         >
-                          <MarkdownDisplay>{content}</MarkdownDisplay>
+                          <MarkdownDisplay>{displayContent}</MarkdownDisplay>
                         </Animated.View>
                         {/* Show streaming cursor when actively sending */}
                         {isSending && <StreamingCursor />}
@@ -904,6 +936,19 @@ const ChatMessage = memo(({
                 </ContextMenu.Item>
               </ContextMenu.Content>
             </ContextMenu.Root>
+          )}
+          
+          {/* Render artifact indicators */}
+          {messageArtifacts.length > 0 && (
+            <View style={styles.artifactsContainer}>
+              {messageArtifacts.map((artifact) => (
+                <ArtifactIndicator
+                  key={artifact.id}
+                  artifact={artifact}
+                  onPress={() => onArtifactPress?.(artifact, messageArtifacts)}
+                />
+              ))}
+            </View>
           )}
           
           {/* Render AI-generated content (additional_data) - shown outside message bubble */}
@@ -1025,7 +1070,7 @@ const ChatMessage = memo(({
               testID="markdown-container"
             >
               {/* Text content first for bot */}
-              {content && !isAudio(content) && (
+              {displayContent && !isAudio(displayContent) && (
                 <View style={styles.botMessageWrapper}>
                   <Animated.View
                     style={[
@@ -1035,7 +1080,7 @@ const ChatMessage = memo(({
                       isSending && { width: 'auto', flex: 1 }, // Allow space for dot when streaming
                     ]}
                   >
-                    <MarkdownDisplay>{content}</MarkdownDisplay>
+                    <MarkdownDisplay>{displayContent}</MarkdownDisplay>
                   </Animated.View>
                   {/* Show streaming cursor when actively sending */}
                   {isSending && <StreamingCursor />}
@@ -1679,6 +1724,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   streamingContentWrapper: {
     marginTop: 8, // Additional spacing for streaming content when shown with intermediate
+  },
+  artifactsContainer: {
+    marginTop: 12,
+    gap: 8,
   },
 });
 

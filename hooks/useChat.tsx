@@ -36,6 +36,8 @@ import { formatAuthHeader } from '@/utils/AuthHelpers';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { AIEvent } from '@/types/mixpanel';
 import { useLocalModel } from './useLocalModel';
+import { Artifact } from '@/utils/ArtifactTypes';
+import { extractArtifactFromStream, extractArtifactsFromMessage } from '@/utils/ArtifactParser';
 
 // Import API_URL_PROD from ApiClient configuration
 const BASE_URL = API_URL_PROD;
@@ -106,6 +108,9 @@ interface ChatContextType {
   clearLocalModel: () => void;
   chatError: ChatError | null;
   clearChatError: () => void;
+  artifacts: Artifact[];
+  currentStreamingArtifact: Artifact | null;
+  getArtifactsForMessage: (messageId: string) => Artifact[];
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -142,6 +147,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ============ Error State ============
   const [error, setError] = useState('');
   const [chatError, setChatError] = useState<ChatError | null>(null);
+  
+  // ============ Artifact State ============
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [currentStreamingArtifact, setCurrentStreamingArtifact] = useState<Artifact | null>(null);
   
   // ============ File Handling State ============
   const [files, setFiles] = useState<any[]>([]);
@@ -282,6 +291,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return updatedMessage;
     }));
   }, [stream, additionalData]);
+
+  // ============ Artifact Stream Processing ============
+  useEffect(() => {
+    if (stream) {
+      // Extract streaming artifact from current stream
+      const streamingArtifact = extractArtifactFromStream(stream);
+      setCurrentStreamingArtifact(streamingArtifact);
+    } else {
+      setCurrentStreamingArtifact(null);
+    }
+  }, [stream]);
 
   // Helper function to abort current stream and wait for cleanup
   const abortCurrentStream = useCallback(async () => {
@@ -452,6 +472,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // ============ Artifact Management ============
+  
+  // Finalize artifacts when streaming completes
+  const finalizeArtifacts = useCallback((messageContent: string, messageId: string) => {
+    const extractedArtifacts = extractArtifactsFromMessage(messageContent, messageId);
+    
+    if (extractedArtifacts.length > 0) {
+      setArtifacts(prev => [...prev, ...extractedArtifacts]);
+      console.log(`[Chat] Finalized ${extractedArtifacts.length} artifacts for message ${messageId}`);
+    }
+  }, []);
+
+  // Get artifacts for a specific message
+  const getArtifactsForMessage = useCallback((messageId: string): Artifact[] => {
+    return artifacts.filter(artifact => artifact.messageId === messageId);
+  }, [artifacts]);
+
   // ---------------- Chat Operations ----------------
 
   const sendMessage = useCallback(async (
@@ -465,6 +502,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       imageProvider?: string;
       imageModel?: string;
       generateVideo?: string;
+      enableArtifacts?: boolean;
       files?: Array<{
         uri: string;
         type: string;
@@ -678,6 +716,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         formData.append('image_model', options.imageModel);
       }
     }
+    
+    // Add artifact generation control
+    if (options?.enableArtifacts !== undefined) {
+      formData.append('need_artifact', options.enableArtifacts ? 'true' : 'false');
+    } else {
+      // Default to enabled if not specified
+      formData.append('need_artifact', 'true');
+    }
 
     // Abort any previous stream with proper synchronization
     await abortCurrentStream();
@@ -818,11 +864,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setStreamWorking(false); // Reset stream working state
       setIntermediate(''); // Clear intermediate state to stop loading indicator
       
+      // Finalize artifacts after streaming completes
+      if (stream && currentConversationId) {
+        const messageId = `${currentConversationId}-${Date.now()}`;
+        finalizeArtifacts(stream, messageId);
+      }
+      
       // Don't reset additionalData here - it needs to persist in the message
       // Don't reset stream here - it's used for display and doesn't affect input state
     }
     
-  }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream]);
+  }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream, stream, finalizeArtifacts]);
 
   const fetchConversation = useCallback(async (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => {
     const effectiveLimit = limitValue || 20;
@@ -1012,6 +1064,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAdditionalData([]); // Reset additional data when clearing chat
     setChatError(null); // Clear any errors
     setCurrentConversationId(null); // Clear conversation ID to prevent refetch
+    
+    // Clear artifacts
+    setArtifacts([]);
+    setCurrentStreamingArtifact(null);
   }, [abortCurrentStream]);
 
   const deleteConversation = useCallback(async (conversationId: string): Promise<boolean> => {
@@ -1169,7 +1225,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isLocalModelReady: localModel.isLocalModelReady,
       clearLocalModel: localModel.clearLocalModel,
       chatError,
-      clearChatError
+      clearChatError,
+      artifacts,
+      currentStreamingArtifact,
+      getArtifactsForMessage,
     };
   }, [
     isChatLoading,
@@ -1198,7 +1257,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     appendToMessageHistory,
     localModel,
     chatError,
-    clearChatError
+    clearChatError,
+    artifacts,
+    currentStreamingArtifact,
+    getArtifactsForMessage,
   ]);
 
   return (
