@@ -56,8 +56,8 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
   const [generationOptions, setGenerationOptions] = useState<GenerationOptionsState>({
     webSearch: false,
     generateImage: 'none',
-    imageProvider: 'openai', // Changed from 'stability' to 'openai' (backend supports this)
-    imageModel: 'gpt-image-1', // Changed from 'stable-diffusion-xl' to 'gpt-image-1'
+    imageProvider: 'gemini', // Default to Gemini for image generation
+    imageModel: 'gemini-2.5-flash-image-preview', // Gemini's image model name
     generateVideo: 'none',
     enableArtifacts: true, // Enable artifacts by default
   });

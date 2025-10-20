@@ -30,7 +30,7 @@ const Layout = () => {
   const theme = useTheme();
   const styles = getStyles(theme);
   const router = useRouter();
-  const { createNewConversation, resetChat } = useChat();
+  const { createNewConversation, resetChat, isSending } = useChat();
 
   const handleNewChat = async () => {
     try {
@@ -80,6 +80,9 @@ const Layout = () => {
             drawerType: 'slide',
             swipeEdgeWidth: 50,
             swipeMinDistance: 10,
+            // ✅ IMPORTANT: Keep drawer swipe enabled even during streaming
+            // Users should be able to navigate while chat is streaming
+            swipeEnabled: true,
           }}
         >
 

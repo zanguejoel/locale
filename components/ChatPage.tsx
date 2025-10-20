@@ -762,8 +762,8 @@ const ChatPage = () => {
 
           {/* Loading indicator when switching conversations */}
           {isLoadingMessages && messages.length > 0 && (
-            <View style={styles.loadingOverlay}>
-              <View style={styles.loadingContainer}>
+            <View style={styles.loadingOverlay} pointerEvents="box-none">
+              <View style={styles.loadingContainer} pointerEvents="auto">
                 <ActivityIndicator size="large" color={theme.colors.primary} />
                 <Text style={styles.loadingText}>Loading messages...</Text>
               </View>
@@ -778,6 +778,7 @@ const ChatPage = () => {
               - inverted: Newest messages at bottom (index 0 = newest)
               - Users can read older messages while new content streams in
               - "Streaming..." button appears when scrolled up during streaming
+              - Navigation remains enabled: Users can open drawer, switch chats while streaming
             */}
             <FlashList
               contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}

@@ -81,7 +81,15 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
   const handleImageProviderChange = (provider: string) => {
     if (!generationOptions || !onGenerationOptionsChange) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onGenerationOptionsChange({ ...generationOptions, imageProvider: provider });
+    
+    // Set the correct model name based on provider
+    const modelName = provider === 'openai' ? 'gpt-image-1' : 'gemini-2.5-flash-image-preview';
+    
+    onGenerationOptionsChange({ 
+      ...generationOptions, 
+      imageProvider: provider,
+      imageModel: modelName,
+    });
   };
 
   // Unified view with both attachments and AI options
@@ -108,6 +116,12 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
         style={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContentContainer}
+        bounces={true}
+        alwaysBounceVertical={false}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
+        scrollEventThrottle={16}
+        overScrollMode="always"
       >
         {/* Attachments Section */}
         <View style={styles.optionsContainer}>
@@ -225,7 +239,8 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
                   generationOptions.generateImage !== 'none' && styles.singleLineCardActive
                 ]}
                 onPress={() => {
-                  const nextValue = generationOptions.generateImage === 'none' ? 'auto' : 'none';
+                  // Always use 'always' mode when enabling image generation
+                  const nextValue = generationOptions.generateImage === 'none' ? 'always' : 'none';
                   handleImageGenerationChange(nextValue);
                 }}
                 activeOpacity={0.7}
@@ -240,7 +255,8 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
                 <Switch
                   value={generationOptions.generateImage !== 'none'}
                   onValueChange={(value) => {
-                    handleImageGenerationChange(value ? 'auto' : 'none');
+                    // Always use 'always' mode when enabling
+                    handleImageGenerationChange(value ? 'always' : 'none');
                   }}
                   trackColor={{ 
                     false: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
@@ -252,39 +268,11 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Image Generation Options (when enabled) */}
+            {/* Image Generation Options (when enabled) - Mode hidden, always uses 'always' */}
             {generationOptions.generateImage !== 'none' && (
               <View style={styles.expandedSection}>
-                <View style={styles.optionRow}>
-                  <Text style={styles.optionRowLabel}>Mode</Text>
-                  <View style={styles.inlineButtonGroup}>
-                    <TouchableOpacity
-                      style={[
-                        styles.inlineButton,
-                        generationOptions.generateImage === 'auto' && styles.inlineButtonActive
-                      ]}
-                      onPress={() => handleImageGenerationChange('auto')}
-                    >
-                      <Text style={[
-                        styles.inlineButtonText,
-                        generationOptions.generateImage === 'auto' && styles.inlineButtonTextActive
-                      ]}>Auto</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.inlineButton,
-                        generationOptions.generateImage === 'always' && styles.inlineButtonActive
-                      ]}
-                      onPress={() => handleImageGenerationChange('always')}
-                    >
-                      <Text style={[
-                        styles.inlineButtonText,
-                        generationOptions.generateImage === 'always' && styles.inlineButtonTextActive
-                      ]}>Always</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
+                {/* Mode selection hidden - always uses 'always' mode by default */}
+                
                 <View style={styles.optionRow}>
                   <Text style={styles.optionRowLabel}>Provider</Text>
                   <View style={styles.inlineButtonGroup}>
@@ -524,13 +512,9 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
         </TouchableOpacity>
 
         <View style={styles.modalContent}>
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-            style={styles.modalCard}
-          >
+          <View style={styles.modalCard}>
             {renderUnifiedView()}
-          </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -558,7 +542,7 @@ const getStyles = (theme: Theme, insets: { bottom: number }) =>
       bottom: 0,
       left: 0,
       right: 0,
-      maxHeight: '85%',
+      maxHeight: '90%',
     },
     modalCard: {
       backgroundColor: theme.colors.background,
@@ -568,6 +552,8 @@ const getStyles = (theme: Theme, insets: { bottom: number }) =>
       borderBottomRightRadius: 0,
       padding: 20,
       paddingBottom: Math.max(insets.bottom, 20),
+      maxHeight: '100%',
+      flex: 1,
       ...Platform.select({
         ios: {
           shadowColor: '#000',
@@ -757,7 +743,8 @@ const getStyles = (theme: Theme, insets: { bottom: number }) =>
       flex: 1,
     },
     scrollContentContainer: {
-      paddingBottom: 10,
+      paddingBottom: 20,
+      flexGrow: 1,
     },
     section: {
       marginBottom: 16,
