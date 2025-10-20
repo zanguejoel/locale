@@ -722,8 +722,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Add generation options if provided
+    // Always send explicit value to match web frontend implementation
     if (options?.webSearch) {
       formData.append('web_search', 'true');
+    } else {
+      formData.append('web_search', 'false');
     }
     
     if (options?.generateVideo && options.generateVideo !== 'none') {

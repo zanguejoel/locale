@@ -4,8 +4,8 @@ import { getToken, saveTokenWithExpiry, clearAllTokens, isTokenExpired } from '.
 import { storage } from '@/hooks/useMMKVStorage';
 
 export const API_URL_DEV = "https://api-alpha.odysseytech.ai";
-// export const API_URL_PROD = "https://api.odysseytech.ai";
-export const API_URL_PROD = API_URL_DEV;
+ export const API_URL_PROD = "https://api.odysseytech.ai";
+// export const API_URL_PROD = API_URL_DEV;
 
 // Event listeners for session expiration
 type SessionExpiredListener = () => void;
