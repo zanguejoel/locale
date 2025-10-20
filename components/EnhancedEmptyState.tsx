@@ -124,7 +124,7 @@ const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
           {getGreeting()}, {firstName}! 👋
         </Text>
         <Text style={styles.subGreeting}>
-          I'm Odyssey, ready to help you with anything
+          I'm Odyssey, ready to help you with anything.
         </Text>
         
         {/* Credits Display */}

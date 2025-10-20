@@ -312,7 +312,7 @@ const useMarkdownDisplay = () => {
 
     // Horizontal rule
     hr: {
-      backgroundColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
+      backgroundColor: theme.isDark ? theme.colors.greyLight : theme.colors.grey,
       height: 1,
       width: '100%',
       marginVertical: 12,

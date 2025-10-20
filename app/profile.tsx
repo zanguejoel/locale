@@ -187,7 +187,7 @@ const Profile = () => {
       { label: "Last Name", value: user?.last_name, icon: "person-outline" },
       { label: "Email", value: user?.email, icon: "mail-outline" },
       { label: "Phone", value: user?.phone, icon: "call-outline" },
-      { label: "Birth Date", value: user?.date_of_birth, icon: "calendar-outline" },
+    /*   { label: "Birth Date", value: user?.date_of_birth, icon: "calendar-outline" }, */
       { label: "Street Address", value: user?.address, icon: "home-outline" },
       { label: "City", value: user?.city, icon: "map-outline" },
       { label: "State", value: user?.state, icon: "globe-outline" },
