@@ -203,6 +203,29 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     intermediateRef.current = intermediate;
   }, [isSending, streamWorking, intermediate]);
   
+  // ============ Auto-clear Stale Intermediate State ============
+  // Prevents UI from hanging if intermediate state never gets cleared
+  useEffect(() => {
+    if (!intermediate) return;
+    
+    const INTERMEDIATE_TIMEOUT = 30000; // 30 seconds
+    
+    const timeoutId = setTimeout(() => {
+      if (intermediate) {
+        console.warn('[useChat] ⚠️ Force-clearing stale intermediate state:', intermediate);
+        setIntermediate('');
+        
+        // Also ensure isSending is false
+        if (isSending) {
+          console.warn('[useChat] ⚠️ Force-clearing stale isSending state');
+          setIsSending(false);
+        }
+      }
+    }, INTERMEDIATE_TIMEOUT);
+    
+    return () => clearTimeout(timeoutId);
+  }, [intermediate, isSending]);
+  
   // ============ Effective Sending State ============
   // Safety mechanism: Keep isSending true while we have intermediate state
   // Note: stream is NOT included here as it persists after sending completes
@@ -309,8 +332,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[Chat] Aborting current stream...');
       try {
         streamControllerRef.current.abort();
-        // Wait a tick for abort to propagate through the stream processing
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Wait longer to allow word queue to finish (200ms gives time for ~20 words)
+        await new Promise(resolve => setTimeout(resolve, 200));
       } catch (e) {
         console.warn('[Chat] Error aborting stream:', e);
       } finally {

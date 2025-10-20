@@ -24,7 +24,7 @@ type SetStreamFunction = (value: string | ((prev: string) => string)) => void;
 // - 80ms  = Slow (deliberate, easy to follow)
 // - 100ms+ = Very slow (emphasizes each word)
 // ============================================================
-const WORD_DELAY_MS = 10; // Delay between words in milliseconds
+const WORD_DELAY_MS = 1; // Delay between words in milliseconds
 
 export const processStream = async (
   response: ReadableStream<Uint8Array> | null,
@@ -229,6 +229,13 @@ export const processStream = async (
       }
     }
 
+    // Check if we received a proper final event
+    if (!res) {
+      console.warn('[ChatStream] ⚠️ Stream ended without receiving type:"final" event');
+      // Treat as successful completion - clear intermediate state
+      setIntermediate('');
+    }
+
     // Process any remaining buffer
     if (buffer.trim()) {
       console.log('[ChatStream] 🔚 Processing remaining buffer:', buffer);
@@ -249,12 +256,44 @@ export const processStream = async (
       console.log('[ChatStream] 🔚 Flushing remaining word buffer:', wordBuffer);
       pendingWords.push(wordBuffer);
       wordBuffer = '';
+    } else if (pendingWords.length === 0 && buffer.trim()) {
+      // Edge case: buffer has content but wasn't processed
+      console.warn('[ChatStream] ⚠️ Unprocessed buffer content detected:', buffer);
+      setStream((prev) => prev + buffer);
+      buffer = '';
     }
     
-    // Wait for all pending words to be displayed
+    // Wait for all pending words to be displayed with timeout protection
     if (pendingWords.length > 0) {
-      console.log('[ChatStream] ⏳ Waiting for', pendingWords.length, 'remaining words to display');
-      await processWordQueue();
+      const wordCount = pendingWords.length;
+      console.log('[ChatStream] ⏳ Waiting for', wordCount, 'remaining words to display');
+      
+      // Calculate max wait time: (words × delay) + 1 second buffer
+      const maxWaitTime = wordCount * WORD_DELAY_MS + 1000;
+      
+      // Create timeout promise
+      const timeoutPromise = new Promise<void>((resolve) => {
+        setTimeout(() => {
+          if (pendingWords.length > 0) {
+            console.warn('[ChatStream] ⚠️ Word queue timeout! Remaining:', pendingWords.length);
+            // Force clear remaining words by adding them all at once
+            const remaining = pendingWords.join('');
+            if (remaining) {
+              setStream((prev) => prev + remaining);
+            }
+            pendingWords.length = 0; // Clear the queue
+          }
+          resolve();
+        }, maxWaitTime);
+      });
+      
+      // Wait for either word queue to complete or timeout
+      await Promise.race([
+        processWordQueue(),
+        timeoutPromise
+      ]);
+      
+      console.log('[ChatStream] ✓ Word queue processed, remaining:', pendingWords.length);
     }
   } catch (error) {
     console.error('[ChatStream] Stream processing error:', error);

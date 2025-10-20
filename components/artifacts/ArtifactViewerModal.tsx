@@ -257,8 +257,17 @@ const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={true}
+          nestedScrollEnabled={true}
         >
-          {renderArtifactContent()}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={true}
+            bounces={false}
+            nestedScrollEnabled={true}
+            contentContainerStyle={{ minWidth: '100%' }}
+          >
+            {renderArtifactContent()}
+          </ScrollView>
         </ScrollView>
 
         {/* Footer Actions */}

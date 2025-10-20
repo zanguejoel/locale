@@ -21,6 +21,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ content }) => {
   const styles = getStyles(theme);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [webViewHeight, setWebViewHeight] = useState(300);
 
   // Extract mermaid code from markdown code blocks if present
   const mermaidCode = extractCodeContent(content);
@@ -30,7 +31,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ content }) => {
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
   <style>
     * {
@@ -38,30 +39,31 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ content }) => {
       padding: 0;
       box-sizing: border-box;
     }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background-color: ${theme.isDark ? '#1a1a1a' : '#ffffff'};
       color: ${theme.isDark ? '#e0e0e0' : '#333333'};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
       padding: 20px;
-      overflow-x: auto;
     }
     #diagram-container {
       width: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      display: inline-block;
+      overflow: visible;
     }
     .mermaid {
-      max-width: 100%;
-      height: auto;
+      display: inline-block;
+      width: 100%;
+      overflow: visible;
     }
     /* Mermaid theme customization */
     .mermaid svg {
-      max-width: 100%;
+      display: block;
+      width: 100%;
       height: auto;
     }
     /* Error message */
@@ -91,21 +93,45 @@ ${mermaidCode}
         theme: '${theme.isDark ? 'dark' : 'default'}',
         securityLevel: 'loose',
         flowchart: {
-          useMaxWidth: true,
+          useMaxWidth: false,
           htmlLabels: true,
           curve: 'basis'
         },
         sequence: {
-          useMaxWidth: true,
+          useMaxWidth: false,
           wrap: true
         }
       });
       
-      // Notify React Native that rendering is complete
-      window.ReactNativeWebView?.postMessage(JSON.stringify({ 
-        type: 'loaded',
-        success: true 
-      }));
+      // Wait for mermaid to render, then send height
+      setTimeout(() => {
+        const container = document.getElementById('diagram-container');
+        const svg = container.querySelector('svg');
+        
+        if (svg) {
+          // Get the actual SVG dimensions
+          const svgHeight = svg.getBoundingClientRect().height;
+          const svgWidth = svg.getBoundingClientRect().width;
+          
+          // Add padding
+          const totalHeight = Math.max(svgHeight + 40, 300);
+          
+          // Notify React Native with dimensions
+          window.ReactNativeWebView?.postMessage(JSON.stringify({ 
+            type: 'loaded',
+            success: true,
+            height: totalHeight,
+            width: svgWidth
+          }));
+        } else {
+          // Fallback if SVG not found
+          window.ReactNativeWebView?.postMessage(JSON.stringify({ 
+            type: 'loaded',
+            success: true,
+            height: 300
+          }));
+        }
+      }, 500);
     } catch (error) {
       // Show error in diagram
       document.getElementById('diagram-container').innerHTML = 
@@ -128,6 +154,10 @@ ${mermaidCode}
       if (data.type === 'loaded' && data.success) {
         setLoading(false);
         setError(false);
+        // Update height if provided
+        if (data.height) {
+          setWebViewHeight(data.height);
+        }
       } else if (data.type === 'error') {
         setLoading(false);
         setError(true);
@@ -156,7 +186,7 @@ ${mermaidCode}
       
       <WebView
         source={{ html }}
-        style={[styles.webview, loading && styles.hidden]}
+        style={[styles.webview, { height: webViewHeight }, loading && styles.hidden]}
         onMessage={handleMessage}
         onLoadEnd={() => {
           // Fallback if message doesn't arrive
@@ -168,7 +198,7 @@ ${mermaidCode}
           setLoading(false);
           setError(true);
         }}
-        scrollEnabled={true}
+        scrollEnabled={false}
         bounces={false}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
@@ -177,8 +207,8 @@ ${mermaidCode}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         startInLoadingState={false}
-        // Prevent zoom
-        scalesPageToFit={false}
+        // Allow zoom/pinch for better diagram viewing
+        scalesPageToFit={true}
         // Security
         allowsInlineMediaPlayback={false}
         mediaPlaybackRequiresUserAction={true}
@@ -191,14 +221,12 @@ const getStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       width: '100%',
-      minHeight: 300,
       backgroundColor: theme.isDark ? '#1a1a1a' : '#ffffff',
       borderRadius: 8,
       overflow: 'hidden',
     },
     webview: {
       width: '100%',
-      minHeight: 300,
       backgroundColor: 'transparent',
     },
     hidden: {
