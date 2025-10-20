@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard, Clipboard, Alert } from 'react-native';
+import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard, Clipboard, Alert, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useChat } from '@/hooks/useChat';
@@ -199,14 +199,33 @@ const ChatPage = () => {
 
   // Effect to handle conversation loading/clearing based on route
   useEffect(() => {
-    if (id) {
-      setCurrentRoom(id);
-      setUserHasScrolledUp(false);
-    } else {
-      // Clear conversation when navigating to /new route
-      // This prevents old conversation from being refetched
-      resetChat();
-    }
+    const loadConversation = async () => {
+      if (id) {
+        setIsLoadingMessages(true);
+        try {
+          setCurrentRoom(id);
+          await fetchMessages(id);
+          setUserHasScrolledUp(false);
+        } catch (error) {
+          console.error('Error loading conversation:', error);
+          setErrorState({
+            show: true,
+            type: 'network',
+            message: 'Unable to load messages. Please try again.'
+          });
+        } finally {
+          setIsLoadingMessages(false);
+        }
+      } else {
+        // Clear conversation when navigating to /new route
+        // This prevents old conversation from being refetched
+        resetChat();
+        setIsLoadingMessages(false);
+      }
+    };
+
+    loadConversation();
+
     // Entrance animation
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -214,7 +233,7 @@ const ChatPage = () => {
       useNativeDriver: true,
       easing: Easing.out(Easing.quad),
     }).start();
-  }, [id, resetChat, setCurrentRoom]);
+  }, [id, resetChat, setCurrentRoom, fetchMessages]);
   
   // Set model selection when conversation loads
   useEffect(() => {
@@ -740,6 +759,17 @@ const ChatPage = () => {
               <SkeletonLoader variant="message" count={5} />
             </View>
           )}
+
+          {/* Loading indicator when switching conversations */}
+          {isLoadingMessages && messages.length > 0 && (
+            <View style={styles.loadingOverlay}>
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={styles.loadingText}>Loading messages...</Text>
+              </View>
+            </View>
+          )}
+
           {messages.length > 0 && (
           <CustomView style={{ flex: 1 }}>
             {/* 
@@ -763,6 +793,16 @@ const ChatPage = () => {
               scrollEventThrottle={16}
               extraData={{ isSending, intermediate }}
               inverted
+              // Pull to refresh
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={theme.colors.primary}
+                  colors={[theme.colors.primary]}
+                  progressViewOffset={20}
+                />
+              }
               // Pagination
               onEndReachedThreshold={0.5}
               onEndReached={() => {
@@ -1073,6 +1113,42 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     minWidth: 44,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // Loading overlay styles
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 1000,
+  },
+  loadingContainer: {
+    backgroundColor: theme.colors.background,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: theme.colors.text,
   },
 
 });

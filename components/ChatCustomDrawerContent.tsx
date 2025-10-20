@@ -1,5 +1,5 @@
 
-import { useDrawerProgress, useDrawerStatus } from '@react-navigation/drawer';
+import { useDrawerStatus } from '@react-navigation/drawer';
 import { Link, useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -23,7 +23,9 @@ import { useChat, Conversations } from '@/hooks/useChat';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Swipeable } from 'react-native-gesture-handler';
 import { FlashList } from '@shopify/flash-list';
-import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
+import Animated, { 
+    FadeIn,
+} from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import ModelToggle from './ModelToggle';
@@ -42,8 +44,6 @@ export const CustomDrawerContent = (props: any) => {
     const styles = getStyles(theme);
     const drawerStatus = useDrawerStatus();
     const { bottom } = useSafeAreaInsets();
-    const progressDrawer = useDrawerProgress()
-    const [isShowData, setShowData] = useState(false)
 
     const {
         conversations,
@@ -68,7 +68,6 @@ export const CustomDrawerContent = (props: any) => {
     const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [isLoadingDisplayChats, setLoadingDisplayChats] = useState(true);
     const [openSwipeableId, setOpenSwipeableId] = useState<string | null>(null);
     const [pinnedChats, setPinnedChats] = useState<Set<string>>(new Set());
 
@@ -86,25 +85,8 @@ export const CustomDrawerContent = (props: any) => {
         fetchConversation(query, limitRef.current);
     }, [fetchConversation, query]);
 
-    useAnimatedReaction(
-        () => progressDrawer.value,
-        (currentValue) => {
-            if (currentValue >= 0.9) {
-                runOnJS(setShowData)(true);
-            } else {
-                runOnJS(setShowData)(false);
-            }
-        }
-    );
-
-    useEffect(() => {
-        if (drawerStatus === 'open') {
-            setLoadingDisplayChats(false)
-        } else {
-            setLoadingDisplayChats(true)
-
-        }
-    }, [drawerStatus])
+    // Removed drawer animation reaction to prevent list flashing
+    // The list is now always rendered for better performance
 
     useEffect(() => {
         const unsubscribe = navigation.addListener('state', () => {
@@ -460,7 +442,7 @@ export const CustomDrawerContent = (props: any) => {
                         closeOpenSwipeable();
                     }}
                 >
-                    <Ionicons name="trash" size={20} color="white" />
+                    <Ionicons name="trash" size={18} color="white" />
                 </Pressable>
             </View>
         ),
@@ -512,14 +494,14 @@ export const CustomDrawerContent = (props: any) => {
                 <ContextMenu.Root>
                     <ContextMenu.Trigger>
                         {chatId.toString() === currentConversationId?.toString() ? (
-                            // Active chat with gradient
+                            // Active chat with modern gradient
                             <LinearGradient
                                 colors={theme.isDark 
-                                    ? ['#1e3a8a', '#1e40af']
-                                    : ['#3b82f6', '#2563eb']
+                                    ? ['#2563eb', '#1e40af', '#1e3a8a']
+                                    : ['#60a5fa', '#3b82f6', '#2563eb']
                                 }
                                 start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
+                                end={{ x: 1, y: 1 }}
                                 style={[styles.chatItem, styles.activeChatItemGradient]}
                             >
                                 <Pressable
@@ -539,32 +521,37 @@ export const CustomDrawerContent = (props: any) => {
                                                     {chatTitle}
                                                 </Text>
                                                 {pinnedChats.has(chatId) && (
-                                                    <Ionicons name="pin" size={14} color="#FFFFFF" style={styles.pinIcon} />
+                                                    <View style={styles.pinnedBadge}>
+                                                        <Ionicons name="pin" size={10} color="#FFFFFF" />
+                                                    </View>
                                                 )}
                                             </View>
-                                            <Text style={[styles.chatTimestamp, styles.activeChatTimestamp]} numberOfLines={1}>
-                                                {new Date().toLocaleDateString()}
-                                            </Text>
+                                            <View style={styles.chatMetaRow}>
+                                                <Ionicons name="time-outline" size={10} color="rgba(255, 255, 255, 0.8)" />
+                                                <Text style={[styles.chatTimestamp, styles.activeChatTimestamp]} numberOfLines={1}>
+                                                    {new Date().toLocaleDateString()}
+                                                </Text>
+                                            </View>
                                         </View>
                                         <View style={styles.chatActions}>
                                             <Pressable
-                                                style={styles.actionButton}
+                                                style={[styles.actionButton, styles.activeActionButton]}
                                                 onPress={() => onRenameChat(chatId, chatTitle)}
                                             >
-                                                <Ionicons name="pencil" size={16} color="#FFFFFF" />
+                                                <Ionicons name="pencil" size={14} color="#FFFFFF" />
                                             </Pressable>
                                             <Pressable
-                                                style={styles.actionButton}
+                                                style={[styles.actionButton, styles.activeActionButton]}
                                                 onPress={() => onDeleteChat(chatId)}
                                             >
-                                                <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                                                <Ionicons name="trash-outline" size={14} color="#FFFFFF" />
                                             </Pressable>
                                         </View>
                                     </View>
                                 </Pressable>
                             </LinearGradient>
                         ) : (
-                            // Non-active chat without gradient
+                            // Non-active chat with modern design
                             <Pressable
                                 style={({ pressed }) => [
                                     styles.chatItem,
@@ -573,34 +560,47 @@ export const CustomDrawerContent = (props: any) => {
                                 onPress={() => handleConversationSelect(chatId)}
                             >
                                 <View style={styles.chatItemContent}>
-                                    <View style={styles.chatIconContainer}>
-                                        <Ionicons name="chatbubble" size={18} color={theme.colors.primary} />
-                                    </View>
+                                    <LinearGradient
+                                        colors={theme.isDark 
+                                            ? ['rgba(59, 130, 246, 0.15)', 'rgba(99, 102, 241, 0.15)']
+                                            : ['rgba(59, 130, 246, 0.12)', 'rgba(99, 102, 241, 0.12)']
+                                        }
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                        style={styles.chatIconContainer}
+                                    >
+                                        <Ionicons name="chatbubble-outline" size={18} color={theme.colors.primary} />
+                                    </LinearGradient>
                                     <View style={styles.chatDetails}>
                                         <View style={styles.chatTitleRow}>
                                             <Text style={styles.chatTitle} numberOfLines={1}>
                                                 {chatTitle}
                                             </Text>
                                             {pinnedChats.has(chatId) && (
-                                                <Ionicons name="pin" size={14} color={theme.colors.primary} style={styles.pinIcon} />
+                                                <View style={[styles.pinnedBadge, styles.inactivePinnedBadge]}>
+                                                    <Ionicons name="pin" size={9} color={theme.colors.primary} />
+                                                </View>
                                             )}
                                         </View>
-                                        <Text style={styles.chatTimestamp} numberOfLines={1}>
-                                            {new Date().toLocaleDateString()}
-                                        </Text>
+                                        <View style={styles.chatMetaRow}>
+                                            <Ionicons name="time-outline" size={10} color={theme.colors.greyLight} />
+                                            <Text style={styles.chatTimestamp} numberOfLines={1}>
+                                                {new Date().toLocaleDateString()}
+                                            </Text>
+                                        </View>
                                     </View>
                                     <View style={styles.chatActions}>
                                         <Pressable
                                             style={styles.actionButton}
                                             onPress={() => onRenameChat(chatId, chatTitle)}
                                         >
-                                            <Ionicons name="pencil" size={16} color={theme.colors.greyLight} />
+                                            <Ionicons name="create-outline" size={16} color={theme.colors.primary} />
                                         </Pressable>
                                         <Pressable
                                             style={styles.actionButton}
                                             onPress={() => onDeleteChat(chatId)}
                                         >
-                                            <Ionicons name="trash-outline" size={16} color={theme.colors.greyLight} />
+                                            <Ionicons name="trash-outline" size={16} color="#EF4444" />
                                         </Pressable>
                                     </View>
                                 </View>
@@ -666,31 +666,40 @@ export const CustomDrawerContent = (props: any) => {
 
     const keyExtractor = useCallback((item: Conversations) => item?.id?.toString() || '', []);
 
-    if (isLoadingDisplayChats) {
-        return (
-            <View style={styles.drawerContainer}>
-                <ActivityIndicator size="small" />
-            </View>
-        );
-    }
-
     return (
         <View
             ref={viewRef}
             style={styles.drawerContainer}>
             {showLoading && (
                 <View style={styles.loadingOverlay}>
-                    <ActivityIndicator size="large" color={Colors.common.primary} />
+                    <View style={styles.loadingContent}>
+                        <LinearGradient
+                            colors={theme.isDark 
+                                ? ['#3b82f6', '#6366f1', '#8b5cf6']
+                                : ['#60a5fa', '#3b82f6', '#6366f1']
+                            }
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.loadingIndicatorGradient}
+                        >
+                            <ActivityIndicator size="large" color="#FFFFFF" />
+                        </LinearGradient>
+                        <Text style={styles.loadingText}>Loading...</Text>
+                    </View>
                 </View>
             )}
 
          
 
-            <View style={styles.headerContainer}>
-            
+            <Animated.View 
+                style={styles.headerContainer}
+                entering={FadeIn.duration(400)}
+            >
                 {/* Only show ModelToggle if local LLM feature is enabled */}
                 {FEATURES.LOCAL_LLM_ENABLED && (
-                    <ModelToggle onSelectModel={handleModelSwitch} initialState={isLocal} disableLocal={!isLocalLLMSupported} />
+                    <View style={styles.modelToggleContainer}>
+                        <ModelToggle onSelectModel={handleModelSwitch} initialState={isLocal} disableLocal={!isLocalLLMSupported} />
+                    </View>
                 )}
         
                 {/* Show search and history title for cloud mode (or always if local models disabled) */}
@@ -698,90 +707,158 @@ export const CustomDrawerContent = (props: any) => {
                     <>
                         <View style={styles.searchContainer}>
                             <View style={styles.searchSection}>
-                                <Ionicons style={styles.searchIcon} name="search" size={20} color={theme.colors.greyLight} />
+                                <Ionicons style={styles.searchIcon} name="search" size={18} color={theme.colors.greyLight} />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Search conversations"
+                                    placeholder="Search conversations..."
                                     placeholderTextColor={theme.colors.greyLight}
                                     underlineColorAndroid="transparent"
                                     onChangeText={(value) => setQuery(value)}
                                     value={query}
                                 />
                                 {query ? (
-                                    <TouchableOpacity onPress={() => setQuery('')}>
+                                    <TouchableOpacity 
+                                        onPress={() => setQuery('')}
+                                        style={styles.clearButton}
+                                    >
                                         <Ionicons name="close-circle" size={18} color={theme.colors.greyLight} />
                                     </TouchableOpacity>
                                 ) : null}
                             </View>
                         </View>
-                        <Text style={styles.historyTitle}>Chat History</Text>
+                        <View style={styles.historyHeader}>
+                            <Text style={styles.historyTitle}>Recent Chats</Text>
+                            {conversations.length > 0 && (
+                                <Text style={styles.chatCount}>{conversations.length}</Text>
+                            )}
+                        </View>
                     </>
                 )}
-            </View>
+            </Animated.View>
             
-            {/* New Chat Button */}
-            <TouchableOpacity 
-                style={styles.newChatButton}
-                onPress={async () => {
-                    try {
-                        setLocalLoading(true);
-                        
-                        if (isLocal) {
-                            // For local mode, just reset the chat and navigate to new
-                            resetChat();
-                            router.push('/(chat)/new');
-                        } else {
-                            // For cloud mode, create a new server-side conversation
-                            const newConvId = await createNewConversation();
-                            if (newConvId) {
-                                router.push(`/(chat)/${newConvId}`);
-                            } else {
-                                // Fallback to new chat route if creation fails
+            {/* Modern New Chat Button */}
+            <Animated.View 
+                style={styles.newChatButtonContainer}
+                entering={FadeIn.delay(100).duration(400)}
+            >
+                <TouchableOpacity 
+                    style={styles.newChatButton}
+                    onPress={async () => {
+                        try {
+                            setLocalLoading(true);
+                            
+                            if (isLocal) {
+                                // For local mode, just reset the chat and navigate to new
                                 resetChat();
                                 router.push('/(chat)/new');
+                            } else {
+                                // For cloud mode, create a new server-side conversation
+                                const newConvId = await createNewConversation();
+                                if (newConvId) {
+                                    router.push(`/(chat)/${newConvId}`);
+                                } else {
+                                    // Fallback to new chat route if creation fails
+                                    resetChat();
+                                    router.push('/(chat)/new');
+                                }
                             }
+                        } catch (error) {
+                            // console.error('Error creating new chat:', error);
+                            // Fallback: just reset and navigate to new chat
+                            resetChat();
+                            router.push('/(chat)/new');
+                            Alert.alert('Note', 'Started a new chat session');
+                        } finally {
+                            setLocalLoading(false);
                         }
-                    } catch (error) {
-                        // console.error('Error creating new chat:', error);
-                        // Fallback: just reset and navigate to new chat
-                        resetChat();
-                        router.push('/(chat)/new');
-                        Alert.alert('Note', 'Started a new chat session');
-                    } finally {
-                        setLocalLoading(false);
-                    }
-                }}
-                activeOpacity={0.7}
-            >
-                <Ionicons name="add-circle" size={24} color={theme.colors.primary} />
-                <Text style={styles.newChatButtonText}>New Chat</Text>
-            </TouchableOpacity>
-
-            {!isShowData ? <></> :
-                <View style={{ flex: 1 }}>
-                    {(isLocal && FEATURES.LOCAL_LLM_ENABLED) ? (
-                        // Local mode - show info message instead of conversation list (only if feature enabled)
-                        <View style={styles.localModeInfoContainer}>
-                            <Ionicons name="phone-portrait-outline" size={60} color={theme.colors.primary} />
-                            <Text style={styles.localModeTitle}>Local Mode</Text>
-                            <Text style={styles.localModeText}>
-                                You're using local models that run completely offline on your device.
-                            </Text>
-                            <Text style={styles.localModeSubText}>
-                                Local conversations are not saved to the cloud. Start a new chat to begin!
-                            </Text>
+                    }}
+                    activeOpacity={0.8}
+                >
+                    <LinearGradient
+                        colors={theme.isDark 
+                            ? ['#3b82f6', '#2563eb']
+                            : ['#60a5fa', '#3b82f6']
+                        }
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.newChatGradient}
+                    >
+                        <View style={styles.newChatIconContainer}>
+                            <Ionicons name="add" size={18} color="#FFFFFF" />
                         </View>
+                        <Text style={styles.newChatButtonText}>New Conversation</Text>
+                        <Ionicons name="chevron-forward" size={16} color="rgba(255, 255, 255, 0.8)" />
+                    </LinearGradient>
+                </TouchableOpacity>
+            </Animated.View>
+
+            <View style={{ flex: 1 }}>
+                {(isLocal && FEATURES.LOCAL_LLM_ENABLED) ? (
+                        // Local mode - show modern info message
+                        <Animated.View 
+                            style={styles.localModeInfoContainer}
+                            entering={FadeIn.duration(500)}
+                        >
+                            <View style={styles.localModeIconContainer}>
+                                <LinearGradient
+                                    colors={['#10b981', '#059669']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.localModeIconGradient}
+                                >
+                                    <Ionicons name="shield-checkmark" size={40} color="#FFFFFF" />
+                                </LinearGradient>
+                            </View>
+                            <Text style={styles.localModeTitle}>Local & Private</Text>
+                            <Text style={styles.localModeText}>
+                                Your conversations run completely offline on your device with end-to-end privacy.
+                            </Text>
+                            <View style={styles.localModeFeatures}>
+                                <View style={styles.localModeFeature}>
+                                    <Ionicons name="wifi-outline" size={20} color={theme.colors.primary} style={styles.localModeFeatureIcon} />
+                                    <Text style={styles.localModeFeatureText}>Works offline</Text>
+                                </View>
+                                <View style={styles.localModeFeature}>
+                                    <Ionicons name="lock-closed" size={20} color={theme.colors.primary} style={styles.localModeFeatureIcon} />
+                                    <Text style={styles.localModeFeatureText}>100% private</Text>
+                                </View>
+                                <View style={styles.localModeFeature}>
+                                    <Ionicons name="flash" size={20} color={theme.colors.primary} style={styles.localModeFeatureIcon} />
+                                    <Text style={styles.localModeFeatureText}>Fast responses</Text>
+                                </View>
+                            </View>
+                            <Text style={styles.localModeSubText}>
+                                Note: Conversations aren't synced to cloud
+                            </Text>
+                        </Animated.View>
                     ) : (
                         // Cloud mode - show conversation list
                         <>
                             {filteredConversations.length === 0 ? (
-                                <View style={styles.emptyStateContainer}>
-                                    <Ionicons name="chatbubble-outline" size={50} color={Colors.common.greyLight} />
-                                    <Text style={styles.emptyStateText}>No conversations found</Text>
-                                    <Text style={styles.emptyStateSubText}>
-                                        {query ? 'Try a different search term' : 'Start a new chat to begin'}
+                                <Animated.View 
+                                    style={styles.emptyStateContainer}
+                                    entering={FadeIn.duration(500)}
+                                >
+                                    <View style={styles.emptyStateIconContainer}>
+                                        <LinearGradient
+                                            colors={theme.isDark 
+                                                ? ['rgba(99, 102, 241, 0.2)', 'rgba(139, 92, 246, 0.2)']
+                                                : ['rgba(59, 130, 246, 0.2)', 'rgba(99, 102, 241, 0.2)']
+                                            }
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                            style={styles.emptyStateIconGradient}
+                                        >
+                                            <Ionicons name="chatbubbles-outline" size={48} color={theme.colors.primary} />
+                                        </LinearGradient>
+                                    </View>
+                                    <Text style={styles.emptyStateText}>
+                                        {query ? 'No conversations found' : 'Your conversations await'}
                                     </Text>
-                                </View>
+                                    <Text style={styles.emptyStateSubText}>
+                                        {query ? 'Try adjusting your search' : 'Create your first conversation to get started'}
+                                    </Text>
+                                </Animated.View>
                             ) : (
                                 <FlashList
                                     data={filteredConversations}
@@ -789,7 +866,7 @@ export const CustomDrawerContent = (props: any) => {
                                     renderItem={renderItem}
                                     onScroll={handleScroll}
                                     scrollEventThrottle={16}
-                                    estimatedItemSize={68}
+                                    estimatedItemSize={56}
                                     refreshControl={
                                         <RefreshControl
                                             refreshing={isRefreshing}
@@ -804,22 +881,39 @@ export const CustomDrawerContent = (props: any) => {
                         </>
                     )}
                 </View>
-            }
-            <View style={[styles.footerContainer, { paddingBottom: 10 + bottom }]}>
+            <Animated.View 
+                style={[styles.footerContainer, { paddingBottom: 10 + bottom }]}
+                entering={FadeIn.delay(200).duration(400)}
+            >
                 <Link href="/(modal)/settings" asChild>
-                    <TouchableOpacity style={styles.footer}>
+                    <TouchableOpacity style={styles.footer} activeOpacity={0.7}>
                         <View style={styles.userContainer}>
-                            <View style={styles.userAvatar}>
+                            <LinearGradient
+                                colors={theme.isDark 
+                                    ? ['#4f46e5', '#7c3aed']
+                                    : ['#6366f1', '#8b5cf6']
+                                }
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.userAvatar}
+                            >
                                 <Text style={styles.userInitials}>
                                     {user?.first_name?.[0] || 'J'}
                                 </Text>
+                            </LinearGradient>
+                            <View style={styles.userInfo}>
+                                <Text style={styles.userName}>{user?.first_name || 'John'} {user?.last_name?.[0] || 'D'}.</Text>
+                                <Text style={styles.userEmail} numberOfLines={1}>
+                                    {user?.email || 'user@odyssey.ai'}
+                                </Text>
                             </View>
-                            <Text style={styles.userName}>{user?.first_name || 'John'}</Text>
                         </View>
-                        <Ionicons name="settings-outline" size={20} color={theme.colors.greyLight} />
+                        <View style={styles.settingsButton}>
+                            <Ionicons name="settings-outline" size={20} color={theme.colors.primary} />
+                        </View>
                     </TouchableOpacity>
                 </Link>
-            </View>
+            </Animated.View>
         </View>
     );
 };
@@ -829,53 +923,100 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     drawerContainer: {
         flex: 1,
         backgroundColor: theme.colors.background,
-        borderRightWidth: theme.isDark ? 0.5 : 1,
-        borderRightColor: theme.colors.greyLight,
     },
     headerContainer: {
         backgroundColor: theme.colors.background,
-        paddingBottom: 12,
-        borderBottomWidth: theme.isDark ? 0.4 : 1,
-        borderBottomColor: theme.colors.greyLight,
+        paddingBottom: 10,
+        paddingTop: 8,
+        borderBottomWidth: 0,
         marginTop: 50,
+    },
+    modelToggleContainer: {
+        paddingHorizontal: 14,
+        paddingTop: 0,
     },
     searchContainer: {
         paddingHorizontal: 16,
         paddingTop: 12,
-        paddingBottom: 8,
+        paddingBottom: 6,
+    },
+    historyHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 8,
+        paddingBottom: 2,
     },
     historyTitle: {
         fontSize: 16,
         fontWeight: '700',
-        marginLeft: 20,
-        marginTop: 8,
         color: theme.colors.text,
+        letterSpacing: 0.2,
+    },
+    chatCount: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: theme.colors.textSecondary,
+        backgroundColor: theme.colors.backgroundLight,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+        overflow: 'hidden',
+    },
+    newChatButtonContainer: {
+        paddingHorizontal: 14,
+        paddingVertical: 8,
     },
     newChatButton: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 4,
+    },
+    newChatGradient: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'transparent',
-        marginHorizontal: 16,
-        marginVertical: 12,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        gap: 10,
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+    },
+    newChatIconContainer: {
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     newChatButtonText: {
-        fontSize: 16,
+        flex: 1,
+        fontSize: 15,
         fontWeight: '600',
-        color: theme.colors.primary,
+        color: '#FFFFFF',
+        marginLeft: 10,
+        letterSpacing: 0.2,
+    },
+    clearButton: {
+        padding: 4,
     },
     searchSection: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: theme.colors.backgroundLight,
-        borderWidth: theme.isDark ? 0.4 : 1,
-        borderColor: theme.colors.greyLight,
+        borderWidth: 1.5,
+        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
         borderRadius: 12,
-        height: 40,
+        height: 42,
         paddingHorizontal: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+        elevation: 2,
     },
     searchIcon: {
         marginRight: 8,
@@ -888,27 +1029,41 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     scrollViewContent: {
         backgroundColor: theme.colors.background,
-        paddingTop: 8,
-        paddingHorizontal: 12,
+        paddingTop: 6,
+        paddingHorizontal: 14,
+        paddingBottom: 16,
     },
     emptyStateContainer: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 20,
+        paddingHorizontal: 32,
+    },
+    emptyStateIconContainer: {
+        marginBottom: 20,
+    },
+    emptyStateIconGradient: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     emptyStateText: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 20,
+        fontWeight: '700',
         color: theme.colors.text,
-        marginTop: 16,
-        textAlign: 'center',
-    },
-    emptyStateSubText: {
-        fontSize: 14,
-        color: Colors.common.greyLight,
         marginTop: 8,
         textAlign: 'center',
+        letterSpacing: 0.2,
+    },
+    emptyStateSubText: {
+        fontSize: 15,
+        color: theme.colors.textSecondary,
+        marginTop: 12,
+        textAlign: 'center',
+        lineHeight: 22,
+        paddingHorizontal: 20,
     },
     localModeInfoContainer: {
         flex: 1,
@@ -917,62 +1072,114 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         paddingHorizontal: 32,
         paddingVertical: 40,
     },
+    localModeIconContainer: {
+        marginBottom: 16,
+        shadowColor: '#10b981',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    localModeIconGradient: {
+        width: 90,
+        height: 90,
+        borderRadius: 45,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     localModeTitle: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: '700',
         color: theme.colors.text,
-        marginTop: 20,
+        marginTop: 16,
         marginBottom: 12,
         textAlign: 'center',
+        letterSpacing: 0.3,
     },
     localModeText: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '500',
         color: theme.colors.text,
         textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: 12,
+        lineHeight: 24,
+        marginBottom: 24,
+        paddingHorizontal: 10,
+    },
+    localModeFeatures: {
+        flexDirection: 'column',
+        gap: 14,
+        width: '100%',
+        marginBottom: 24,
+    },
+    localModeFeature: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.backgroundLight,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+    },
+    localModeFeatureIcon: {
+        marginRight: 12,
+    },
+    localModeFeatureText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: theme.colors.text,
     },
     localModeSubText: {
-        fontSize: 14,
+        fontSize: 13,
         color: theme.colors.textSecondary,
         textAlign: 'center',
         lineHeight: 20,
+        fontStyle: 'italic',
     },
     chatItem: {
         borderRadius: 12,
-        marginBottom: 8,
+        marginBottom: 6,
         backgroundColor: theme.colors.chatItemBg,
         overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: theme.isDark ? 0.08 : 0.04,
+        shadowRadius: 4,
+        elevation: 2,
     },
     activeChatItem: {
         backgroundColor: theme.colors.activeChatItem,
     },
     activeChatItemGradient: {
-        backgroundColor: '#3b82f6', // Solid background for efficient shadow calculation
+        backgroundColor: '#3b82f6',
+        borderColor: '#2563eb',
         shadowColor: '#3b82f6',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+        transform: [{ scale: 1.01 }],
     },
     pressedChatItem: {
-        opacity: 0.7,
+        opacity: 0.85,
+        transform: [{ scale: 0.98 }],
     },
     chatItemContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 12,
+        padding: 10,
     },
     chatItemContentTransparent: {
         backgroundColor: 'transparent',
     },
     activeChatText: {
         color: '#FFFFFF',
-        fontWeight: '600',
+        fontWeight: '700',
     },
     activeChatTimestamp: {
-        color: 'rgba(255, 255, 255, 0.8)',
+        color: 'rgba(255, 255, 255, 0.85)',
     },
     chatIconContainer: {
         width: 36,
@@ -981,10 +1188,17 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         backgroundColor: theme.colors.chatIconContainer,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 10,
+        shadowColor: theme.colors.primary,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.12,
+        shadowRadius: 3,
+        elevation: 2,
     },
     activeChatIconContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        shadowColor: '#FFFFFF',
+        shadowOpacity: 0.2,
     },
     chatDetails: {
         flex: 1,
@@ -993,26 +1207,50 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
+        marginBottom: 3,
+    },
+    chatMetaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
     },
     pinIcon: {
-        marginLeft: 4,
+        marginLeft: 2,
+    },
+    pinnedBadge: {
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        borderRadius: 6,
+        width: 18,
+        height: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    inactivePinnedBadge: {
+        backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
     },
     chatTitle: {
         fontSize: 15,
-        fontWeight: '500',
+        fontWeight: '600',
         color: theme.colors.text,
         flex: 1,
+        letterSpacing: 0.1,
     },
     chatTimestamp: {
-        fontSize: 12,
+        fontSize: 11,
         color: theme.colors.greyLight,
-        marginTop: 2,
+        fontWeight: '500',
     },
     chatActions: {
         flexDirection: 'row',
+        gap: 4,
     },
     actionButton: {
         padding: 6,
+        borderRadius: 8,
+        backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+    },
+    activeActionButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
     },
     contextMenuPreview: {
         padding: 16,
@@ -1026,38 +1264,75 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         color: Colors.common.grey,
     },
     footerContainer: {
-        padding: 16,
-        borderTopWidth: theme.isDark ? 0.4 : 1,
-        borderTopColor: '#F0F0F0',
+        paddingHorizontal: 12,
+        paddingTop: 10,
+        paddingBottom: 8,
+        borderTopWidth: 1,
+        borderTopColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
         backgroundColor: theme.colors.background,
     },
     footer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        backgroundColor: theme.colors.backgroundLight,
+        borderRadius: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderWidth: 1.5,
+        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
     },
     userContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        flex: 1,
     },
     userAvatar: {
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: theme.colors.backgroundLight,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 10,
+        shadowColor: '#6366f1',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 4,
     },
     userInitials: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: theme.colors.text,
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        letterSpacing: 0.5,
+    },
+    userInfo: {
+        flex: 1,
     },
     userName: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 14,
+        fontWeight: '700',
         color: theme.colors.text,
+        letterSpacing: 0.2,
+    },
+    userEmail: {
+        fontSize: 11,
+        fontWeight: '500',
+        color: theme.colors.textSecondary,
+        marginTop: 1,
+    },
+    settingsButton: {
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 18,
@@ -1074,23 +1349,50 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.85)',
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1000,
     },
-    swipeActionContainer: {
+    loadingContent: {
+        alignItems: 'center',
+        gap: 16,
+    },
+    loadingIndicatorGradient: {
         width: 80,
+        height: 80,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    loadingText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: theme.colors.text,
+        letterSpacing: 0.3,
+    },
+    swipeActionContainer: {
+        width: 70,
         height: '100%',
-        marginBottom: 8,
+        marginBottom: 6,
     },
     deleteAction: {
         flex: 1,
-        backgroundColor: '#FF3B30',
+        backgroundColor: '#EF4444',
         justifyContent: 'center',
         alignItems: 'center',
         borderTopRightRadius: 12,
         borderBottomRightRadius: 12,
+        shadowColor: '#EF4444',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.4,
+        shadowRadius: 6,
+        elevation: 4,
     },
     actionButtonContainer: {
         flexDirection: 'row',

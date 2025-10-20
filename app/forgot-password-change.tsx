@@ -13,6 +13,9 @@ import {
   Image,
   Platform,
   SafeAreaView,
+  ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import CustomInput from "@/components/CustomInput";
@@ -35,6 +38,7 @@ const ForgotPasswordChange = () => {
   const [loading, setLoading] = useState(false);
   const [sessionData, setSessionData] = useState<any>(null);
   const [sessionError, setSessionError] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const [formData, setFormData] = useState({
     newPassword: "",
@@ -79,6 +83,23 @@ const ForgotPasswordChange = () => {
     loadSession();
   }, [session]);
 
+  // Keyboard visibility listeners
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
+
 
   const passwordFields = [
     { label: "New Password", key: "newPassword", placeholder: "Enter new password" },
@@ -93,6 +114,9 @@ const ForgotPasswordChange = () => {
   };
 
   const handleSavePassword = async () => {
+    // Dismiss keyboard
+    Keyboard.dismiss();
+    
     // Validate passwords match
     if (formData.newPassword !== formData.confirmNewPassword) {
       Alert.alert("Passwords Don't Match", "New passwords do not match. Please try again.");
@@ -163,91 +187,109 @@ const ForgotPasswordChange = () => {
 
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <SafeAreaView>
-        {isLoading && (
-          <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-        )}
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {isLoading && (
+              <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+              </View>
+            )}
 
-        <View style={styles.headerContainer}>
-          <Image
-            source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
-            style={styles.logo}
-          />
-          <Text style={[styles.title, { color: theme.colors.text }]}>Reset Password</Text>
-          <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-            Enter your new password below
-          </Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>New Password</Text>
-            <CustomInput
-              ref={newPasswordRef}
-              icon="lock-closed-outline"
-              autoComplete="off"
-              style={styles.input}
-              value={formData.newPassword}
-              onChangeText={(value) => handleInputChange("newPassword", value)}
-              placeholder="Enter new password"
-              isPassword
-              returnKeyType="next"
-              onSubmitEditing={() => confirmPasswordRef.current?.focus()}
-              blurOnSubmit={false}
-              autoFocus={true}
-            />
-          </View>
-          
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Confirm New Password</Text>
-            <CustomInput
-              ref={confirmPasswordRef}
-              icon="lock-closed-outline"
-              autoComplete="off"
-              style={styles.input}
-              value={formData.confirmNewPassword}
-              onChangeText={(value) => handleInputChange("confirmNewPassword", value)}
-              placeholder="Confirm new password"
-              isPassword
-              returnKeyType="done"
-              onSubmitEditing={handleSavePassword}
-              blurOnSubmit={true}
-            />
-          </View>
-          {error.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{error.email}</Text>}
-
-          <View style={styles.btnContainer}>
-            <TouchableOpacity
-              style={[defaultStyles.btn, styles.resetButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handleSavePassword}
-            >
-              <Text style={styles.buttonText}>Confirm</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[defaultStyles.btnSecondary, styles.cancelButton, { borderColor: theme.colors.primary }]}
-              onPress={() => router.back()}
-            >
-              <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
-                Back to Login
+            <View style={[styles.headerContainer, keyboardVisible && styles.headerContainerCompact]}>
+              <Image
+                source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
+                style={[styles.logo, keyboardVisible && styles.logoCompact]}
+              />
+              <Text style={[styles.title, { color: theme.colors.text }]}>Reset Password</Text>
+              <Text style={[styles.subtitle, { color: theme.colors.text }]}>
+                Enter your new password below
               </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+            </View>
+
+            <View style={styles.formContainer}>
+              <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>New Password</Text>
+                <CustomInput
+                  ref={newPasswordRef}
+                  icon="lock-closed-outline"
+                  autoComplete="off"
+                  style={styles.input}
+                  value={formData.newPassword}
+                  onChangeText={(value) => handleInputChange("newPassword", value)}
+                  placeholder="Enter new password"
+                  isPassword
+                  returnKeyType="next"
+                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                  blurOnSubmit={false}
+                  autoFocus={true}
+                />
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Confirm New Password</Text>
+                <CustomInput
+                  ref={confirmPasswordRef}
+                  icon="lock-closed-outline"
+                  autoComplete="off"
+                  style={styles.input}
+                  value={formData.confirmNewPassword}
+                  onChangeText={(value) => handleInputChange("confirmNewPassword", value)}
+                  placeholder="Confirm new password"
+                  isPassword
+                  returnKeyType="done"
+                  onSubmitEditing={handleSavePassword}
+                  blurOnSubmit={true}
+                />
+              </View>
+              {error.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{error.email}</Text>}
+
+              <View style={styles.btnContainer}>
+                <TouchableOpacity
+                  style={[defaultStyles.btn, styles.resetButton, { backgroundColor: theme.colors.primary }]}
+                  onPress={handleSavePassword}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.buttonText}>Confirm</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[defaultStyles.btnSecondary, styles.cancelButton, { borderColor: theme.colors.primary }]}
+                  onPress={() => router.back()}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
+                    Back to Login
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   headerContainer: {
     alignItems: 'center',
@@ -256,11 +298,21 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 20,
   },
+  headerContainerCompact: {
+    marginTop: 40,
+    marginBottom: 30,
+    paddingVertical: 10,
+  },
   logo: {
     width: 180,
     height: 100,
     resizeMode: 'contain',
     marginBottom: 20,
+  },
+  logoCompact: {
+    width: 140,
+    height: 80,
+    marginBottom: 15,
   },
   title: {
     fontSize: 24,

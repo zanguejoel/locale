@@ -13,6 +13,9 @@ import {
   Image,
   Platform,
   SafeAreaView,
+  ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
@@ -35,6 +38,7 @@ const ForgotPassword = () => {
   const [resetSent, setResetSent] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [code, setCode] = useState("");
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   
   // Input refs for keyboard navigation
   const emailInputRef = useRef<TextInput>(null);
@@ -50,6 +54,23 @@ const ForgotPassword = () => {
     }
   }, [resendTimer]);
 
+  // Keyboard visibility listeners
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
+
   const validateEmail = () => {
     if (!email) {
       setError({ email: "Email is required" });
@@ -63,6 +84,9 @@ const ForgotPassword = () => {
   };
 
   const handleResetPassword = async () => {
+    // Dismiss keyboard
+    Keyboard.dismiss();
+    
     // e.preventDefault();
     setIsSubmitted(true);
 
@@ -124,6 +148,9 @@ const ForgotPassword = () => {
   };
 
   const handleValidCode = async (e: any) => {
+    // Dismiss keyboard
+    Keyboard.dismiss();
+    
     // e.preventDefault();
     if (!code) {
       setError({ code: "Code is required" });
@@ -174,147 +201,176 @@ const ForgotPassword = () => {
 
   if (resetSent) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.successContainer}>
-          <Image
-            source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
-            style={styles.logo}
-          />
-          <Text style={[styles.title, { color: theme.colors.text }]}>Check Your Email</Text>
-          <Text style={[styles.successMessage, { color: theme.colors.text }]}>
-            We've sent verification code to:
-          </Text>
-          <Text style={[styles.emailText, { color: theme.colors.primary }]}>{email}</Text>
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Verification Code</Text>
-            <CustomInput
-              ref={codeInputRef}
-              icon="code-outline"
-              placeholder="Enter 6-digit code"
-              value={code}
-            onChangeText={(text) => {
-              setCode(text);
-            }}
-            error={!!error.code}
-            autoCapitalize="none"
-            keyboardType="numeric"
-            returnKeyType="go"
-            containerStyle={{width: '100%'}}
-            onSubmitEditing={handleValidCode}
-            blurOnSubmit={true}
-            autoFocus={true}
-          />
-          </View>
-          <View style={styles.btnContainer}>
-            <TouchableOpacity
-              style={[defaultStyles.btn, styles.returnButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handleValidCode}
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardView}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              bounces={false}
             >
-              <Text style={styles.buttonText}>Confirm</Text>
-            </TouchableOpacity>
+              <View style={[styles.successContainer, keyboardVisible && styles.successContainerCompact]}>
+                <Image
+                  source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
+                  style={[styles.logo, keyboardVisible && styles.logoCompact]}
+                />
+                <Text style={[styles.title, { color: theme.colors.text }]}>Check Your Email</Text>
+                <Text style={[styles.successMessage, { color: theme.colors.text }]}>
+                  We've sent verification code to:
+                </Text>
+                <Text style={[styles.emailText, { color: theme.colors.primary }]}>{email}</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Verification Code</Text>
+                  <CustomInput
+                    ref={codeInputRef}
+                    icon="code-outline"
+                    placeholder="Enter 6-digit code"
+                    value={code}
+                  onChangeText={(text) => {
+                    setCode(text);
+                  }}
+                  error={!!error.code}
+                  autoCapitalize="none"
+                  keyboardType="numeric"
+                  returnKeyType="go"
+                  containerStyle={{width: '100%'}}
+                  onSubmitEditing={handleValidCode}
+                  blurOnSubmit={true}
+                  autoFocus={true}
+                />
+                </View>
+                <View style={styles.btnContainer}>
+                  <TouchableOpacity
+                    style={[defaultStyles.btn, styles.returnButton, { backgroundColor: theme.colors.primary }]}
+                    onPress={handleValidCode}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.buttonText}>Confirm</Text>
+                  </TouchableOpacity>
 
-            <TouchableOpacity
-              disabled={resendTimer > 0}
-              style={[
-                defaultStyles.btnSecondary,
-                styles.resendButton,
-                {
-                  borderColor: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary
-                }
-              ]}
-              onPress={handleResetPassword}
-            >
-              <Text style={[
-                styles.buttonText,
-                {
-                  color: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary
-                }
-              ]}>
-                Resend code
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {resendTimer > 0 && (
-            <View style={styles.resendContainerTimer}>
-              <Text style={{ color: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary }}>
-                Resend the code
-              </Text>
-              <Text style={[styles.timerText, { color: theme.colors.primary }]}>{resendTimer}s</Text>
-            </View>
-          )}
-        </View>
-      </View>
+                  <TouchableOpacity
+                    disabled={resendTimer > 0}
+                    style={[
+                      defaultStyles.btnSecondary,
+                      styles.resendButton,
+                      {
+                        borderColor: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary
+                      }
+                    ]}
+                    onPress={handleResetPassword}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.buttonText,
+                      {
+                        color: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary
+                      }
+                    ]}>
+                      Resend code
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {resendTimer > 0 && (
+                  <View style={styles.resendContainerTimer}>
+                    <Text style={{ color: resendTimer > 0 ? theme.colors.greyLight : theme.colors.primary }}>
+                      Resend the code
+                    </Text>
+                    <Text style={[styles.timerText, { color: theme.colors.primary }]}>{resendTimer}s</Text>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <SafeAreaView>
-        {isLoading && (
-          <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Sending reset code...</Text>
-          </View>
-        )}
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {isLoading && (
+              <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={styles.loadingText}>Sending reset code...</Text>
+              </View>
+            )}
 
-        <View style={styles.headerContainer}>
-          <Image
-            source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
-            style={styles.logo}
-          />
-          <Text style={[styles.title, { color: theme.colors.text }]}>Forgot Password?</Text>
-          <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-            Enter your email address to receive verification code
-          </Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Email Address</Text>
-            <CustomInput
-              ref={emailInputRef}
-              icon="mail-outline"
-              placeholder="you@example.com"
-              value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              if (isSubmitted) validateEmail();
-            }}
-            error={!!error.email}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-            returnKeyType="send"
-            onSubmitEditing={handleResetPassword}
-            blurOnSubmit={true}
-            autoFocus={true}
-          />
-          {error.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{error.email}</Text>}
-          </View>
-
-          <View style={styles.btnContainer}>
-            <TouchableOpacity
-              style={[defaultStyles.btn, styles.resetButton, { backgroundColor: theme.colors.primary }]}
-              onPress={() => handleResetPassword()}
-            >
-              <Text style={styles.buttonText}>Send Reset Code</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[defaultStyles.btnSecondary, styles.cancelButton, { borderColor: theme.colors.primary }]}
-              onPress={() => router.back()}
-            >
-              <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
-                Back to Login
+            <View style={[styles.headerContainer, keyboardVisible && styles.headerContainerCompact]}>
+              <Image
+                source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
+                style={[styles.logo, keyboardVisible && styles.logoCompact]}
+              />
+              <Text style={[styles.title, { color: theme.colors.text }]}>Forgot Password?</Text>
+              <Text style={[styles.subtitle, { color: theme.colors.text }]}>
+                Enter your email address to receive verification code
               </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+            </View>
+
+            <View style={styles.formContainer}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Email Address</Text>
+                <CustomInput
+                  ref={emailInputRef}
+                  icon="mail-outline"
+                  placeholder="you@example.com"
+                  value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (isSubmitted) validateEmail();
+                }}
+                error={!!error.email}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                returnKeyType="send"
+                onSubmitEditing={handleResetPassword}
+                blurOnSubmit={true}
+                autoFocus={true}
+              />
+              {error.email && <Text style={[styles.errorText, { color: theme.colors.red }]}>{error.email}</Text>}
+              </View>
+
+              <View style={styles.btnContainer}>
+                <TouchableOpacity
+                  style={[defaultStyles.btn, styles.resetButton, { backgroundColor: theme.colors.primary }]}
+                  onPress={() => handleResetPassword()}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.buttonText}>Send Reset Code</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[defaultStyles.btnSecondary, styles.cancelButton, { borderColor: theme.colors.primary }]}
+                  onPress={() => router.back()}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
+                    Back to Login
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -322,12 +378,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   headerContainer: {
     alignItems: 'center',
     marginTop: 80,
     marginBottom: 50,
     paddingHorizontal: 24,
     paddingVertical: 20,
+  },
+  headerContainerCompact: {
+    marginTop: 40,
+    marginBottom: 30,
+    paddingVertical: 10,
   },
   resendContainerTimer: {
     flexDirection: 'row',
@@ -339,6 +406,11 @@ const styles = StyleSheet.create({
     height: 100,
     resizeMode: 'contain',
     marginBottom: 20,
+  },
+  logoCompact: {
+    width: 140,
+    height: 80,
+    marginBottom: 15,
   },
   appTitle: {
     fontSize: 42,
@@ -407,6 +479,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 80,
     paddingVertical: 20,
+  },
+  successContainerCompact: {
+    paddingTop: 40,
+    paddingVertical: 10,
   },
   successMessage: {
     fontSize: 16,

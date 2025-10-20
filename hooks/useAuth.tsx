@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const expired = await isTokenExpired();
         if (expired) {
           console.log('[Auth] Token already expired, signing out user');
-          Alert.alert(
+          /* Alert.alert(
             'Session Expired',
             'Your session has expired. Please sign in again.',
             [
@@ -90,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
               }
             ]
-          );
+          ); */
           return;
         }
 
@@ -134,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Show alert to user (after state is cleared)
-      Alert.alert(
+      /* Alert.alert(
         'Session Expired',
         'Your session has expired. Please sign in again.',
         [
@@ -151,7 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isHandlingSessionExpiration.current = false;
           }
         }
-      );
+      ); */
     });
 
     return () => {
@@ -178,15 +178,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ]);
 
       if (!response.ok) {
-        const errorMessage = response.data?.detail || response.data?.message || response.problem || 'Login failed';
+        // Handle error properly when response.data is null or doesn't have detail
+        let errorMessage = 'Login failed';
+        
+        // Try to extract meaningful error from response
+        // Handle Pydantic validation errors (array format)
+        if (Array.isArray(response.data?.detail)) {
+          errorMessage = response.data.detail
+            .map((err: any) => err.msg || err.message || String(err))
+            .join('. ');
+        }
+        // Handle nested error structures (like email verification error)
+        else if (response.data?.detail?.msg) {
+          errorMessage = response.data.detail.msg;
+        }
+        // Handle string detail or message
+        else if (response.data?.detail) {
+          errorMessage = response.data.detail;
+        } else if (response.data?.message) {
+          errorMessage = response.data.message;
+        } else if (response.problem) {
+          // Handle network problems
+          if (response.problem === 'NETWORK_ERROR') {
+            errorMessage = 'Network error. Please check your internet connection.';
+          } else if (response.problem === 'TIMEOUT_ERROR') {
+            errorMessage = 'Request timed out. Please try again.';
+          } else if (response.problem === 'CONNECTION_ERROR') {
+            errorMessage = 'Unable to connect to server. Please try again.';
+          } else if (response.problem === 'SERVER_ERROR') {
+            errorMessage = 'Server error. Please try again later.';
+          } else if (response.problem === 'CLIENT_ERROR') {
+            errorMessage = 'Invalid request. Please check your email and password.';
+          } else {
+            errorMessage = `Login failed: ${response.problem}`;
+          }
+        }
         
         // Track login failed (non-blocking)
         mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
           method: 'email',
-          error_message: typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage),
+          error_message: errorMessage,
+          status_code: response.status,
         }).catch(() => {});
         
-        throw new Error(typeof errorMessage === 'string' ? errorMessage : 'Login failed');
+        throw new Error(errorMessage);
       }
 
       if (!response.data?.token) {
@@ -213,20 +248,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Fetch user data with timeout
       const userResponse = await Promise.race([
-        api.get<User | any>('/auth/me'),
+        api.get<User | any>('/auth/me', 
+          { headers: { 'authorization': `${response.data.token}` } 
+        }),
         new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('User data fetch timeout')), 30000)
+          setTimeout(() => reject(new Error('User data fetch timeout')), 10000)
         )
       ]);
 
       if (!(userResponse.ok && userResponse.data)) {
+        // Handle error properly with detailed message extraction
+        let errorMessage = 'Failed to fetch user data';
+        
+        // Extract meaningful error from response
+        if (Array.isArray(userResponse.data?.detail)) {
+          errorMessage = userResponse.data.detail
+            .map((err: any) => err.msg || err.message || String(err))
+            .join('. ');
+        } else if (userResponse.data?.detail?.msg) {
+          errorMessage = userResponse.data.detail.msg;
+        } else if (userResponse.data?.detail) {
+          errorMessage = userResponse.data.detail;
+        } else if (userResponse.data?.message) {
+          errorMessage = userResponse.data.message;
+        } else if (userResponse.problem) {
+          // Handle network problems
+          if (userResponse.problem === 'NETWORK_ERROR') {
+            errorMessage = 'Network error while fetching user data. Please check your connection.';
+          } else if (userResponse.problem === 'TIMEOUT_ERROR') {
+            errorMessage = 'Request timed out while fetching user data. Please try again.';
+          } else if (userResponse.problem === 'CONNECTION_ERROR') {
+            errorMessage = 'Unable to connect to server. Please check your connection.';
+          } else if (userResponse.problem === 'SERVER_ERROR') {
+            errorMessage = 'Server error while fetching user data. Please try again later.';
+          } else if (userResponse.problem === 'CLIENT_ERROR') {
+            errorMessage = 'Authentication error. Please try logging in again.';
+          } else {
+            errorMessage = `Failed to fetch user data: ${userResponse.problem}`;
+          }
+        }
+        
         // Track login failed (non-blocking)
         mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
           method: 'email',
-          error_message: 'Failed to fetch user data',
+          error_message: errorMessage,
+          status_code: userResponse.status,
+          failure_point: 'fetch_user_data',
         }).catch(() => {});
         
-        throw new Error('Failed to fetch user data');
+        throw new Error(errorMessage);
       }
 
       // Store user data WITHOUT token
@@ -712,6 +782,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setTimeout(() => reject(new Error('User data fetch timeout')), 30000)
           )
         ]);
+
+        if (!userResponse.ok || !userResponse.data) {
+          // Handle error properly with detailed message extraction
+          let errorMessage = 'Failed to fetch user data';
+          
+          // Extract meaningful error from response
+          if (Array.isArray(userResponse.data?.detail)) {
+            errorMessage = userResponse.data.detail
+              .map((err: any) => err.msg || err.message || String(err))
+              .join('. ');
+          } else if (userResponse.data?.detail?.msg) {
+            errorMessage = userResponse.data.detail.msg;
+          } else if (userResponse.data?.detail) {
+            errorMessage = userResponse.data.detail;
+          } else if (userResponse.data?.message) {
+            errorMessage = userResponse.data.message;
+          } else if (userResponse.problem) {
+            // Handle network problems
+            if (userResponse.problem === 'NETWORK_ERROR') {
+              errorMessage = 'Network error while fetching user data. Please check your connection.';
+            } else if (userResponse.problem === 'TIMEOUT_ERROR') {
+              errorMessage = 'Request timed out while fetching user data. Please try again.';
+            } else if (userResponse.problem === 'CONNECTION_ERROR') {
+              errorMessage = 'Unable to connect to server. Please check your connection.';
+            } else if (userResponse.problem === 'SERVER_ERROR') {
+              errorMessage = 'Server error while fetching user data. Please try again later.';
+            } else if (userResponse.problem === 'CLIENT_ERROR') {
+              errorMessage = 'Authentication error after OAuth. Please try again.';
+            } else {
+              errorMessage = `Failed to fetch user data: ${userResponse.problem}`;
+            }
+          }
+          
+          // Track OAuth login failed (non-blocking)
+          mixpanelService.trackAuth(AuthEvent.LOGIN_FAILED, {
+            method: provider,
+            error_message: errorMessage,
+            status_code: userResponse.status,
+            failure_point: 'fetch_user_data',
+          }).catch(() => {});
+          
+          return {
+            success: false,
+            error: errorMessage,
+          };
+        }
 
         if (userResponse.ok && userResponse.data) {
           const newUser = { ...userResponse.data };
