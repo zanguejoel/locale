@@ -83,7 +83,21 @@ interface ChatContextType {
   isLoading: boolean;
   isSending: boolean;
   stream: string;
-  sendMessage: (message: string, messageType?: string, operation?: string | null, additionalData?: string, options?: any) => Promise<void>;
+  sendMessage: (message: string, messageType?: string, operation?: string | null, additionalData?: string, options?: {
+    webSearch?: boolean;
+    generateImage?: string;
+    imageProvider?: string;
+    imageModel?: string;
+    generateVideo?: string;
+    enableArtifacts?: boolean;
+    modelId?: string;
+    files?: Array<{
+      uri: string;
+      type: string;
+      name: string;
+      size?: number;
+    }>;
+  }) => Promise<void>;
   fetchMessages: (conversationId: string) => Promise<void>;
   fetchConversation: (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => Promise<Conversations[] | void>;
   createConversation: (participantIds: string[]) => Promise<string>;
@@ -96,6 +110,7 @@ interface ChatContextType {
   resetChat: () => void;
   createNewConversation: () => Promise<string>;
   intermediate: string;
+  reasoningText: string;
   setChatLoading?: (a: boolean) => void;
   isChatLoading?: boolean;
   appendToMessageHistory: (message: string, role: Role) => void;
@@ -140,9 +155,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ============ Streaming State ============
   const [stream, setStream] = useState('');
   const [intermediate, setIntermediate] = useState('');
+  const [reasoningText, setReasoningText] = useState('');
   const [streamWorking, setStreamWorking] = useState(false);
   const streamWorkingRef = useRef(streamWorking);
   const intermediateRef = useRef(intermediate);
+  const reasoningTextRef = useRef(reasoningText);
+  const streamRef = useRef(stream);
   
   // ============ Error State ============
   const [error, setError] = useState('');
@@ -204,7 +222,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isSendingRef.current = isSending;
     streamWorkingRef.current = streamWorking;
     intermediateRef.current = intermediate;
-  }, [isSending, streamWorking, intermediate]);
+    reasoningTextRef.current = reasoningText;
+    streamRef.current = stream;
+  }, [isSending, streamWorking, intermediate, reasoningText, stream]);
   
   // ============ Auto-clear Stale Intermediate State ============
   // Prevents UI from hanging if intermediate state never gets cleared
@@ -572,6 +592,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       imageModel?: string;
       generateVideo?: string;
       enableArtifacts?: boolean;
+      modelId?: string; // Add modelId to options
       files?: Array<{
         uri: string;
         type: string;
@@ -593,6 +614,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setChatError(null); // Clear any previous errors
     setStream('');
     setIntermediate(''); // Clear intermediate initially - will be set by stream or remain empty for loading dots
+    setReasoningText(''); // Clear reasoning text from previous message
     setAdditionalData([]); // Reset additional data for new message
     setStreamWorking(false); // Reset stream working state
 
@@ -727,9 +749,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       formData.append('operations', JSON.stringify(operation));
     }
     
-    // Add the default model ID to the request
-    const modelId = getDefaultModelId();
+    // Add the model ID to the request
+    // Use provided modelId from options, or fall back to default from storage
+    const modelId = options?.modelId || getDefaultModelId();
     formData.append('model', modelId);
+    console.log('[sendMessage] Using model:', modelId);
     
     const conversationId = currentConversationId || '';
     
@@ -864,7 +888,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         handleError,
         setIntermediate,
         setStreamWorking,
-        setAdditionalData
+        setAdditionalData,
+        setReasoningText
       );
       
       // Handle additional_data after streaming completes
@@ -936,6 +961,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setStreamWorking(false); // Reset stream working state
       setIntermediate(''); // Clear intermediate state to stop loading indicator
       
+      // Combine reasoning back into message content after streaming completes
+      // Use refs to get the final values after streaming
+      const finalStreamContent = streamRef.current;
+      const finalReasoningContent = reasoningTextRef.current;
+      
+      if (finalReasoningContent && finalReasoningContent.trim()) {
+        const finalContent = finalStreamContent + (finalStreamContent ? '\n\n' : '') + `<jmeReasoning>${finalReasoningContent}</jmeReasoning>`;
+        console.log('[Chat] 🧠 Combining reasoning into final message content');
+        console.log('[Chat] 🧠 Stream length:', finalStreamContent.length, 'Reasoning length:', finalReasoningContent.length);
+        console.log('[Chat] 🧠 Final content preview:', finalContent.substring(0, 100) + '...');
+        
+        setMessages(prev => updateLastItem(prev, message => ({
+          ...message,
+          content: finalContent,
+        })));
+        
+        // Clear reasoning text after adding to content
+        setReasoningText('');
+      }
+      
       // Finalize artifacts after streaming completes (with error recovery)
       if (stream && currentConversationId) {
         const messageId = `${currentConversationId}-${Date.now()}`;
@@ -970,7 +1015,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Don't reset stream here - it's used for display and doesn't affect input state
     }
     
-  }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream, stream, finalizeArtifacts]);
+  }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream, stream, reasoningText, finalizeArtifacts]);
 
   const fetchConversation = useCallback(async (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => {
     const effectiveLimit = limitValue || 20;
@@ -1028,6 +1073,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Do this after abort completes to prevent race conditions
     setStream('');
     setIntermediate('');
+    setReasoningText(''); // Clear reasoning text when switching conversations
     setStreamWorking(false);
     isSendingRef.current = false;
     setIsSending(false);
@@ -1154,6 +1200,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages([]);
     setStream('');
     setIntermediate('');
+    setReasoningText(''); // Clear reasoning text when resetting chat
     setStreamWorking(false);
     isSendingRef.current = false;
     setIsSending(false);
@@ -1312,6 +1359,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createNewConversation,
       streamWorking,
       intermediate,
+      reasoningText,
       appendToMessageHistory,
       handleSendLocalMessage: localModel.handleSendLocalMessage,
       isLocal: localModel.isLocal,
@@ -1330,6 +1378,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isChatLoading,
     setChatLoading,
     intermediate,
+    reasoningText,
     messages,
     conversations,
     currentConversationId,

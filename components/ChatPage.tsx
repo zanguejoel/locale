@@ -124,6 +124,7 @@ const ChatPage = () => {
     stream, 
     fetchMessages, 
     intermediate,
+    reasoningText,
     localModelDownloadProgress,
     isLocalModelReady,
     setIsLocal,
@@ -142,6 +143,16 @@ const ChatPage = () => {
 
   const id = (params as { id?: string })?.id
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  
+  // Debug: Log reasoning text changes
+  useEffect(() => {
+    if (reasoningText) {
+      console.log('[ChatPage] 🧠 reasoningText updated:', {
+        length: reasoningText.length,
+        preview: reasoningText.substring(0, 100) + (reasoningText.length > 100 ? '...' : '')
+      });
+    }
+  }, [reasoningText]);
   
   // File attachments state
   const [files, setFiles] = useState<SelectedFile[]>([]);
@@ -634,6 +645,19 @@ const ChatPage = () => {
               isOnlyInGroup={isOnlyInGroup}
               artifacts={getArtifactsForMessage(item.id || '')}
               streamingArtifact={currentStreamingArtifact}
+              streamingReasoning={(() => {
+                const isLastMessage = index === displayMessages.length - 1;
+                const reasoning = isLastMessage ? reasoningText : undefined;
+                if (reasoning && reasoning.length > 0) {
+                  console.log('[ChatPage] 🧠 Passing reasoning to last message:', {
+                    messageIndex: index,
+                    isLastMessage,
+                    reasoningLength: reasoning.length,
+                    reasoningPreview: reasoning.substring(0, 50) + '...'
+                  });
+                }
+                return reasoning;
+              })()}
               onArtifactPress={handleArtifactPress}
               onCopy={() => handleCopyMessage(item.content)}
               onPin={() => handleMessagePin(item.id || `${index}`)}
@@ -923,6 +947,7 @@ const ChatPage = () => {
             }}
             isLoading={isSending}
             isLocal={isLocal}
+            currentModelId={isLocal ? selectedLocalModel.id : selectedCloudModel.id}
             onRecordingStateChange={(recording, onCancel) => {
               setIsRecording(recording);
               setCancelRecording(() => onCancel);

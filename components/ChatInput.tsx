@@ -228,6 +228,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
       }),
       generateVideo: generationOptions.generateVideo,
       enableArtifacts: generationOptions.enableArtifacts,
+      modelId: currentModelId, // Pass the selected model ID
       files: files.length > 0 ? files : undefined, // Pass files array in options
     } : undefined;
     

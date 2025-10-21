@@ -27,12 +27,14 @@ export const processStream = async (
   handleError: (error: string) => void,
   setIntermediate: (value: string) => void,
   setStreamWorking: (v: boolean) => void,
-  setAdditionalData?: (a: any[]) => void
+  setAdditionalData?: (a: any[]) => void,
+  setReasoningText?: (value: string | ((prev: string) => string)) => void
 ): Promise<StreamData | null> => {
   console.log("[ChatStream] ═══════════════════════════════════════");
   console.log("[ChatStream] processStream called - CHUNK MODE (instant)");
   console.log("[ChatStream] - Response exists:", !!response);
   console.log("[ChatStream] - Has additionalData callback:", !!setAdditionalData);
+  console.log("[ChatStream] - Has reasoning callback:", !!setReasoningText);
   console.log("[ChatStream] - Streaming mode: Instant chunk display");
   console.log("[ChatStream] ═══════════════════════════════════════");
   
@@ -43,6 +45,7 @@ export const processStream = async (
   let chunkCount = 0;
   let hasReceivedContent = false;
   let hasReceivedIntermediate = false;
+  let reasoning = false; // Track if we're in reasoning mode
 
   if (!response) {
     handleError("No response stream available");
@@ -99,8 +102,84 @@ export const processStream = async (
                     }
                     console.log(`[ChatStream] 💬 Received content chunk: "${data.content}" (${data.content.length} chars)`);
                     
-                    // Display content instantly as it arrives
-                    setStream((prev) => prev + data.content);
+                    // Handle reasoning tags if callback is provided
+                    if (setReasoningText && data.content) {
+                      // Check if content contains reasoning tags
+                      if (data.content.includes('<jmeReasoning>') && !reasoning) {
+                        const parts = data.content.split('<jmeReasoning>');
+                        const beforeReasoning = parts[0];
+                        const afterOpening = parts.slice(1).join('<jmeReasoning>');
+                        
+                        // Add content before tag to regular stream
+                        if (beforeReasoning.trim()) {
+                          setStream((prev) => prev + beforeReasoning);
+                        }
+                        
+                        reasoning = true;
+                        console.log('[ChatStream] 🧠 Entering reasoning mode');
+                        console.log('[ChatStream] 🧠 Content before reasoning:', beforeReasoning);
+                        
+                        // Process the content after opening tag (might include closing tag too)
+                        if (afterOpening) {
+                          if (afterOpening.includes('</jmeReasoning>')) {
+                            const closingParts = afterOpening.split('</jmeReasoning>');
+                            const reasoningContent = closingParts[0];
+                            const afterClosing = closingParts.slice(1).join('</jmeReasoning>');
+                            
+                            setReasoningText((prev) => {
+                              const newReasoning = prev + reasoningContent;
+                              console.log('[ChatStream] 🧠 Reasoning complete:', newReasoning);
+                              return newReasoning;
+                            });
+                            reasoning = false;
+                            console.log('[ChatStream] 🧠 Exiting reasoning mode (complete block)');
+                            
+                            if (afterClosing.trim()) {
+                              setStream((prev) => prev + afterClosing);
+                            }
+                          } else {
+                            setReasoningText((prev) => {
+                              const newReasoning = prev + afterOpening;
+                              console.log('[ChatStream] 🧠 Reasoning chunk (opening):', afterOpening);
+                              return newReasoning;
+                            });
+                          }
+                        }
+                      }
+                      // Handle closing tag when already in reasoning mode
+                      else if (data.content.includes('</jmeReasoning>') && reasoning) {
+                        const parts = data.content.split('</jmeReasoning>');
+                        const reasoningPart = parts[0];
+                        const regularPart = parts.slice(1).join('</jmeReasoning>');
+                        
+                        setReasoningText((prev) => {
+                          const finalReasoning = prev + reasoningPart;
+                          console.log('[ChatStream] 🧠 Reasoning complete (closing tag):', finalReasoning);
+                          return finalReasoning;
+                        });
+                        reasoning = false;
+                        console.log('[ChatStream] 🧠 Exiting reasoning mode (closing tag)');
+                        
+                        if (regularPart.trim()) {
+                          setStream((prev) => prev + regularPart);
+                        }
+                      }
+                      // Content in reasoning mode (no closing tag yet)
+                      else if (reasoning) {
+                        setReasoningText((prev) => {
+                          const newReasoning = prev + data.content;
+                          console.log('[ChatStream] 🧠 Reasoning chunk:', data.content, '| Total length:', newReasoning.length);
+                          return newReasoning;
+                        });
+                      }
+                      // Regular content (not in reasoning mode)
+                      else {
+                        setStream((prev) => prev + data.content);
+                      }
+                    } else {
+                      // No reasoning callback, display content normally
+                      setStream((prev) => prev + data.content);
+                    }
                   }
                   break;
 
@@ -129,9 +208,10 @@ export const processStream = async (
                   console.log('[ChatStream] - Has content:', !!data.content);
                   console.log('[ChatStream] - Has additional_data:', !!data?.data?.additional_data);
                   
-                  // Clear intermediate state when final response is received
-                  console.log('[ChatStream] Clearing intermediate state');
+                  // Clear intermediate state and reasoning state when final response is received
+                  console.log('[ChatStream] Clearing intermediate and reasoning state');
                   setIntermediate('');
+                  reasoning = false;
                   
                   if (data?.data?.additional_data) {
                     console.log('[ChatStream] Final has additional_data:', data.data.additional_data.length, 'items');
