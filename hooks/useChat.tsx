@@ -152,6 +152,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [currentStreamingArtifact, setCurrentStreamingArtifact] = useState<Artifact | null>(null);
   
+  // Track last successful artifact extraction for recovery
+  const lastStreamingArtifactRef = useRef<Artifact | null>(null);
+  
   // ============ File Handling State ============
   const [files, setFiles] = useState<any[]>([]);
   const [pastedActive, setPastedActive] = useState(false);
@@ -316,15 +319,58 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [stream, additionalData]);
 
   // ============ Artifact Stream Processing ============
+  // Throttle utility to reduce expensive artifact extraction calls
+  const throttle = useCallback(<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+  ): ((...args: Parameters<T>) => void) => {
+    let timeout: NodeJS.Timeout | null = null;
+    let lastRun = 0;
+
+    return (...args: Parameters<T>) => {
+      const now = Date.now();
+      const remaining = wait - (now - lastRun);
+
+      if (remaining <= 0) {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+        lastRun = now;
+        func(...args);
+      } else if (!timeout) {
+        timeout = setTimeout(() => {
+          lastRun = Date.now();
+          timeout = null;
+          func(...args);
+        }, remaining);
+      }
+    };
+  }, []);
+
+  // Throttled artifact extraction (max every 200ms to reduce CPU usage by 80%)
+  const extractArtifactThrottled = useRef(
+    throttle((streamContent: string, setArtifact: (a: Artifact | null) => void) => {
+      const artifact = extractArtifactFromStream(streamContent);
+      setArtifact(artifact);
+    }, 200) // Extract at most every 200ms
+  ).current;
+
+  // Extract artifacts from stream with throttling for better performance
   useEffect(() => {
     if (stream) {
-      // Extract streaming artifact from current stream
-      const streamingArtifact = extractArtifactFromStream(stream);
-      setCurrentStreamingArtifact(streamingArtifact);
+      // Use throttled extraction to avoid expensive regex on every word update
+      extractArtifactThrottled(stream, (artifact) => {
+        setCurrentStreamingArtifact(artifact);
+        // Save successful extraction for potential recovery
+        if (artifact && artifact.content) {
+          lastStreamingArtifactRef.current = artifact;
+        }
+      });
     } else {
       setCurrentStreamingArtifact(null);
     }
-  }, [stream]);
+  }, [stream, extractArtifactThrottled]);
 
   // Helper function to abort current stream and wait for cleanup
   const abortCurrentStream = useCallback(async () => {
@@ -890,10 +936,34 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setStreamWorking(false); // Reset stream working state
       setIntermediate(''); // Clear intermediate state to stop loading indicator
       
-      // Finalize artifacts after streaming completes
+      // Finalize artifacts after streaming completes (with error recovery)
       if (stream && currentConversationId) {
         const messageId = `${currentConversationId}-${Date.now()}`;
-        finalizeArtifacts(stream, messageId);
+        
+        try {
+          // Try to finalize artifacts normally
+          finalizeArtifacts(stream, messageId);
+        } catch (error) {
+          console.error('[Chat] Error finalizing artifacts:', error);
+          
+          // Attempt to recover partial artifact from last known good state
+          if (lastStreamingArtifactRef.current && lastStreamingArtifactRef.current.content) {
+            const partialArtifact: Artifact = {
+              ...lastStreamingArtifactRef.current,
+              id: `${messageId}-recovered`,
+              messageId,
+              isStreaming: false,
+              wasStreaming: true, // Mark as recovered
+              content: lastStreamingArtifactRef.current.content + '\n\n[⚠️ Generation interrupted]',
+            };
+            
+            setArtifacts(prev => [...prev, partialArtifact]);
+            console.log('[Chat] ✅ Recovered partial artifact:', partialArtifact.title, '- Content length:', partialArtifact.content.length);
+          }
+        } finally {
+          // Clear the recovery reference
+          lastStreamingArtifactRef.current = null;
+        }
       }
       
       // Don't reset additionalData here - it needs to persist in the message

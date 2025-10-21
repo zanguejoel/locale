@@ -70,6 +70,7 @@ interface ChatMessageProps extends Message {
   // Artifact props
   onArtifactPress?: (artifact: Artifact, allMessageArtifacts?: Artifact[]) => void;
   artifacts?: Artifact[];
+  streamingArtifact?: Artifact | null; // NEW: For real-time streaming display
   // Action handlers
   onCopy?: () => void;
   onPin?: () => void;
@@ -235,6 +236,7 @@ const ChatMessage = memo(({
   isOnlyInGroup = false,
   onArtifactPress,
   artifacts: providedArtifacts,
+  streamingArtifact,
   onCopy,
   onPin,
   isPinned = false,
@@ -261,11 +263,37 @@ const ChatMessage = memo(({
   }, [content, role, timestamp]);
 
   // Extract all artifacts from segments for external use (e.g., passing to parent)
+  // Combine finalized artifacts with streaming artifact if applicable
   const messageArtifacts = useMemo(() => {
-    return contentSegments
+    // Get artifacts from content segments
+    const segmentArtifacts = contentSegments
       .filter((seg): seg is Extract<ContentSegment, { type: 'artifact' }> => seg.type === 'artifact')
       .map(seg => seg.artifact);
-  }, [contentSegments]);
+    
+    // If we have a streaming artifact and it belongs to this message (last bot message)
+    // add it to the artifacts list for real-time display
+    if (streamingArtifact && role === Role.Bot && isSending) {
+      // Check if streaming artifact is already in the list (avoid duplicates)
+      const hasStreamingArtifact = segmentArtifacts.some(a => a.id === streamingArtifact.id);
+      if (!hasStreamingArtifact) {
+        return [...segmentArtifacts, streamingArtifact];
+      }
+    }
+    
+    // Also include artifacts passed as prop (from useChat context)
+    if (providedArtifacts && providedArtifacts.length > 0) {
+      // Merge with segment artifacts, avoiding duplicates
+      const allArtifacts = [...segmentArtifacts];
+      providedArtifacts.forEach((artifact: Artifact) => {
+        if (!allArtifacts.some(a => a.id === artifact.id)) {
+          allArtifacts.push(artifact);
+        }
+      });
+      return allArtifacts;
+    }
+    
+    return segmentArtifacts;
+  }, [contentSegments, streamingArtifact, providedArtifacts, role, isSending]);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);

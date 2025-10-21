@@ -15,16 +15,11 @@ interface StreamData {
 type SetStreamFunction = (value: string | ((prev: string) => string)) => void;
 
 // ============================================================
-// WORD-BY-WORD STREAMING CONFIGURATION
+// STREAMING CONFIGURATION
 // ============================================================
-// Adjust this value to control streaming speed:
-// - 10ms  = Very fast (almost instant)
-// - 30ms  = Fast (smooth but quick) ← CURRENT
-// - 50ms  = Medium (comfortable reading speed)
-// - 80ms  = Slow (deliberate, easy to follow)
-// - 100ms+ = Very slow (emphasizes each word)
+// Instant chunk streaming - content displays as it arrives
+// Simple, fast, and responsive
 // ============================================================
-const WORD_DELAY_MS = 1; // Delay between words in milliseconds
 
 export const processStream = async (
   response: ReadableStream<Uint8Array> | null,
@@ -35,10 +30,10 @@ export const processStream = async (
   setAdditionalData?: (a: any[]) => void
 ): Promise<StreamData | null> => {
   console.log("[ChatStream] ═══════════════════════════════════════");
-  console.log("[ChatStream] processStream called - WORD-BY-WORD MODE");
+  console.log("[ChatStream] processStream called - CHUNK MODE (instant)");
   console.log("[ChatStream] - Response exists:", !!response);
   console.log("[ChatStream] - Has additionalData callback:", !!setAdditionalData);
-  console.log("[ChatStream] - Word delay:", WORD_DELAY_MS, "ms");
+  console.log("[ChatStream] - Streaming mode: Instant chunk display");
   console.log("[ChatStream] ═══════════════════════════════════════");
   
   setStreamWorking(true);
@@ -48,59 +43,14 @@ export const processStream = async (
   let chunkCount = 0;
   let hasReceivedContent = false;
   let hasReceivedIntermediate = false;
-  
-  // Word-by-word streaming buffers
-  let wordBuffer = ''; // Accumulates characters until we have complete words
-  let pendingWords: string[] = []; // Queue of complete words to display
-  let isProcessingWords = false; // Flag to prevent concurrent word processing
 
   if (!response) {
-    // console.error("[ChatStream] Error: No response stream");
     handleError("No response stream available");
     setStreamWorking(false);
     return null;
   }
 
   const decoder = new TextDecoder();
-  
-  // Function to extract complete words from the word buffer
-  const extractWords = (text: string): { words: string[], remaining: string } => {
-    // Split by whitespace but keep the whitespace
-    const parts = text.split(/(\s+)/);
-    const words: string[] = [];
-    let remaining = '';
-    
-    // Process all but the last part (which might be incomplete)
-    for (let i = 0; i < parts.length - 1; i++) {
-      words.push(parts[i]);
-    }
-    
-    // Keep the last part as remaining (might be incomplete word)
-    remaining = parts[parts.length - 1] || '';
-    
-    return { words, remaining };
-  };
-  
-  // Function to process and display words one by one
-  const processWordQueue = async () => {
-    if (isProcessingWords) return; // Already processing
-    isProcessingWords = true;
-    
-    while (pendingWords.length > 0) {
-      const word = pendingWords.shift();
-      if (word !== undefined) {
-        // console.log(`[ChatStream] 📝 Displaying word: "${word}"`);
-        setStream((prev) => prev + word);
-        
-        // Add delay between words for smooth streaming effect
-        if (pendingWords.length > 0) {
-          await new Promise(resolve => setTimeout(resolve, WORD_DELAY_MS));
-        }
-      }
-    }
-    
-    isProcessingWords = false;
-  };
 
   try {
     // console.log("[ChatStream] Getting reader...");
@@ -135,7 +85,7 @@ export const processStream = async (
           buffer = remaining;
           console.log(`[ChatStream] 🔍 Parsed ${results.length} results from chunk ${chunkCount}`);
 
-          // Handle each parsed result - word-by-word streaming
+          // Handle each parsed result - instant chunk streaming
           for (const data of results) {
             try {
               switch (data.type) {
@@ -147,20 +97,8 @@ export const processStream = async (
                     }
                     console.log(`[ChatStream] 💬 Received content chunk: "${data.content}" (${data.content.length} chars)`);
                     
-                    // Add content to word buffer
-                    wordBuffer += data.content;
-                    
-                    // Extract complete words from buffer
-                    const { words, remaining } = extractWords(wordBuffer);
-                    wordBuffer = remaining;
-                    
-                    if (words.length > 0) {
-                      console.log(`[ChatStream] 📚 Extracted ${words.length} words, remaining: "${remaining}"`);
-                      // Add words to pending queue
-                      pendingWords.push(...words);
-                      // Start processing words (non-blocking)
-                      processWordQueue();
-                    }
+                    // Display content instantly as it arrives
+                    setStream((prev) => prev + data.content);
                   }
                   break;
 
@@ -243,57 +181,12 @@ export const processStream = async (
         const { results } = processJSONChunks(buffer + '\n');
         for (const data of results) {
           if (data.type === 'stream' && data.content) {
-            wordBuffer += data.content;
+            setStream((prev) => prev + data.content);
           }
         }
       } catch (e) {
         console.error('[ChatStream] Error processing final buffer:', e);
       }
-    }
-    
-    // Flush any remaining word buffer and pending words
-    if (wordBuffer) {
-      console.log('[ChatStream] 🔚 Flushing remaining word buffer:', wordBuffer);
-      pendingWords.push(wordBuffer);
-      wordBuffer = '';
-    } else if (pendingWords.length === 0 && buffer.trim()) {
-      // Edge case: buffer has content but wasn't processed
-      console.warn('[ChatStream] ⚠️ Unprocessed buffer content detected:', buffer);
-      setStream((prev) => prev + buffer);
-      buffer = '';
-    }
-    
-    // Wait for all pending words to be displayed with timeout protection
-    if (pendingWords.length > 0) {
-      const wordCount = pendingWords.length;
-      console.log('[ChatStream] ⏳ Waiting for', wordCount, 'remaining words to display');
-      
-      // Calculate max wait time: (words × delay) + 1 second buffer
-      const maxWaitTime = wordCount * WORD_DELAY_MS + 1000;
-      
-      // Create timeout promise
-      const timeoutPromise = new Promise<void>((resolve) => {
-        setTimeout(() => {
-          if (pendingWords.length > 0) {
-            console.warn('[ChatStream] ⚠️ Word queue timeout! Remaining:', pendingWords.length);
-            // Force clear remaining words by adding them all at once
-            const remaining = pendingWords.join('');
-            if (remaining) {
-              setStream((prev) => prev + remaining);
-            }
-            pendingWords.length = 0; // Clear the queue
-          }
-          resolve();
-        }, maxWaitTime);
-      });
-      
-      // Wait for either word queue to complete or timeout
-      await Promise.race([
-        processWordQueue(),
-        timeoutPromise
-      ]);
-      
-      console.log('[ChatStream] ✓ Word queue processed, remaining:', pendingWords.length);
     }
   } catch (error) {
     console.error('[ChatStream] Stream processing error:', error);
@@ -320,13 +213,11 @@ export const processStream = async (
     
     // Log streaming session summary
     console.log("[ChatStream] ═══════════════════════════════════════");
-    console.log("[ChatStream] Stream processing complete (WORD-BY-WORD)");
+    console.log("[ChatStream] Stream processing complete (instant chunks)");
     console.log("[ChatStream] - Total chunks received:", chunkCount);
     console.log("[ChatStream] - Had content:", hasReceivedContent);
     console.log("[ChatStream] - Had intermediate:", hasReceivedIntermediate);
     console.log("[ChatStream] - Has final result:", !!res);
-    console.log("[ChatStream] - Remaining words in queue:", pendingWords.length);
-    console.log("[ChatStream] - Remaining in word buffer:", wordBuffer);
     console.log("[ChatStream] ═══════════════════════════════════════");
   }
 

@@ -3,10 +3,10 @@
  * 
  * Full-screen modal for viewing and interacting with artifacts.
  * Supports navigation between multiple artifacts, view/code toggle,
- * and actions like copy, share, download.
+ * streaming artifact display, and actions like copy, share, download.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,12 +19,14 @@ import {
   Alert,
   Share,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Artifact, supportsCodeView } from '@/utils/ArtifactTypes';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CodeRenderer from './renderers/CodeRenderer';
 import MarkdownRenderer from './renderers/MarkdownRenderer';
 import MermaidRenderer from './renderers/MermaidRenderer';
@@ -34,6 +36,7 @@ interface ArtifactViewerModalProps {
   artifacts: Artifact[];
   initialIndex?: number;
   onClose: () => void;
+  streamingArtifact?: Artifact | null; // NEW: For real-time streaming display
 }
 
 type ViewMode = 'view' | 'code';
@@ -43,17 +46,42 @@ const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
   artifacts,
   initialIndex = 0,
   onClose,
+  streamingArtifact, // NEW
 }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
+  const insets = useSafeAreaInsets();
 
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [viewMode, setViewMode] = useState<ViewMode>('view');
   const [copied, setCopied] = useState(false);
 
-  const currentArtifact = artifacts[currentIndex];
-  const hasMultiple = artifacts.length > 1;
+  // Combine artifacts with streaming artifact if applicable
+  const allArtifacts = useMemo(() => {
+    if (streamingArtifact && streamingArtifact.isStreaming) {
+      // Replace streaming artifact if it's in the list, or add it
+      const index = artifacts.findIndex(a => a.id === streamingArtifact.id);
+      if (index >= 0) {
+        const updated = [...artifacts];
+        updated[index] = streamingArtifact;
+        return updated;
+      }
+      return [...artifacts, streamingArtifact];
+    }
+    return artifacts;
+  }, [artifacts, streamingArtifact]);
+
+  const currentArtifact = allArtifacts[currentIndex];
+  const hasMultiple = allArtifacts.length > 1;
   const canToggleView = currentArtifact && supportsCodeView(currentArtifact.type);
+
+  // Auto-update when streaming artifact content changes
+  useEffect(() => {
+    if (streamingArtifact && streamingArtifact.isStreaming) {
+      // Force re-render when streaming content updates
+      setCurrentIndex(prev => prev);
+    }
+  }, [streamingArtifact?.content]);
 
   const handleCopy = async () => {
     if (!currentArtifact) return;
@@ -219,9 +247,17 @@ const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
 
           {/* Center: Title */}
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {currentArtifact?.title || 'Artifact'}
-            </Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {currentArtifact?.title || 'Artifact'}
+              </Text>
+              {currentArtifact?.isStreaming && (
+                <View style={styles.streamingIndicator}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Text style={styles.streamingText}>Streaming...</Text>
+                </View>
+              )}
+            </View>
             {currentArtifact?.language && (
               <Text style={styles.headerSubtitle}>
                 {currentArtifact.language}
@@ -270,18 +306,19 @@ const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
           </ScrollView>
         </ScrollView>
 
-        {/* Footer Actions */}
-        <View style={styles.footer}>
-          <TouchableOpacity
-            onPress={handleCopy}
-            style={[styles.actionButton, copied && styles.actionButtonSuccess]}
-          >
-            <Ionicons
-              name={copied ? 'checkmark-circle' : 'copy'}
-              size={20}
-              color={copied ? '#10b981' : theme.colors.primary}
-            />
-            <Text
+        {/* Footer Actions - disabled during streaming */}
+        {!currentArtifact?.isStreaming && (
+          <View style={styles.footer}>
+            <TouchableOpacity
+              onPress={handleCopy}
+              style={[styles.actionButton, copied && styles.actionButtonSuccess]}
+            >
+              <Ionicons
+                name={copied ? 'checkmark-circle' : 'copy'}
+                size={20}
+                color={copied ? '#10b981' : theme.colors.primary}
+              />
+              <Text
               style={[
                 styles.actionButtonText,
                 copied && styles.actionButtonTextSuccess,
@@ -299,7 +336,8 @@ const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
             />
             <Text style={styles.actionButtonText}>Share</Text>
           </TouchableOpacity>
-        </View>
+          </View>
+        )}
       </SafeAreaView>
     </Modal>
   );
@@ -359,11 +397,18 @@ const getStyles = (theme: Theme) =>
     iconButton: {
       padding: 4,
     },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
     headerTitle: {
       fontSize: 18,
       fontWeight: '600',
       color: theme.colors.text,
       textAlign: 'center',
+      flex: 0,
     },
     headerSubtitle: {
       fontSize: 12,
@@ -420,6 +465,23 @@ const getStyles = (theme: Theme) =>
     },
     actionButtonTextSuccess: {
       color: '#10b981',
+    },
+    // NEW: Streaming indicator styles
+    streamingIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+      backgroundColor: theme.isDark
+        ? 'rgba(59, 130, 246, 0.2)'
+        : 'rgba(59, 130, 246, 0.15)',
+    },
+    streamingText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.colors.primary,
     },
   });
 

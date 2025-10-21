@@ -281,15 +281,19 @@ const ChatPage = () => {
   };
 
   const handleScroll = (event: any) => {
-    const { contentOffset } = event.nativeEvent;
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     const currentOffset = contentOffset.y;
     
     // Store current scroll offset
     scrollOffsetRef.current = currentOffset;
 
-    // In inverted list, positive scroll = scrolling up to see older messages
-    // Show button when user has scrolled up more than 100 points
-    if (currentOffset > 100) {
+    // In normal list (not inverted), check if user is near the bottom
+    // Bottom = where newest messages are
+    const scrollPosition = currentOffset + layoutMeasurement.height;
+    const bottomThreshold = contentSize.height - 100; // 100px from bottom
+    
+    // User has scrolled up if they're not near the bottom
+    if (scrollPosition < bottomThreshold) {
       setUserHasScrolledUp(true);
     } else {
       setUserHasScrolledUp(false);
@@ -300,7 +304,8 @@ const ChatPage = () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (messageListRef.current) {
       try {
-        messageListRef.current.scrollToOffset({ offset: 0, animated: true });
+        // Scroll to the end (bottom) of the list where newest messages are
+        messageListRef.current.scrollToEnd({ animated: true });
         setUserHasScrolledUp(false);
       } catch (error) {
         // console.error('Failed to scroll to bottom:', error);
@@ -419,10 +424,10 @@ const ChatPage = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  // Reverse messages for inverted list (newest at index 0)
-  // Memoized to prevent array creation on every render
-  const reversedMessages = useMemo(() => {
-    return [...messages].reverse();
+  // Messages in chronological order (oldest first, newest last)
+  // Newest messages appear at top of screen with bottom spacing
+  const displayMessages = useMemo(() => {
+    return messages; // No reversal needed
   }, [messages]);
 
   // New feature handlers
@@ -455,15 +460,15 @@ const ChatPage = () => {
   }, [messages, pinnedMessages]);
 
   const handleScrollToPinnedMessage = useCallback((messageId: string) => {
-    const reversedIndex = reversedMessages.findIndex(m => m.id === messageId);
-    if (reversedIndex >= 0 && messageListRef.current) {
+    const messageIndex = displayMessages.findIndex(m => m.id === messageId);
+    if (messageIndex >= 0 && messageListRef.current) {
       messageListRef.current.scrollToIndex({
-        index: reversedIndex,
+        index: messageIndex,
         animated: true,
         viewPosition: 0.5,
       });
     }
-  }, [reversedMessages]);
+  }, [displayMessages]);
 
   const handleEditMessage = useCallback((messageId: string) => {
     const message = messages.find(m => m.id === messageId);
@@ -566,18 +571,18 @@ const ChatPage = () => {
   }, [id, fetchMessages]);
 
   const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => {
-    // In inverted list with reversed array, index 0 is the newest message
-    const isLastBotMessage = item.role === Role.Bot && index === 0;
+    // In normal list, last index is the newest message
+    const isLastBotMessage = item.role === Role.Bot && index === displayMessages.length - 1;
     const hasNoContent = !item.content || item.content.trim() === '';
     
     // Show loading state on the last bot message while sending
     // This includes: loading dots (when no content) OR intermediate state (during streaming)
     const showLoading = isLastBotMessage && isSending && (hasNoContent || !!intermediate);
     
-    // Show date separator if last message or different day from next (inverted)
+    // Show date separator if first message or different day from previous
     const showDateSeparator = 
-      index === reversedMessages.length - 1 || 
-      !isSameDay(item.timestamp, reversedMessages[index + 1]?.timestamp);
+      index === 0 || 
+      !isSameDay(item.timestamp, displayMessages[index - 1]?.timestamp);
 
     // Check if message can be retried (user message that failed or needs retry)
     const canRetry = item.role === Role.User && !isSending;
@@ -586,8 +591,8 @@ const ChatPage = () => {
     const isPinned = pinnedMessages.some(m => m.id === item.id);
     
     // Message grouping logic
-    const previousMessage = reversedMessages[index - 1];
-    const nextMessage = reversedMessages[index + 1];
+    const previousMessage = displayMessages[index - 1];
+    const nextMessage = displayMessages[index + 1];
     
     const isFirstInGroup = !previousMessage || previousMessage.role !== item.role;
     const isLastInGroup = !nextMessage || nextMessage.role !== item.role;
@@ -595,6 +600,9 @@ const ChatPage = () => {
 
     return (
       <>
+        {showDateSeparator && item.timestamp && (
+          <DateSeparator label={getDateSeparator(item.timestamp)} />
+        )}
         <SwipeableMessage
           messageId={item.id || `${index}`}
           role={item.role}
@@ -624,6 +632,8 @@ const ChatPage = () => {
               isFirstInGroup={isFirstInGroup}
               isLastInGroup={isLastInGroup}
               isOnlyInGroup={isOnlyInGroup}
+              artifacts={getArtifactsForMessage(item.id || '')}
+              streamingArtifact={currentStreamingArtifact}
               onArtifactPress={handleArtifactPress}
               onCopy={() => handleCopyMessage(item.content)}
               onPin={() => handleMessagePin(item.id || `${index}`)}
@@ -643,12 +653,9 @@ const ChatPage = () => {
             )}
           </View>
         </SwipeableMessage>
-        {showDateSeparator && item.timestamp && (
-          <DateSeparator label={getDateSeparator(item.timestamp)} />
-        )}
       </>
     );
-  }, [reversedMessages, isSending, intermediate, pinnedMessages, handleCopyMessage, handleDeleteMessage, handleRetryMessage, handleEditMessage, handleMessagePin, handleReplyToMessage, handleScrollToPinnedMessage, handleAddReaction, handleRemoveReaction]);
+  }, [displayMessages, isSending, intermediate, pinnedMessages, handleCopyMessage, handleDeleteMessage, handleRetryMessage, handleEditMessage, handleMessagePin, handleReplyToMessage, handleScrollToPinnedMessage, handleAddReaction, handleRemoveReaction]);
 
   const CustomView = Platform.OS === 'ios' ? PanGestureHandler : View
 
@@ -773,18 +780,18 @@ const ChatPage = () => {
           {messages.length > 0 && (
           <CustomView style={{ flex: 1 }}>
             {/* 
-              FlashList configured for FREE SCROLLING during streaming:
-              - No maintainVisibleContentPosition: Users can scroll anywhere during streaming
-              - inverted: Newest messages at bottom (index 0 = newest)
-              - Users can read older messages while new content streams in
-              - "Streaming..." button appears when scrolled up during streaming
-              - Navigation remains enabled: Users can open drawer, switch chats while streaming
+              FlashList configured for top-aligned messages with bottom spacing:
+              - Chronological order: Oldest first, newest last
+              - Newest messages appear at TOP of screen (immediately visible under header)
+              - Bottom spacing component provides padding for comfortable reading
+              - No auto-scroll during streaming: User control
+              - Smooth content updates without scroll jumping
             */}
             <FlashList
-              contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}
+              contentContainerStyle={{ paddingBottom: 20 }}
               showsVerticalScrollIndicator={false}
               ref={messageListRef}
-              data={reversedMessages}
+              data={displayMessages}
               renderItem={renderItem}
               keyExtractor={(item, index) => item.id || `msg-${index}`}
               keyboardDismissMode="interactive"
@@ -792,8 +799,10 @@ const ChatPage = () => {
               onScroll={handleScroll}
               estimatedItemSize={150}
               scrollEventThrottle={16}
-              extraData={{ isSending, intermediate }}
-              inverted
+              // Disable automatic scrolling during streaming by not including extraData
+              // This prevents the list from re-rendering and jumping during stream updates
+              // Add bottom spacer component for comfortable reading
+              ListFooterComponent={<View style={{ height: 300 }} />}
               // Pull to refresh
               refreshControl={
                 <RefreshControl
@@ -807,8 +816,8 @@ const ChatPage = () => {
               // Pagination
               onEndReachedThreshold={0.5}
               onEndReached={() => {
-                // Load more messages when scrolling to top (older messages)
-                if (!refreshing && reversedMessages.length > 0) {
+                // Load more messages when scrolling to bottom (older messages in pagination)
+                if (!refreshing && displayMessages.length > 0) {
                   // You can implement pagination here
                 }
               }}
@@ -905,8 +914,8 @@ const ChatPage = () => {
             setFiles={setFiles}
             fetchMessages={handleFetchMessages}
             onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
-              // Only auto-scroll if user hasn't manually scrolled up
-              // This allows users to stay where they are if they're reading older messages
+              // Auto-scroll to bottom only when sending a new message (not during streaming)
+              // Only if user hasn't manually scrolled up to read older messages
               if (!userHasScrolledUp) {
                 scrollToBottom();
               }

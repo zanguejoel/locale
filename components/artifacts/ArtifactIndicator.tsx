@@ -2,11 +2,12 @@
  * Artifact Indicator Component
  * 
  * Displays an inline indicator for artifacts in chat messages.
- * Shows artifact type, title, and status. Tappable to open full viewer.
+ * Shows artifact type, title, status, and real-time progress during streaming.
+ * Tappable to open full viewer.
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Artifact, getArtifactTypeName, getArtifactIcon } from '@/utils/ArtifactTypes';
@@ -29,6 +30,44 @@ const ArtifactIndicator: React.FC<ArtifactIndicatorProps> = ({
 
   const iconName = getArtifactIcon(artifact.type);
   const typeName = getArtifactTypeName(artifact.type);
+
+  // Calculate content progress for streaming artifacts
+  const contentProgress = useMemo(() => {
+    if (!artifact.isStreaming || !artifact.content) return 100;
+    
+    // Estimate progress based on content length
+    // Average artifact is ~500 characters for code, ~800 for markdown
+    const avgLength = artifact.type === 'code' ? 500 : 
+                      artifact.type === 'mermaid' ? 300 : 800;
+    const currentLength = artifact.content.length;
+    const progress = Math.min((currentLength / avgLength) * 100, 95);
+    
+    return Math.round(progress);
+  }, [artifact.isStreaming, artifact.content, artifact.type]);
+
+  // Animated progress value for smooth transitions
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (artifact.isStreaming) {
+      Animated.timing(progressAnim, {
+        toValue: contentProgress,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      progressAnim.setValue(100);
+    }
+  }, [contentProgress, artifact.isStreaming, progressAnim]);
+
+  // Generate preview text from content
+  const previewText = useMemo(() => {
+    if (!artifact.content) return 'Generating...';
+    
+    // Show first 60 characters of content
+    const preview = artifact.content.trim().substring(0, 60);
+    return preview.length < artifact.content.trim().length ? `${preview}...` : preview;
+  }, [artifact.content]);
 
   return (
     <TouchableOpacity
@@ -62,9 +101,37 @@ const ArtifactIndicator: React.FC<ArtifactIndicatorProps> = ({
               {artifact.title}
             </Text>
             {artifact.isStreaming && (
-              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <View style={styles.streamingBadge}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={styles.progressText}>{contentProgress}%</Text>
+              </View>
             )}
           </View>
+
+          {/* Content Preview */}
+          {artifact.content && (
+            <Text style={styles.preview} numberOfLines={2}>
+              {previewText}
+            </Text>
+          )}
+
+          {/* Progress bar for streaming */}
+          {artifact.isStreaming && (
+            <View style={styles.progressBarContainer}>
+              <Animated.View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ['0%', '100%'],
+                    }),
+                    backgroundColor: theme.colors.primary,
+                  },
+                ]}
+              />
+            </View>
+          )}
 
           <View style={styles.metaRow}>
             <View style={[styles.badge, { backgroundColor: theme.colors.primary }]}>
@@ -77,10 +144,12 @@ const ArtifactIndicator: React.FC<ArtifactIndicatorProps> = ({
               </View>
             )}
 
-            {!artifact.isStreaming && (
+            {artifact.isStreaming ? (
+              <Text style={styles.streamingStatus}>Generating...</Text>
+            ) : (
               <View style={styles.statusContainer}>
                 <View style={styles.readyDot} />
-                <Text style={styles.statusText}>Ready</Text>
+                <Text style={styles.statusText}>Tap to view</Text>
               </View>
             )}
           </View>
@@ -205,6 +274,51 @@ const getStyles = (theme: Theme) =>
     arrowContainer: {
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    // NEW: Streaming progress styles
+    streamingBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      backgroundColor: theme.isDark
+        ? 'rgba(59, 130, 246, 0.2)'
+        : 'rgba(59, 130, 246, 0.15)',
+    },
+    progressText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    preview: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: theme.isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+      marginTop: 4,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      lineHeight: 18,
+    },
+    progressBarContainer: {
+      height: 3,
+      backgroundColor: theme.isDark
+        ? 'rgba(255, 255, 255, 0.1)'
+        : 'rgba(0, 0, 0, 0.1)',
+      borderRadius: 1.5,
+      overflow: 'hidden',
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    progressBar: {
+      height: '100%',
+      borderRadius: 1.5,
+    },
+    streamingStatus: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: theme.colors.primary,
+      fontStyle: 'italic',
     },
   });
 

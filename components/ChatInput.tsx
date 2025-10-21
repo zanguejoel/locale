@@ -393,7 +393,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
               <Ionicons 
                 name="add" 
                 size={24} 
-                color={isLoading ? theme.colors.mutedForeground : theme.colors.mutedForeground} 
+                color={isLoading ? theme.colors.mutedForeground : theme.colors.grey} 
                 style={{ opacity: isLoading ? 0.5 : 1 }}
               />
             </TouchableOpacity>
@@ -421,7 +421,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
             returnKeyType="default"
             blurOnSubmit={false}
             enablesReturnKeyAutomatically={true}
-            editable={!isLoading}
+            // editable={!isLoading}
             inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_VIEW_ID : undefined}
           />
           {message.length > 0 ? (
