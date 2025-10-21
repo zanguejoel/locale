@@ -46,6 +46,8 @@ import ArtifactIndicator from './artifacts/ArtifactIndicator';
 import { Artifact } from '@/utils/ArtifactTypes';
 import { extractThinkingFromStream, stripThinkingTags, hasThinkingTags } from '@/utils/ThinkingParser';
 import ThinkingBlock from './ThinkingBlock';
+import { extractReasoningFromStream, stripReasoningTags, hasReasoningTags } from '@/utils/ReasoningParser';
+import ReasoningBlock from './ReasoningBlock';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -73,6 +75,8 @@ interface ChatMessageProps extends Message {
   onArtifactPress?: (artifact: Artifact, allMessageArtifacts?: Artifact[]) => void;
   artifacts?: Artifact[];
   streamingArtifact?: Artifact | null; // NEW: For real-time streaming display
+  // Reasoning props
+  streamingReasoning?: string; // For real-time reasoning display during streaming
   // Action handlers
   onCopy?: () => void;
   onPin?: () => void;
@@ -246,6 +250,7 @@ const ChatMessage = memo(({
   onLike,
   onDislike,
   reaction,
+  streamingReasoning,
 }: ChatMessageProps) => {
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -258,20 +263,36 @@ const ChatMessage = memo(({
     return { thinking: null, contentWithoutThinking: content };
   }, [content, role]);
 
+  // Extract reasoning blocks from content (handles both streaming and historical messages)
+  const reasoningData = useMemo(() => {
+    if (role === Role.Bot && thinkingData.contentWithoutThinking && hasReasoningTags(thinkingData.contentWithoutThinking)) {
+      const extracted = extractReasoningFromStream(thinkingData.contentWithoutThinking);
+      if (extracted.reasoning) {
+        console.log('[ChatMessage] 🧠 Extracted reasoning from content:', {
+          isComplete: extracted.reasoning.isComplete,
+          contentLength: extracted.reasoning.content.length,
+          source: extracted.reasoning.isComplete ? 'historical/completed' : 'streaming'
+        });
+      }
+      return extracted;
+    }
+    return { reasoning: null, contentWithoutReasoning: thinkingData.contentWithoutThinking };
+  }, [thinkingData.contentWithoutThinking, role]);
+
   // Parse content into segments (text and artifacts) to preserve original positions
-  // Use content without thinking tags for display
+  // Use content without thinking and reasoning tags for display
   const contentSegments = useMemo(() => {
     // Parse into segments for bot messages - preserves artifact positions
-    if (role === Role.Bot && thinkingData.contentWithoutThinking) {
-      const segments = parseContentSegments(thinkingData.contentWithoutThinking, 'message-' + (timestamp || Date.now()));
+    if (role === Role.Bot && reasoningData.contentWithoutReasoning) {
+      const segments = parseContentSegments(reasoningData.contentWithoutReasoning, 'message-' + (timestamp || Date.now()));
       if (segments.length > 0) {
         const artifactCount = segments.filter(s => s.type === 'artifact').length;
         console.log('[ChatMessage] ✅ Parsed content into', segments.length, 'segments (', artifactCount, 'artifacts)');
       }
       return segments;
     }
-    return [{ type: 'text' as const, content: thinkingData.contentWithoutThinking }];
-  }, [thinkingData.contentWithoutThinking, role, timestamp]);
+    return [{ type: 'text' as const, content: reasoningData.contentWithoutReasoning }];
+  }, [reasoningData.contentWithoutReasoning, role, timestamp]);
 
   // Extract all artifacts from segments for external use (e.g., passing to parent)
   // Combine finalized artifacts with streaming artifact if applicable
@@ -990,6 +1011,33 @@ const ChatMessage = memo(({
                         isStreaming={!thinkingData.thinking.isComplete}
                       />
                     )}
+                    
+                    {/* 
+                      Render reasoning block if present
+                      Sources:
+                      1. streamingReasoning: Real-time reasoning during active streaming
+                      2. reasoningData.reasoning: Extracted from historical/completed messages
+                    */}
+                    {(() => {
+                      const hasStreamingReasoning = streamingReasoning && streamingReasoning.trim().length > 0;
+                      const hasHistoricalReasoning = reasoningData.reasoning && reasoningData.reasoning.content.trim().length > 0;
+                      
+                      if (hasStreamingReasoning || hasHistoricalReasoning) {
+                        console.log('[ChatMessage] 🧠 Rendering reasoning block:', {
+                          hasStreamingReasoning,
+                          hasHistoricalReasoning,
+                          streamingReasoningLength: streamingReasoning?.length || 0,
+                          historicalReasoningLength: reasoningData.reasoning?.content.length || 0,
+                        });
+                      }
+                      
+                      return (hasStreamingReasoning || hasHistoricalReasoning) && (
+                        <ReasoningBlock
+                          content={streamingReasoning || reasoningData.reasoning?.content || ''}
+                          isStreaming={hasStreamingReasoning || !reasoningData.reasoning?.isComplete}
+                        />
+                      );
+                    })()}
                     
                     {/* Render content segments inline (text and artifacts in original order) */}
                     {contentSegments.length > 0 && !isAudio(content) && !isAudio(imageData || '') && (
