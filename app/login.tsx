@@ -197,6 +197,7 @@ const Login = () => {
                 ref={emailInputRef}
                 icon="mail-outline"
                 placeholder="you@example.com"
+                nativeID="email-input"
                 value={emailAddress}
                 onChangeText={(value) => {
                   setEmailAddress(value);
@@ -219,6 +220,8 @@ const Login = () => {
                 onSubmitEditing={() => passwordInputRef.current?.focus()}
                 blurOnSubmit={false}
                 autoFocus={true}
+                textContentType="username"
+                autoComplete="email"
               />
             {errors.email && <Text style={[styles.errorText]}>{errors.email}</Text>}
             </View>
@@ -229,6 +232,7 @@ const Login = () => {
                 ref={passwordInputRef}
                 icon="lock-closed-outline"
                 placeholder="Enter your password"
+                nativeID="password-input"
                 value={password}
                 onChangeText={(value) => {
                   setPassword(value);
@@ -246,6 +250,8 @@ const Login = () => {
                 returnKeyType="go"
                 onSubmitEditing={onSignInPress}
                 blurOnSubmit={true}
+                textContentType="password"
+                autoComplete="password"
               />
             {errors.password && <Text style={[styles.errorText]}>{errors.password}</Text>}
             </View>
@@ -447,7 +453,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     gap: 16,
   },
   divider: {
-    width: 140,
+    width: '40%',
     height: 1,
     backgroundColor: theme.colors.greyLight
   },

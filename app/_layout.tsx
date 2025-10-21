@@ -22,6 +22,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { MixpanelProvider } from "@/utils/mixpanel/MixpanelProvider";
 import LocalModelErrorBoundary from "@/components/LocalModelErrorBoundary";
+import { IntegrationsProvider } from "@/contexts/IntegrationsContext";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -236,6 +237,24 @@ const Layout = () => {
         }}
       />
       <Stack.Screen
+        name="(modal)/integrations"
+        options={{
+          headerTitle: "Integrations",
+          headerTitleAlign: 'center',
+          headerTintColor: theme.colors.text,
+          headerTitleStyle: { color: theme.colors.text },
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color={theme.colors.text} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <Stack.Screen
         name="(modal)/image/[url]"
         options={{
           headerTitle: "",
@@ -268,15 +287,17 @@ function RootLayoutNav() {
     <AuthProvider>
       <LocalModelErrorBoundary>
         <ChatProvider>
-          <MixpanelProvider>
-            <ThemeProvider
-              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-            >
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <Layout />
-              </GestureHandlerRootView>
-            </ThemeProvider>
-          </MixpanelProvider>
+          <IntegrationsProvider>
+            <MixpanelProvider>
+              <ThemeProvider
+                value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+              >
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <Layout />
+                </GestureHandlerRootView>
+              </ThemeProvider>
+            </MixpanelProvider>
+          </IntegrationsProvider>
         </ChatProvider>
       </LocalModelErrorBoundary>
     </AuthProvider>
