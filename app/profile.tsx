@@ -198,7 +198,7 @@ const Profile = () => {
     return userData.map((item, index) => (
       <View key={index} style={[styles.infoCard, userData.length - 1 === index && { borderBottomWidth: 0 }]}>
         <View style={styles.iconContainer}>
-          <Ionicons name={item.icon as any} size={22} color={Colors.common.primary} />
+          <Ionicons name={item.icon as any} size={18} color={Colors.common.primary} />
         </View>
         <View style={styles.infoContent}>
           <Text style={styles.label}>{item.label}</Text>
@@ -268,10 +268,10 @@ const Profile = () => {
 
         {/* Danger Zone Section */}
         <View style={styles.dangerZoneContainer}>
-          <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
+         
           <View style={styles.dangerZoneCard}>
             <View style={styles.dangerZoneHeader}>
-              <Ionicons name="warning" size={24} color={Colors.common.error} />
+              <Ionicons name="warning" size={20} color={Colors.common.error} />
               <Text style={styles.dangerZoneHeaderText}>Delete Account</Text>
             </View>
             <Text style={styles.dangerZoneDescription}>
@@ -287,7 +287,7 @@ const Profile = () => {
               style={styles.deleteAccountButton}
               onPress={() => setShowDeleteConfirmModal(true)}
             >
-              <Ionicons name="trash" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Ionicons name="trash" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
               <Text style={styles.deleteAccountButtonText}>Delete Account</Text>
             </TouchableOpacity>
           </View>
@@ -336,108 +336,126 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 90,
+    paddingBottom: 80,
     backgroundColor: theme.colors.background,
-
   },
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
   profileHeader: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   profileImageContainer: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#e5f3f7',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: theme.isDark 
+      ? 'rgba(100, 181, 246, 0.15)' 
+      : '#e5f3f7',
     justifyContent: 'center',
     alignItems: 'center',
   },
   profileInitials: {
-    fontSize: 30,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '700',
     color: Colors.common.primary,
+    letterSpacing: 0.5,
   },
   profileName: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.text,
-    marginBottom: 4,
+    marginBottom: 3,
+    letterSpacing: -0.3,
   },
   profileEmail: {
-    fontSize: 16,
+    fontSize: 14,
     color: Colors.common.greyLight,
+    opacity: 0.9,
   },
   sectionContainer: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: 10,
     color: theme.colors.text,
+    letterSpacing: -0.2,
+    opacity: 0.9,
   },
   infoContainer: {
     borderRadius: 12,
-    backgroundColor: theme.colors.card, // Solid background for efficient shadow calculation
+    backgroundColor: theme.colors.card,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
     elevation: 2,
-    padding: 12,
+    padding: 10,
   },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.greyLight,
-
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.backgroundLight,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: theme.isDark 
+      ? 'rgba(255, 255, 255, 0.06)' 
+      : 'rgba(0, 0, 0, 0.03)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   infoContent: {
     flex: 1,
   },
   label: {
-    fontSize: 13,
-    color: theme.colors.text,
+    fontSize: 12,
+    color: theme.colors.greyLight,
     marginBottom: 2,
+    opacity: 0.8,
   },
   value: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
     color: theme.colors.text,
+    letterSpacing: -0.1,
   },
   editButton: {
     backgroundColor: Colors.common.primary,
-    paddingVertical: 12,
+    paddingVertical: 11,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 10,
+    shadowColor: Colors.common.primary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.2,
   },
   input: {
     backgroundColor: '#F9F9F9',
@@ -450,82 +468,95 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   // Danger Zone Styles
   dangerZoneContainer: {
-    marginTop: 24,
-    marginBottom: 16,
+    marginTop: 20,
+    marginBottom: 14,
   },
   dangerZoneTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: 10,
     color: Colors.common.error,
+    letterSpacing: -0.2,
   },
   dangerZoneCard: {
     borderRadius: 12,
-    backgroundColor: 'rgba(239, 68, 68, 0.05)',
-    borderWidth: 2,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    padding: 16,
+    backgroundColor: 'rgba(239, 68, 68, 0.04)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+    padding: 14,
+    shadowColor: Colors.common.error,
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  dangerZoneHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  dangerZoneHeaderText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.common.error,
+    marginLeft: 8,
+    letterSpacing: -0.2,
+  },
+  dangerZoneDescription: {
+    fontSize: 12,
+    color: theme.colors.greyLight,
+    marginBottom: 10,
+    lineHeight: 17,
+    opacity: 0.9,
+  },
+  warningBox: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  warningBoxTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.common.error,
+    marginBottom: 6,
+  },
+  warningBoxItem: {
+    fontSize: 11,
+    color: Colors.common.error,
+    marginLeft: 8,
+    marginBottom: 3,
+    opacity: 0.9,
+  },
+  deleteAccountButton: {
+    backgroundColor: Colors.common.error,
+    paddingVertical: 11,
+    borderRadius: 10,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
     shadowColor: Colors.common.error,
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  dangerZoneHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(239, 68, 68, 0.2)',
-  },
-  dangerZoneHeaderText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.common.error,
-    marginLeft: 8,
-  },
-  dangerZoneDescription: {
-    fontSize: 13,
-    color: theme.colors.greyLight,
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  warningBox: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  warningBoxTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.common.error,
-    marginBottom: 8,
-  },
-  warningBoxItem: {
-    fontSize: 12,
-    color: Colors.common.error,
-    marginLeft: 8,
-    marginBottom: 4,
-  },
-  deleteAccountButton: {
-    backgroundColor: Colors.common.error,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   deleteAccountButtonText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });
 
