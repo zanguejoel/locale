@@ -13,6 +13,9 @@ import {
     Image,
     Platform,
     SafeAreaView,
+    ScrollView,
+    TouchableWithoutFeedback,
+    Keyboard,
 } from "react-native";
 
 import { router, useLocalSearchParams } from "expo-router";
@@ -100,70 +103,85 @@ const EmailVerification = () => {
     };
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.container}
-        >
-            <SafeAreaView>
-                {isLoading && (
-                    <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
-                        <ActivityIndicator size="large" color={theme.colors.primary} />
-                        <Text style={styles.loadingText}>Verifying...</Text>
-                    </View>
-                )}
+        <SafeAreaView style={styles.container}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardView}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+            >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <ScrollView
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                        bounces={false}
+                    >
+                        {isLoading && (
+                            <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+                                <ActivityIndicator size="large" color={theme.colors.primary} />
+                                <Text style={styles.loadingText}>Verifying...</Text>
+                            </View>
+                        )}
 
-                <View style={styles.headerContainer}>
-                    <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} />
-                    <Text style={styles.title}>Email Verification</Text>
-                    <Text style={styles.subtitle}>
-                        {sessionData?.email 
-                            ? `A verification code has been sent to ${sessionData.email}.`
-                            : "Loading..."}
-                    </Text>
-                </View>
-
-                <View style={styles.formContainer}>
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Verification Code</Text>
-                        <CustomInput
-                            ref={codeInputRef}
-                            icon="code-outline"
-                            placeholder="Enter 6-digit code"
-                            value={code}
-                        onChangeText={(text) => {
-                            setCode(text);
-                        }}
-                        error={!!error.code}
-                        autoCapitalize="none"
-                        keyboardType="numeric"
-                        returnKeyType="go"
-                        onSubmitEditing={handleConfirm}
-                        blurOnSubmit={true}
-                        autoFocus={true}
-                    />
-                    {error.code && <Text style={styles.errorText}>{error.code}</Text>}
-                    </View>
-
-                    <View style={styles.btnContainer}>
-                        <TouchableOpacity
-                            style={[defaultStyles.btn, styles.resetButton]}
-                            onPress={handleConfirm}
-                        >
-                            <Text style={styles.buttonText}>Submit</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[defaultStyles.btnSecondary, styles.cancelButton]}
-                            onPress={() => router.replace('/login')}
-                        >
-                            <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
-                                Back to Login
+                        <View style={styles.headerContainer}>
+                            <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} />
+                            <Text style={styles.title}>Email Verification</Text>
+                            <Text style={styles.subtitle}>
+                                {sessionData?.email 
+                                    ? `A verification code has been sent to ${sessionData.email}.`
+                                    : "Loading..."}
                             </Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </SafeAreaView>
-        </KeyboardAvoidingView>
+                        </View>
+
+                        <View style={styles.formContainer}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Verification Code</Text>
+                                <CustomInput
+                                    ref={codeInputRef}
+                                    icon="code-outline"
+                                    placeholder="Enter 6-digit code"
+                                    value={code}
+                                    onChangeText={(text) => {
+                                        setCode(text);
+                                    }}
+                                    error={!!error.code}
+                                    autoCapitalize="none"
+                                    keyboardType="numeric"
+                                    returnKeyType="go"
+                                    onSubmitEditing={handleConfirm}
+                                    blurOnSubmit={true}
+                                    autoFocus={true}
+                                />
+                                {error.code && <Text style={styles.errorText}>{error.code}</Text>}
+                            </View>
+
+                            <View style={styles.btnContainer}>
+                                <TouchableOpacity
+                                    style={[defaultStyles.btn, styles.resetButton]}
+                                    onPress={handleConfirm}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.buttonText}>Submit</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[defaultStyles.btnSecondary, styles.cancelButton]}
+                                    onPress={() => {
+                                        Keyboard.dismiss();
+                                        router.replace('/login');
+                                    }}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
+                                        Back to Login
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </ScrollView>
+                </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 };
 
@@ -171,6 +189,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.background,
+    },
+    keyboardView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
     },
     headerContainer: {
         alignItems: 'center',
