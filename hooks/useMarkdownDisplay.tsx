@@ -1,10 +1,55 @@
+/**
+ * useMarkdownDisplay Hook
+ * 
+ * Purpose:
+ * Provides a customized Markdown component for rendering formatted text in the mobile app.
+ * Includes support for code blocks, tables, images, links, and other markdown elements
+ * with mobile-optimized styling and behavior.
+ * 
+ * Key Features:
+ * - Theme-aware styling (light/dark mode)
+ * - Horizontal scrolling tables for wide content
+ * - Custom code blocks with copy functionality
+ * - Proper touch event handling for nested scrollable content
+ * - Deep linking support for internal navigation
+ * - Accessibility support
+ * 
+ * Usage:
+ * ```tsx
+ * const MarkdownDisplay = useMarkdownDisplay();
+ * 
+ * return <MarkdownDisplay>{markdownContent}</MarkdownDisplay>;
+ * ```
+ * 
+ * Custom Render Rules:
+ * - Tables: Wrapped in horizontal ScrollView for wide tables
+ * - Code blocks: Custom CodeBlockWithCopy component
+ * - Images: Sized and styled appropriately for mobile
+ * - Links: Support for both internal and external URLs
+ * 
+ * Performance Considerations:
+ * - Memoized render function to prevent unnecessary re-renders
+ * - Optimized ScrollView settings for 60fps
+ * - Native-driven animations where possible
+ * 
+ * Dependencies:
+ * - react-native-markdown-display: Markdown parsing and rendering
+ * - @react-navigation/native: Deep linking support
+ * - CodeBlockWithCopy: Custom code block component
+ * 
+ * @module useMarkdownDisplay
+ * @author Assistant
+ * @last-updated 2025-10-21
+ * @see docs/features/implementation/2025-10-21-horizontal-scrollable-tables.md
+ */
+
 import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import Markdown, {
   MarkdownProps,
   RenderRules,
 } from 'react-native-markdown-display';
-import { StyleSheet, Text, View, Image, Platform, Linking } from 'react-native';
+import { StyleSheet, Text, View, Image, Platform, Linking, ScrollView, Pressable } from 'react-native';
 import Colors from '@/constants/Colors';
 import { Theme } from '@/constants/Types';
 import { useTheme } from './useTheme';
@@ -279,13 +324,12 @@ const useMarkdownDisplay = () => {
       height: 8,
     },
 
-    // Tables
+    // Tables - Optimized for horizontal scrolling with proper column alignment
     table: {
       borderWidth: 1,
       borderColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
       borderRadius: 4,
-      marginVertical: 10,
-      width: '100%',
+      minWidth: '100%', // Changed from width: '100%' to allow growth
       overflow: 'hidden',
     },
     thead: {
@@ -299,6 +343,9 @@ const useMarkdownDisplay = () => {
     th: {
       padding: 8,
       fontWeight: 'bold',
+      minWidth: 120, // Fixed minimum width for consistent column alignment
+      width: 120, // Fixed width to ensure columns align across rows
+      color: theme.colors.text,
     },
     tr: {
       borderBottomWidth: 0.5,
@@ -307,7 +354,10 @@ const useMarkdownDisplay = () => {
     },
     td: {
       padding: 8,
-      flex: 1,
+      minWidth: 120, // Fixed minimum width for consistent column alignment
+      width: 120, // Fixed width to ensure columns align across rows
+      // Removed flex: 1 to prevent column width variations
+      color: theme.colors.text,
     },
 
     // Horizontal rule
@@ -334,15 +384,15 @@ const useMarkdownDisplay = () => {
 
   const customRules: RenderRules = {
     /*  list_item: (node, children, parent, styles) => {
-       return (
-         <View
-           key={node.key}
-           style={[styles.list_item, styles[`list_item_level_${node.level || 0}`]]}
-         >
-           {children}
-         </View>
-       );
-     }, */
+      return (
+        <View
+          key={node.key}
+          style={[styles.list_item, styles[`list_item_level_${node.level || 0}`]]}
+        >
+          {children}
+        </View>
+      );
+    }, */
 
     code_block: (node, children, parent, styles) => {
       return (
@@ -361,6 +411,100 @@ const useMarkdownDisplay = () => {
           content={node.content}
           language={node.sourceInfo || undefined}
         />
+      );
+    },
+
+    /**
+     * Custom table renderer with horizontal scrolling capability
+     * 
+     * Purpose:
+     * Wraps markdown tables in a horizontal ScrollView to handle wide tables
+     * with many columns that don't fit on mobile screens.
+     * 
+     * Implementation Details:
+     * - Uses React Native ScrollView with horizontal orientation
+     * - Prevents parent scroll container from intercepting horizontal gestures
+     * - Shows scroll indicator for better UX
+     * - Maintains 60fps scroll performance with throttling
+     * 
+     * Inputs:
+     * @param node - AST node representing the table element
+     * @param children - Rendered child elements (thead, tbody, tr, td, etc.)
+     * @param parent - Parent AST node
+     * @param styles - Stylesheet containing table styles
+     * 
+     * Outputs:
+     * @returns JSX.Element - Table wrapped in horizontal ScrollView
+     * 
+     * Touch Event Handling:
+     * - Horizontal swipes: Scroll table content
+     * - Vertical swipes: Pass through to parent chat scroll
+     * - nestedScrollEnabled ensures proper Android gesture handling
+     * 
+     * Performance:
+     * - scrollEventThrottle={16} ensures 60fps (1000ms/60 ≈ 16ms)
+     * - bounces={false} reduces layout recalculations
+     * - Native animation thread handles scrolling (no JS bridge)
+     * 
+     * @see docs/features/implementation/2025-10-21-horizontal-scrollable-tables.md
+     */
+    table: (node, children, parent, styles) => {
+      return (
+        <View key={node.key} style={{ width: '100%', marginVertical: 10 }}>
+          <ScrollView
+            horizontal={true}                          // Enable horizontal scrolling
+            showsHorizontalScrollIndicator={true}      // Show scroll indicator for UX
+            nestedScrollEnabled={true}                 // Allow nested scrolling (critical for Android)
+            bounces={false}                            // Prevent bounce at boundaries for performance
+            scrollEventThrottle={16}                   // 60fps scroll performance
+            contentContainerStyle={{ flexGrow: 1 }}   // Ensure content fills container
+            style={{ width: '100%' }}                 // Full width container
+          >
+            <View style={styles.table}>
+              {children}
+            </View>
+          </ScrollView>
+        </View>
+      );
+    },
+
+    /**
+     * Custom table row renderer with Pressable wrapper
+     * 
+     * Purpose:
+     * Wraps table rows in Pressable to enable proper touch event handling
+     * which is necessary for horizontal scroll to work correctly.
+     * 
+     * Implementation Details:
+     * - Wraps tr content in a Pressable component
+     * - onPress is empty (no action on tap)
+     * - Pressable helps with gesture responder chain
+     * - All rows (header and data) use same wrapper
+     * 
+     * Inputs:
+     * @param node - AST node representing the table row element
+     * @param children - Rendered child elements (td elements)
+     * @param parent - Parent AST node (tbody or thead)
+     * @param styles - Stylesheet containing table row styles
+     * 
+     * Outputs:
+     * @returns JSX.Element - Pressable-wrapped table row
+     * 
+     * Note: The Pressable wrapper is needed for horizontal scroll to work,
+     * even though onPress does nothing. This is due to React Native's
+     * gesture responder system interaction with nested ScrollViews.
+     */
+    tr: (node, children, parent, styles) => {
+      return (
+        <Pressable
+          key={node.key}
+          onPress={() => {
+            // Empty onPress - needed for gesture handling but no action taken
+          }}
+          style={styles.tr}
+        >
+          {children}
+        </Pressable>
       );
     },
 
