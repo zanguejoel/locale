@@ -24,6 +24,8 @@ const CustomInput = forwardRef<TextInput, CustomInputProps>(({
   error,
   isPassword,
   containerStyle,
+  onFocus,
+  onBlur,
   ...props
 }, ref) => {
   const theme = useTheme();
@@ -52,8 +54,14 @@ const CustomInput = forwardRef<TextInput, CustomInputProps>(({
         style={styles.inputField}
         secureTextEntry={isPassword && !showPassword}
         placeholderTextColor={theme.colors.greyLight}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onFocus={(e) => {
+          setIsFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setIsFocused(false);
+          onBlur?.(e);
+        }}
       />
 
       {isPassword && (

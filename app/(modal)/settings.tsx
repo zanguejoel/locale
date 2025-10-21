@@ -24,55 +24,63 @@ import {
   enableBackendDownloads, 
   disableBackendDownloads 
 } from '@/constants/LocalModelsConfig';
+import { useIntegrations } from '@/contexts/IntegrationsContext';
+import apiClient from '@/utils/ApiClient';
 
 const rawPage = [{
   id: 1,
   key: 'profile',
   title: 'Profile',
   icon: 'person-outline'
-}, {
+}, /* {
   id: 2,
+  key: 'integrations',
+  title: 'Integrations',
+  icon: 'link-outline',
+  hasBadge: true
+}, */ {
+  id: 3,
   key: 'credits',
   title: 'Purchase Credits',
   icon: 'diamond-outline'
 }, {
-  id: 3,
+  id: 4,
   key: 'plans-pricing',
   title: 'Plans & Pricing',
   icon: 'card-outline'
 }, {
-  id: 4,
+  id: 5,
   key: 'default-model',
   title: 'Default AI Model',
   icon: 'chatbubbles-outline'
 }, {
-  id: 5,
+  id: 6,
   key: 'theme',
   title: 'Theme',
   icon: 'color-palette-outline'
 }, {
-  id: 6,
+  id: 7,
   key: 'model-manager',
   title: 'Manage Downloaded Models',
   icon: 'folder-open-outline'
 }, /* {
-  id: 7,
+  id: 8,
   key: 'backend-downloads',
   title: 'Use Backend Model Downloads',
   icon: 'cloud-download-outline',
   hasToggle: true
 }, */ {
-  id: 8,
+  id: 9,
   key: 'clear-all-chats',
   title: 'Clear All Chats',
   icon: 'trash-outline'
 }, {
-  id: 9,
+  id: 10,
   key: 'change-password',
   title: 'Change password',
   icon: 'settings-outline'
 }, {
-  id: 10,
+  id: 11,
   key: 'sign_out',
   title: 'Sign Out',
   icon: 'log-out-outline'
@@ -83,7 +91,8 @@ interface IItemRaw {
   key: string,
   title: string,
   icon: string,
-  hasToggle?: boolean
+  hasToggle?: boolean,
+  hasBadge?: boolean
 }
 
 const Page = () => {
@@ -91,6 +100,33 @@ const Page = () => {
   const styles = getStyles(theme);
   const router = useRouter();
   const { signOut } = useAuth();
+  const { nangoIntegrations, initialized: integrationsInitialized } = useIntegrations();
+  
+  // Count connected integrations from context
+  const [connectedCount, setConnectedCount] = useState(0);
+  
+  useEffect(() => {
+    const fetchConnectedCount = async () => {
+      try {
+        const response = await apiClient.get<{ success: boolean; connections: any[] }>(
+          '/nango/list-connections',
+          {
+            team_id: storage.getString('selectedTeamId') || undefined
+          }
+        );
+        if (response.ok && response.data?.success) {
+          const connections = response.data.connections || [];
+          setConnectedCount(connections.length);
+        }
+      } catch (error) {
+        console.log('[Settings] Error fetching connected count:', error);
+      }
+    };
+    
+    if (integrationsInitialized) {
+      fetchConnectedCount();
+    }
+  }, [integrationsInitialized]);
   const { 
     createNewConversation, 
     isLocalLLMSupported: deviceSupportsLocal,
@@ -322,6 +358,8 @@ const Page = () => {
     switch (type) {
       case 'profile':
         return router.push('/profile')
+      case 'integrations':
+        return router.push('/(modal)/integrations')
       case 'credits':
         return setIsCreditPurchaseVisible(true)
       case 'plans-pricing':
@@ -363,6 +401,13 @@ const Page = () => {
             {item.key === 'default-model' && selectedModel && (
               <Text style={styles.menuItemSubtext}>{selectedModel.displayName}</Text>
             )}
+            {item.key === 'integrations' && (
+              <Text style={styles.menuItemSubtext}>
+                {connectedCount === 0 
+                  ? 'Connect your services' 
+                  : `${connectedCount} connected`}
+              </Text>
+            )}
             {item.key === 'theme' && (
               <Text style={styles.menuItemSubtext}>
                 {theme.themeMode.charAt(0).toUpperCase() + theme.themeMode.slice(1)}
@@ -397,6 +442,13 @@ const Page = () => {
         </View>
         {item.key === 'credits' ? (
           <CreditBadge variant="compact" />
+        ) : item.key === 'integrations' && connectedCount > 0 ? (
+          <View style={styles.badgeContainer}>
+            <View style={[styles.badge, { backgroundColor: theme.colors.primary }]}>
+              <Text style={styles.badgeText}>{connectedCount}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.greyLight} style={{ marginLeft: 8 }} />
+          </View>
         ) : item.hasToggle ? (
           <Switch
             value={backendDownloadsEnabled}
@@ -461,42 +513,42 @@ const Page = () => {
 const getStyles = (theme: Theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: 'transparent', // Let gradient show through
+    backgroundColor: 'transparent',
   },
   container: {
     flex: 1,
-    backgroundColor: 'transparent', // Let gradient show through
-    paddingHorizontal: 20,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 16,
   },
   contentContainer: {
-    paddingTop: 20,
+    paddingTop: 16,
     flex: 1,
   },
   menuContainer: {
-    minHeight: 600,
-    borderRadius: 16,
-    backgroundColor: theme.colors.card, // Solid background for efficient shadow calculation
+    borderRadius: 12,
+    backgroundColor: theme.colors.card,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
     overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.greyLight,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
   },
   menuItemPressed: {
-    backgroundColor: theme.colors.selected,
+    backgroundColor: theme.isDark ? theme.colors.selected : theme.colors.selected,
+    opacity: 0.2,
   },
   menuItemLast: {
     borderBottomWidth: 0,
@@ -507,37 +559,42 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     flex: 1,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.backgroundLight,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: theme.isDark 
+      ? 'rgba(255, 255, 255, 0.06)' 
+      : 'rgba(0, 0, 0, 0.03)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   menuTextContainer: {
     flex: 1,
   },
   menuItemText: {
-    fontSize: 16,
+    fontSize: 15,
     color: theme.colors.text,
     fontWeight: '500',
+    letterSpacing: -0.2,
   },
   menuItemSubtext: {
-    fontSize: 13,
+    fontSize: 12,
     color: theme.colors.greyLight,
-    marginTop: 2,
+    marginTop: 1,
+    opacity: 0.8,
   },
   footer: {
     alignItems: 'center',
-    marginBottom: 80,
-    paddingTop: 20,
+    marginBottom: 60,
+    paddingTop: 24,
   },
   logo: {
-    width: 150,
-    height: 75,
+    width: 120,
+    height: 60,
     resizeMode: 'contain',
-    marginBottom: 10,
+    marginBottom: 6,
+    opacity: 0.9,
   },
   appTitle: {
     fontSize: 36,
@@ -552,8 +609,26 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     color: 'white',
   },
   appVersion: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.isDark ? theme.colors.greyLight : theme.colors.grey,
+    opacity: 0.6,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
 
