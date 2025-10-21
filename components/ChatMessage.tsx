@@ -1349,16 +1349,16 @@ const ChatMessage = memo(({
       });
     }
     
-    // Pin action - available for all messages
-    if (onPin) {
-      actions.push({
-        key: 'pin',
-        icon: isPinned ? 'pin' : 'pin-outline',
-        label: isPinned ? 'Unpin' : 'Pin',
-        onPress: onPin,
-        color: isPinned ? theme.colors.orange : theme.colors.textSecondary,
-      });
-    }
+    // Pin action - available for all messages (HIDDEN)
+    // if (onPin) {
+    //   actions.push({
+    //     key: 'pin',
+    //     icon: isPinned ? 'pin' : 'pin-outline',
+    //     label: isPinned ? 'Unpin' : 'Pin',
+    //     onPress: onPin,
+    //     color: isPinned ? theme.colors.orange : theme.colors.textSecondary,
+    //   });
+    // }
     
     // Retry action - only for failed user messages
     if (canRetry && onRetry && role === Role.User) {

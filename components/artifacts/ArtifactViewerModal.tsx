@@ -57,6 +57,7 @@ const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
   const [copied, setCopied] = useState(false);
 
   // Combine artifacts with streaming artifact if applicable
+  // Include content length as dependency to force updates during streaming
   const allArtifacts = useMemo(() => {
     if (streamingArtifact && streamingArtifact.isStreaming) {
       // Replace streaming artifact if it's in the list, or add it
@@ -69,17 +70,20 @@ const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
       return [...artifacts, streamingArtifact];
     }
     return artifacts;
-  }, [artifacts, streamingArtifact]);
+  }, [artifacts, streamingArtifact, streamingArtifact?.content]);
 
   const currentArtifact = allArtifacts[currentIndex];
   const hasMultiple = allArtifacts.length > 1;
   const canToggleView = currentArtifact && supportsCodeView(currentArtifact.type);
 
-  // Auto-update when streaming artifact content changes
+  // Force component to re-render when streaming artifact content updates
+  const [renderKey, setRenderKey] = useState(0);
+  
   useEffect(() => {
     if (streamingArtifact && streamingArtifact.isStreaming) {
-      // Force re-render when streaming content updates
-      setCurrentIndex(prev => prev);
+      // Force re-render by incrementing key
+      setRenderKey(prev => prev + 1);
+      console.log('[ArtifactViewerModal] Streaming artifact updated, content length:', streamingArtifact.content?.length);
     }
   }, [streamingArtifact?.content]);
 
@@ -146,35 +150,53 @@ const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
     if (viewMode === 'code' && canToggleView) {
       return (
         <CodeRenderer
+          key={`code-${renderKey}`}
           content={currentArtifact.content}
           language={currentArtifact.language || currentArtifact.type}
+          isStreaming={currentArtifact.isStreaming}
         />
       );
     }
 
-    // Render based on artifact type
+    // Render based on artifact type (with key to force re-render during streaming)
     switch (currentArtifact.type) {
       case 'code':
         return (
           <CodeRenderer
+            key={`code-${renderKey}`}
             content={currentArtifact.content}
             language={currentArtifact.language || 'text'}
+            isStreaming={currentArtifact.isStreaming}
           />
         );
 
       case 'markdown':
-        return <MarkdownRenderer content={currentArtifact.content} />;
+        return (
+          <MarkdownRenderer
+            key={`markdown-${renderKey}`}
+            content={currentArtifact.content}
+            isStreaming={currentArtifact.isStreaming}
+          />
+        );
 
       case 'mermaid':
-        return <MermaidRenderer content={currentArtifact.content} />;
+        return (
+          <MermaidRenderer
+            key={`mermaid-${renderKey}`}
+            content={currentArtifact.content}
+            isStreaming={currentArtifact.isStreaming}
+          />
+        );
 
       // For now, other types fallback to code view
       // We'll add specialized renderers in the next phase
       default:
         return (
           <CodeRenderer
+            key={`code-${renderKey}`}
             content={currentArtifact.content}
             language={currentArtifact.language || 'text'}
+            isStreaming={currentArtifact.isStreaming}
           />
         );
     }

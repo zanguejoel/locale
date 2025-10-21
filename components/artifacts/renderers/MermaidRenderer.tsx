@@ -14,9 +14,10 @@ import { extractCodeContent } from '@/utils/ArtifactParser';
 
 interface MermaidRendererProps {
   content: string;
+  isStreaming?: boolean;
 }
 
-const MermaidRenderer: React.FC<MermaidRendererProps> = ({ content }) => {
+const MermaidRenderer: React.FC<MermaidRendererProps> = ({ content, isStreaming = false }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,13 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ content }) => {
 
   // Extract mermaid code from markdown code blocks if present
   const mermaidCode = extractCodeContent(content);
+  
+  // Log streaming updates for debugging
+  React.useEffect(() => {
+    if (isStreaming) {
+      console.log('[MermaidRenderer] Streaming update, content length:', content.length);
+    }
+  }, [content, isStreaming]);
 
   // HTML template with Mermaid.js CDN
   const html = `

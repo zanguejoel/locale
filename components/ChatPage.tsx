@@ -957,6 +957,7 @@ const ChatPage = () => {
         artifacts={selectedArtifacts}
         initialIndex={selectedArtifactIndex}
         onClose={handleCloseArtifactModal}
+        streamingArtifact={currentStreamingArtifact}
       />
     </GradientBackground>
   );

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import useMMKVStorage, { storage } from './useMMKVStorage';
 import api from '@/utils/ApiClient';
 import { User } from '@/constants/Types';
-import { saveToken, getToken, deleteToken, saveTokenWithExpiry, clearAllTokens, isTokenExpired } from '@/utils/SecureTokenManager';
+import { saveToken, getToken, deleteToken, saveTokenWithExpiry, clearAllTokens, isTokenExpired, getTokenExpiry, isTokenNearExpiryWithThreshold, getHoursUntilExpiry } from '@/utils/SecureTokenManager';
 import { createSecureSession, getSecureSession } from '@/utils/SecureSession';
 import { formatAuthHeader } from '@/utils/AuthHelpers';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
@@ -159,6 +159,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsubscribe();
     };
   }, []);
+
+  // Proactive token refresh - refresh token before it expires
+  useEffect(() => {
+    if (!isSignedIn || !user?.user_id) {
+      return;
+    }
+
+    console.log('[Auth] Setting up proactive token refresh checker');
+    
+    const checkAndRefreshToken = async () => {
+      try {
+        // Get hours until token expires
+        const hoursUntilExpiry = await getHoursUntilExpiry();
+        
+        if (hoursUntilExpiry === null) {
+          console.log('[Auth] No token expiry found');
+          return;
+        }
+
+        // Refresh token if it expires within 1 hour (but hasn't expired yet)
+        const shouldRefresh = await isTokenNearExpiryWithThreshold(1);
+        
+        if (shouldRefresh && hoursUntilExpiry > 0) {
+          console.log(`[Auth] Token expires in ${hoursUntilExpiry.toFixed(2)} hours, refreshing proactively...`);
+          
+          try {
+            await api.refreshToken();
+            console.log('[Auth] Proactive token refresh successful');
+          } catch (error) {
+            console.error('[Auth] Proactive token refresh failed:', error);
+            // Don't sign out user here, let the normal flow handle it
+          }
+        } else if (hoursUntilExpiry <= 0) {
+          console.log('[Auth] Token already expired');
+        } else {
+          console.log(`[Auth] Token is valid for ${hoursUntilExpiry.toFixed(2)} more hours`);
+        }
+      } catch (error) {
+        console.error('[Auth] Error checking token expiry:', error);
+      }
+    };
+
+    // Check immediately on mount
+    checkAndRefreshToken();
+
+    // Check every 30 minutes
+    const intervalId = setInterval(checkAndRefreshToken, 30 * 60 * 1000);
+
+    return () => {
+      console.log('[Auth] Cleaning up proactive token refresh checker');
+      clearInterval(intervalId);
+    };
+  }, [isSignedIn, user?.user_id]);
 
   const signIn = async (email: string, password: string) => {
     try {

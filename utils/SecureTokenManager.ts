@@ -178,6 +178,48 @@ export const isTokenNearExpiry = async (): Promise<boolean> => {
 };
 
 /**
+ * Get hours until token expiry
+ * @returns Number of hours until token expires, or null if no expiry found
+ */
+export const getHoursUntilExpiry = async (): Promise<number | null> => {
+  try {
+    const expiry = await getTokenExpiry();
+    if (!expiry) return null;
+    
+    const expiryDate = new Date(expiry);
+    const now = new Date();
+    const hoursDiff = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    return hoursDiff;
+  } catch (error) {
+    // console.error('Failed to get hours until expiry:', error);
+    return null;
+  }
+};
+
+/**
+ * Check if token is near expiry with a custom threshold
+ * @param hoursThreshold Number of hours before expiry to consider "near expiry"
+ * @returns true if token expires within the specified hours or expiry not found
+ */
+export const isTokenNearExpiryWithThreshold = async (hoursThreshold: number): Promise<boolean> => {
+  try {
+    const expiry = await getTokenExpiry();
+    if (!expiry) return true;
+    
+    const expiryDate = new Date(expiry);
+    const now = new Date();
+    const hoursDiff = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    // Token is near expiry if it expires within the threshold AND hasn't expired yet
+    return hoursDiff > 0 && hoursDiff <= hoursThreshold;
+  } catch (error) {
+    // console.error('Failed to check token expiry:', error);
+    return true; // Assume expired on error
+  }
+};
+
+/**
  * Clear all authentication data including expiry
  * Enhanced version that also clears token expiry
  */

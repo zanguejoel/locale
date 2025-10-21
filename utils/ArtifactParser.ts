@@ -165,6 +165,7 @@ export type ContentSegment =
 /**
  * Parse content into segments (text and artifacts in order)
  * This preserves the original position of artifacts in the content
+ * Supports both complete and streaming (partial) artifacts
  */
 export const parseContentSegments = (
   content: string,
@@ -176,15 +177,21 @@ export const parseContentSegments = (
   }
 
   const segments: ContentSegment[] = [];
-  const artifactRegex = /<jmeArtifact\s+([^>]+)>([\s\S]*?)<\/jmeArtifact>/g;
+  
+  // First, try to find complete artifacts
+  const completeArtifactRegex = /<jmeArtifact\s+([^>]+)>([\s\S]*?)<\/jmeArtifact>/g;
+  
+  // Also check for streaming (incomplete) artifacts
+  const streamingArtifactMatch = content.match(/<jmeArtifact\s+([^>]+)>([\s\S]*)$/);
   
   let lastIndex = 0;
   let artifactIndex = 0;
   let match;
+  let hasStreamingArtifact = false;
 
   console.log('[ArtifactParser] Parsing content into segments');
 
-  while ((match = artifactRegex.exec(content)) !== null) {
+  while ((match = completeArtifactRegex.exec(content)) !== null) {
     const fullMatch = match[0]; // Full <jmeArtifact>...</jmeArtifact> tag
     const attributeString = match[1];
     const artifactContent = match[2];
@@ -232,8 +239,66 @@ export const parseContentSegments = (
     lastIndex = match.index + fullMatch.length;
   }
 
-  // Add remaining text after last artifact (if any)
-  if (lastIndex < content.length) {
+  // Check for streaming (incomplete) artifact at the end
+  if (lastIndex < content.length && streamingArtifactMatch && !hasStreamingArtifact) {
+    const remainingContent = content.substring(lastIndex);
+    
+    // Check if remaining content is a streaming artifact
+    const streamingMatch = remainingContent.match(/<jmeArtifact\s+([^>]+)>([\s\S]*)$/);
+    
+    if (streamingMatch) {
+      // Add any text before the streaming artifact
+      const textBeforeArtifact = remainingContent.substring(0, streamingMatch.index).trim();
+      if (textBeforeArtifact) {
+        segments.push({
+          type: 'text',
+          content: textBeforeArtifact,
+        });
+        console.log('[ArtifactParser] Added text before streaming artifact (length:', textBeforeArtifact.length, ')');
+      }
+      
+      // Parse streaming artifact
+      const attributeString = streamingMatch[1];
+      const artifactContent = streamingMatch[2];
+      
+      const typeMatch = attributeString.match(/type=["']([^"']+)["']/);
+      const titleMatch = attributeString.match(/title=["']([^"']+)["']/);
+      const languageMatch = attributeString.match(/language=["']([^"']+)["']/);
+      
+      if (typeMatch && titleMatch) {
+        const streamingArtifact: Artifact = {
+          id: `${messageId}-artifact-${artifactIndex}-streaming`,
+          type: typeMatch[1] as ArtifactType,
+          title: titleMatch[1],
+          content: artifactContent,
+          language: languageMatch?.[1],
+          timestamp: Date.now(),
+          messageId,
+          isStreaming: true, // Mark as streaming
+        };
+        
+        segments.push({
+          type: 'artifact',
+          artifact: streamingArtifact,
+          originalTag: streamingMatch[0],
+        });
+        
+        console.log('[ArtifactParser] ⚡ Added STREAMING artifact segment:', streamingArtifact.title);
+        hasStreamingArtifact = true;
+      }
+    } else {
+      // Just regular text
+      const textContent = remainingContent.trim();
+      if (textContent) {
+        segments.push({
+          type: 'text',
+          content: textContent,
+        });
+        console.log('[ArtifactParser] Added final text segment (length:', textContent.length, ')');
+      }
+    }
+  } else if (lastIndex < content.length) {
+    // Add remaining text after last artifact
     const textContent = content.substring(lastIndex).trim();
     if (textContent) {
       segments.push({
