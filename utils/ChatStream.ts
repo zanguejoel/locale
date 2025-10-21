@@ -92,8 +92,10 @@ export const processStream = async (
                 case 'stream':
                   if (data.content !== undefined) {
                     if (!hasReceivedContent) {
-                      console.log('[ChatStream] ✅ First content received');
+                      console.log('[ChatStream] ✅ First content received - clearing intermediate state');
                       hasReceivedContent = true;
+                      // Clear intermediate state when actual content starts arriving
+                      setIntermediate('');
                     }
                     console.log(`[ChatStream] 💬 Received content chunk: "${data.content}" (${data.content.length} chars)`);
                     
@@ -201,6 +203,10 @@ export const processStream = async (
   } finally {
     setStreamWorking(false);
     
+    // Always clear intermediate state in finally block to prevent stuck states
+    console.log('[ChatStream] Finally block - ensuring intermediate state is cleared');
+    setIntermediate('');
+    
     // Clean up reader
     if (reader) {
       try {
@@ -218,6 +224,7 @@ export const processStream = async (
     console.log("[ChatStream] - Had content:", hasReceivedContent);
     console.log("[ChatStream] - Had intermediate:", hasReceivedIntermediate);
     console.log("[ChatStream] - Has final result:", !!res);
+    console.log("[ChatStream] - Intermediate state cleared:", true);
     console.log("[ChatStream] ═══════════════════════════════════════");
   }
 

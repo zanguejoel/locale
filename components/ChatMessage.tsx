@@ -44,6 +44,8 @@ import { handleErrorSilent } from '@/utils/ErrorHandler';
 import { extractArtifactsFromMessage, stripArtifactTags, parseContentSegments, ContentSegment } from '@/utils/ArtifactParser';
 import ArtifactIndicator from './artifacts/ArtifactIndicator';
 import { Artifact } from '@/utils/ArtifactTypes';
+import { extractThinkingFromStream, stripThinkingTags, hasThinkingTags } from '@/utils/ThinkingParser';
+import ThinkingBlock from './ThinkingBlock';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -248,19 +250,28 @@ const ChatMessage = memo(({
   const theme = useTheme();
   const styles = getStyles(theme);
 
+  // Extract thinking blocks from content
+  const thinkingData = useMemo(() => {
+    if (role === Role.Bot && content && hasThinkingTags(content)) {
+      return extractThinkingFromStream(content);
+    }
+    return { thinking: null, contentWithoutThinking: content };
+  }, [content, role]);
+
   // Parse content into segments (text and artifacts) to preserve original positions
+  // Use content without thinking tags for display
   const contentSegments = useMemo(() => {
     // Parse into segments for bot messages - preserves artifact positions
-    if (role === Role.Bot && content) {
-      const segments = parseContentSegments(content, 'message-' + (timestamp || Date.now()));
+    if (role === Role.Bot && thinkingData.contentWithoutThinking) {
+      const segments = parseContentSegments(thinkingData.contentWithoutThinking, 'message-' + (timestamp || Date.now()));
       if (segments.length > 0) {
         const artifactCount = segments.filter(s => s.type === 'artifact').length;
         console.log('[ChatMessage] ✅ Parsed content into', segments.length, 'segments (', artifactCount, 'artifacts)');
       }
       return segments;
     }
-    return [{ type: 'text' as const, content }];
-  }, [content, role, timestamp]);
+    return [{ type: 'text' as const, content: thinkingData.contentWithoutThinking }];
+  }, [thinkingData.contentWithoutThinking, role, timestamp]);
 
   // Extract all artifacts from segments for external use (e.g., passing to parent)
   // Combine finalized artifacts with streaming artifact if applicable
@@ -972,6 +983,14 @@ const ChatMessage = memo(({
                     accessibilityRole="text"
                     testID="markdown-container"
                   >
+                    {/* Render thinking block if present */}
+                    {thinkingData.thinking && (
+                      <ThinkingBlock
+                        content={thinkingData.thinking.content}
+                        isStreaming={!thinkingData.thinking.isComplete}
+                      />
+                    )}
+                    
                     {/* Render content segments inline (text and artifacts in original order) */}
                     {contentSegments.length > 0 && !isAudio(content) && !isAudio(imageData || '') && (
                       <View style={styles.botMessageWrapper}>
