@@ -865,7 +865,7 @@ const ChatPage = () => {
               <Text style={styles.textScrollDown}>
                 {isSending ? 'Streaming...' : 'New messages'}
               </Text>
-              <Ionicons name="chevron-down" size={16} color={Colors.common.grey} />
+              <Ionicons name="chevron-down" size={16} color={theme.isDark ? theme.colors.text : Colors.common.grey} />
             </TouchableOpacity>
           )}
         </View>
@@ -1116,7 +1116,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(240, 240, 240, 0.9)',
+    backgroundColor: theme.isDark ? theme.colors.background : 'rgba(240, 240, 240, 0.9)',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1128,7 +1128,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   textScrollDown: {
     fontSize: 12,
-    color: Colors.common.grey,
+    color: theme.isDark ? theme.colors.text : Colors.common.grey,
     fontWeight: '500',
     marginRight: 4,
   },
