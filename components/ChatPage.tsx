@@ -72,16 +72,6 @@ const ChatPage = () => {
   const styles = getStyles(theme);
   const insets = useSafeAreaInsets();
   
-  // Calculate dynamic buffer height to ensure user message appears near top but below header
-  // Account for header height (~100px) + assistant message feedback icons (~50px) + safe areas
-  const screenHeight = Dimensions.get('window').height;
-  const headerHeight = 100; // Approximate header height including navigation
-  const feedbackIconsHeight = 50; // Height of like/dislike feedback buttons on assistant messages
-  const dynamicBufferHeight = Math.max(
-    450,  // Minimum buffer (optimal positioning to hide feedback icons with comfortable spacing)
-    screenHeight * 0.5 - insets.top - insets.bottom - headerHeight - feedbackIconsHeight
-  );
-  
   // Get selected models (using hooks to ensure reactivity)
   const selectedCloudModel = useDefaultModel();
   const selectedLocalModel = useDefaultLocalModel();
@@ -153,6 +143,31 @@ const ChatPage = () => {
     currentStreamingArtifact,
     getArtifactsForMessage,
   } = chat;
+
+  // Calculate dynamic buffer height based on last user message type
+  // Audio messages need more buffer than text messages to prevent clipping
+  const dynamicBufferHeight = useMemo(() => {
+    const screenHeight = Dimensions.get('window').height;
+    const headerHeight = 100; // Approximate header height including navigation
+    const feedbackIconsHeight = 50; // Height of like/dislike feedback buttons on assistant messages
+    
+    // Check if the last user message is audio (needs extra 20px)
+    let isLastUserMessageAudio = false;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (message?.role === Role.User) {
+        isLastUserMessageAudio = !!message?.files && message.files.length > 0;
+        break;
+      }
+    }
+    
+    const audioExtraBuffer = isLastUserMessageAudio ? -40 : 0; // Extra 20px for audio messages
+    
+    return Math.max(
+      450 + audioExtraBuffer,  // Minimum buffer + extra for audio if needed
+      screenHeight * 0.5 - insets.top - insets.bottom - headerHeight - feedbackIconsHeight + audioExtraBuffer
+    );
+  }, [messages, insets]);
 
 
   const id = (params as { id?: string })?.id
@@ -231,6 +246,18 @@ const ChatPage = () => {
           setCurrentRoom(id);
           await fetchMessages(id);
           setUserHasScrolledUp(false);
+          
+          // Auto-scroll to bottom ONE time when conversation is loaded from history
+          // Use timeout to ensure messages are rendered before scrolling
+          setTimeout(() => {
+            if (messageListRef.current) {
+              try {
+                messageListRef.current.scrollToEnd({ animated: false });
+              } catch (error) {
+                // Silently fail if scroll doesn't work
+              }
+            }
+          }, 300); // Wait for messages to render
         } catch (error) {
           console.error('Error loading conversation:', error);
           setErrorState({

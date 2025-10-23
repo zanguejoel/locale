@@ -91,6 +91,7 @@ interface ChatContextType {
     generateVideo?: string;
     enableArtifacts?: boolean;
     modelId?: string;
+    audio_duration?: number; // Audio recording duration in seconds
     files?: Array<{
       uri: string;
       type: string;
@@ -593,6 +594,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       generateVideo?: string;
       enableArtifacts?: boolean;
       modelId?: string; // Add modelId to options
+      audio_duration?: number; // Audio recording duration in seconds
       files?: Array<{
         uri: string;
         type: string;
@@ -819,6 +821,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       // Default to enabled if not specified
       formData.append('need_artifact', 'true');
+    }
+    
+    // Add audio duration for audio messages (same as web app)
+    if (options?.audio_duration !== undefined && options.audio_duration !== null) {
+      formData.append('audio_duration', String(options.audio_duration));
+      console.log('[sendMessage] Adding audio duration:', options.audio_duration, 'seconds');
     }
 
     // Abort any previous stream with proper synchronization

@@ -53,6 +53,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
 
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const recordingStartTime = useRef<number | null>(null); // Track recording start time for duration
 
   // Check current model's media generation capabilities
   const mediaCapabilities = currentModelId ? canGenerateMedia(currentModelId) : { image: true, video: true };
@@ -146,6 +147,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
 
       setRecording(newRecording);
       setIsRecording(true);
+      recordingStartTime.current = Date.now(); // Track start time for duration calculation
     } catch (err) {
       handleError(err, 'Recording');
     }
@@ -167,12 +169,21 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
         return;
       }
 
-      onShouldSend(uri, 'audio');
+      // Calculate recording duration in seconds (same as web app)
+      const duration = recordingStartTime.current 
+        ? Math.floor((Date.now() - recordingStartTime.current) / 1000) 
+        : 1; // Default to 1 second if no start time
+      
+      console.log('Recording stopped, duration:', duration, 'seconds');
+
+      // Pass audio duration to backend (same as web app)
+      onShouldSend(uri, 'audio', null, undefined, { audio_duration: duration });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
       handleError(err, 'Recording');
     } finally {
       setRecording(null);
+      recordingStartTime.current = null; // Reset start time
     }
   };
 
@@ -191,6 +202,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
       handleError(err, 'Recording', { showAlert: false }); // Silent error for cancel
     } finally {
       setRecording(null);
+      recordingStartTime.current = null; // Reset start time
     }
   };
 
