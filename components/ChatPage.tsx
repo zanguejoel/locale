@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard, Clipboard, Alert, ActivityIndicator } from 'react-native';
+import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard, Clipboard, Alert, ActivityIndicator, Dimensions } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useChat } from '@/hooks/useChat';
@@ -72,6 +72,16 @@ const ChatPage = () => {
   const styles = getStyles(theme);
   const insets = useSafeAreaInsets();
   
+  // Calculate dynamic buffer height to ensure user message appears near top but below header
+  // Account for header height (~100px) + assistant message feedback icons (~50px) + safe areas
+  const screenHeight = Dimensions.get('window').height;
+  const headerHeight = 100; // Approximate header height including navigation
+  const feedbackIconsHeight = 50; // Height of like/dislike feedback buttons on assistant messages
+  const dynamicBufferHeight = Math.max(
+    450,  // Minimum buffer (optimal positioning to hide feedback icons with comfortable spacing)
+    screenHeight * 0.5 - insets.top - insets.bottom - headerHeight - feedbackIconsHeight
+  );
+  
   // Get selected models (using hooks to ensure reactivity)
   const selectedCloudModel = useDefaultModel();
   const selectedLocalModel = useDefaultLocalModel();
@@ -85,6 +95,10 @@ const ChatPage = () => {
   // Track if user has manually scrolled up - used for free scrolling during streaming
   // When true, the app won't auto-scroll to bottom, allowing users to read older messages
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
+  // Track if we're currently auto-scrolling (to prevent interference with user scrolling)
+  const isAutoScrollingRef = useRef(false);
+  // Track if user is actively interacting with scroll
+  const userIsScrollingRef = useRef(false);
   
   // New feature states
   const [showSearch, setShowSearch] = useState(false);
@@ -286,6 +300,41 @@ const ChatPage = () => {
     }
   }, [userHasScrolledUp, messages.length]);
 
+  // Handle auto-scroll behavior during streaming
+  // This effect manages scrolling while messages are being streamed
+  useEffect(() => {
+    // Only consider auto-scrolling if:
+    // 1. We have messages
+    // 2. We're currently sending/streaming
+    // 3. User hasn't manually scrolled up to read older content
+    if (messages.length > 0 && isSending && !userHasScrolledUp && !userIsScrollingRef.current) {
+      // Use a small delay to allow content to render before scrolling
+      const scrollTimer = setTimeout(() => {
+        if (messageListRef.current && !userHasScrolledUp) {
+          try {
+            // Mark as auto-scrolling to prevent handleScroll interference
+            isAutoScrollingRef.current = true;
+            messageListRef.current.scrollToEnd({ animated: false }); // No animation during streaming for smoothness
+            
+            // Reset flag quickly since we're not animating
+            setTimeout(() => {
+              isAutoScrollingRef.current = false;
+            }, 50);
+          } catch (error) {
+            isAutoScrollingRef.current = false;
+          }
+        }
+      }, 100);
+
+      return () => clearTimeout(scrollTimer);
+    }
+    
+    // Reset user scrolling flag when streaming stops
+    if (!isSending) {
+      userIsScrollingRef.current = false;
+    }
+  }, [messages, isSending, userHasScrolledUp]);
+
   const onLayout = (event: any) => {
     const { height } = event.nativeEvent.layout;
     setHeight(height / 2);
@@ -298,10 +347,20 @@ const ChatPage = () => {
     // Store current scroll offset
     scrollOffsetRef.current = currentOffset;
 
+    // Don't update userHasScrolledUp if we're auto-scrolling
+    if (isAutoScrollingRef.current) {
+      return;
+    }
+
+    // Mark that user is actively scrolling (for debouncing)
+    userIsScrollingRef.current = true;
+
     // In normal list (not inverted), check if user is near the bottom
     // Bottom = where newest messages are
     const scrollPosition = currentOffset + layoutMeasurement.height;
-    const bottomThreshold = contentSize.height - 100; // 100px from bottom
+    // Use a proportional threshold based on dynamic buffer (minimum 150px)
+    const thresholdDistance = Math.max(150, dynamicBufferHeight * 0.25);
+    const bottomThreshold = contentSize.height - thresholdDistance;
     
     // User has scrolled up if they're not near the bottom
     if (scrollPosition < bottomThreshold) {
@@ -311,14 +370,23 @@ const ChatPage = () => {
     }
   };
 
-  const scrollToBottom = async () => {
+  const scrollToBottom = async (animated: boolean = true) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (messageListRef.current) {
       try {
+        // Mark that we're auto-scrolling to prevent handleScroll from interfering
+        isAutoScrollingRef.current = true;
+        
         // Scroll to the end (bottom) of the list where newest messages are
-        messageListRef.current.scrollToEnd({ animated: true });
+        messageListRef.current.scrollToEnd({ animated });
         setUserHasScrolledUp(false);
+        
+        // Reset auto-scrolling flag after animation completes
+        setTimeout(() => {
+          isAutoScrollingRef.current = false;
+        }, animated ? 350 : 0); // Animation typically takes ~300ms
       } catch (error) {
+        isAutoScrollingRef.current = false;
         // console.error('Failed to scroll to bottom:', error);
       }
     }
@@ -821,12 +889,29 @@ const ChatPage = () => {
               keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"
               onScroll={handleScroll}
+              onScrollBeginDrag={() => {
+                // User started dragging - mark as actively scrolling
+                userIsScrollingRef.current = true;
+              }}
+              onScrollEndDrag={() => {
+                // User stopped dragging - clear scrolling flag after a short delay
+                setTimeout(() => {
+                  userIsScrollingRef.current = false;
+                }, 200);
+              }}
+              onMomentumScrollEnd={() => {
+                // Momentum scrolling ended - ensure flag is cleared
+                setTimeout(() => {
+                  userIsScrollingRef.current = false;
+                }, 100);
+              }}
               estimatedItemSize={150}
               scrollEventThrottle={16}
               // Disable automatic scrolling during streaming by not including extraData
               // This prevents the list from re-rendering and jumping during stream updates
               // Add bottom spacer component for comfortable reading
-              ListFooterComponent={<View style={{ height: 300 }} />}
+              // Dynamic height ensures user message appears at top without showing previous response
+              ListFooterComponent={<View style={{ height: dynamicBufferHeight }} />}
               // Pull to refresh
               refreshControl={
                 <RefreshControl
@@ -857,7 +942,7 @@ const ChatPage = () => {
           {showScrollButton && messages.length > 0 && (
             <TouchableOpacity
               style={[styles.scrollButton, styles.touchTarget]}
-              onPress={scrollToBottom}
+              onPress={() => scrollToBottom(true)}
               accessibilityLabel="Scroll to latest message"
               accessibilityRole="button"
               activeOpacity={0.6}
@@ -938,23 +1023,21 @@ const ChatPage = () => {
             setFiles={setFiles}
             fetchMessages={handleFetchMessages}
             onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
-              // Auto-scroll to bottom only when sending a new message (not during streaming)
-              // Only if user hasn't manually scrolled up to read older messages
-              if (!userHasScrolledUp) {
-                scrollToBottom();
-              }
+              // ALWAYS scroll to bottom when user sends a message
+              // This ensures the user sees their message and the response
+              scrollToBottom(true);
+              
               return isLocal ? handleSendLocalMessage(message) : sendMessage(message, type, operation, additionalData, options);
             }}
             isLoading={isSending}
             isLocal={isLocal}
-            currentModelId={isLocal ? selectedLocalModel.id : selectedCloudModel.id}
+            currentModelId={isLocal ? selectedLocalModel?.id : selectedCloudModel?.id}
             onRecordingStateChange={(recording, onCancel) => {
               setIsRecording(recording);
               setCancelRecording(() => onCancel);
             }}
             messages={messages}
             conversationTitle={id ? `Conversation ${id}` : 'Chat'}
-            currentModelId={isLocal ? selectedLocalModel?.id : selectedCloudModel?.id}
           />
         </View>
       </KeyboardAvoidingView>
