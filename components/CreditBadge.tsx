@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { useCredits } from '@/hooks/useCredits';
-import CreditPurchaseModal from './CreditPurchaseModal';
+import CreditPurchaseModalWithApplePay from './CreditPurchaseModalWithApplePay';
 import * as Haptics from 'expo-haptics';
 
 interface CreditBadgeProps {
@@ -72,7 +72,7 @@ const CreditBadge: React.FC<CreditBadgeProps> = ({ variant = 'compact', onPress,
             style={styles.badgeFullAdd}
           />
         </TouchableOpacity>
-        <CreditPurchaseModal
+        <CreditPurchaseModalWithApplePay
           visible={showPurchaseModal}
           onClose={() => setShowPurchaseModal(false)}
           source={source}
@@ -102,7 +102,7 @@ const CreditBadge: React.FC<CreditBadgeProps> = ({ variant = 'compact', onPress,
           {remaining_credits}
         </Text>
       </TouchableOpacity>
-      <CreditPurchaseModal
+      <CreditPurchaseModalWithApplePay
         visible={showPurchaseModal}
         onClose={() => setShowPurchaseModal(false)}
         source={source}

@@ -30,6 +30,7 @@
     "@react-navigation/native": "^7.1.18",
     "@shopify/flash-list": "^1.7.3",
     "@shopify/react-native-skia": "^1.5.0",
+    "@stripe/stripe-react-native": "^0.37.3",
     "@tanstack/react-query": "^5.66.0",
     "apisauce": "^3.1.0",
     "assert": "^2.0.0",

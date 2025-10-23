@@ -43,7 +43,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 import ErrorBanner from '@/components/ErrorBanner';
 import EnhancedEmptyState from '@/components/EnhancedEmptyState';
 import { SelectedFile } from '@/components/FilePreviewModal';
-import CreditPurchaseModal from '@/components/CreditPurchaseModal';
+import CreditPurchaseModalWithApplePay from '@/components/CreditPurchaseModalWithApplePay';
 import ArtifactViewerModal from '@/components/artifacts/ArtifactViewerModal';
 import { Artifact } from '@/utils/ArtifactTypes';
 import apiClient from '@/utils/ApiClient';
@@ -966,7 +966,7 @@ const ChatPage = () => {
         onClose={() => setEditingMessage(null)}
         onSave={handleSaveEdit}
       />
-      <CreditPurchaseModal
+      <CreditPurchaseModalWithApplePay
         visible={showCreditPurchaseModal}
         onClose={() => setShowCreditPurchaseModal(false)}
         onSuccess={() => {

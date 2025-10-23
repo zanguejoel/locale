@@ -28,6 +28,9 @@
           "ms-outlook",
           "msauth"
         ]
+      },
+      "entitlements": {
+        "com.apple.developer.in-app-payments": ["merchant.com.neptunetech.odyssey"]
       }
     },
     "android": {
