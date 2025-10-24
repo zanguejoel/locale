@@ -225,30 +225,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     intermediateRef.current = intermediate;
     reasoningTextRef.current = reasoningText;
     streamRef.current = stream;
+    
+    // Debug log for intermediate state changes
+    if (__DEV__ && intermediate) {
+      console.log('[useChat] 📝 Intermediate state updated:', intermediate);
+    }
   }, [isSending, streamWorking, intermediate, reasoningText, stream]);
   
-  // ============ Auto-clear Stale Intermediate State ============
-  // Prevents UI from hanging if intermediate state never gets cleared
-  useEffect(() => {
-    if (!intermediate) return;
-    
-    const INTERMEDIATE_TIMEOUT = 30000; // 30 seconds
-    
-    const timeoutId = setTimeout(() => {
-      if (intermediate) {
-        console.warn('[useChat] ⚠️ Force-clearing stale intermediate state:', intermediate);
-        setIntermediate('');
-        
-        // Also ensure isSending is false
-        if (isSending) {
-          console.warn('[useChat] ⚠️ Force-clearing stale isSending state');
-          setIsSending(false);
-        }
-      }
-    }, INTERMEDIATE_TIMEOUT);
-    
-    return () => clearTimeout(timeoutId);
-  }, [intermediate, isSending]);
+ 
   
   // ============ Effective Sending State ============
   // Safety mechanism: Keep isSending true while we have intermediate state
@@ -872,6 +856,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const parsedError = parseErrorResponse(errorMessage, _response.status);
         setChatError(parsedError);
         
+        // Save error as a permanent bot message in chat history
+        const httpErrorContent = `⚠️ **Unable to Complete Request**\n\n${parsedError.message}\n\n*Please try again or contact support if the issue persists.*`;
+        
+        setMessages(prev => updateLastItem(prev, message => ({
+          ...message,
+          content: httpErrorContent,
+          timestamp: new Date().toISOString(),
+        })));
+        
+        // Track failed response
+        await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
+          model_used: modelId,
+          is_local_model: false,
+          conversation_id: conversationId,
+          error_message: parsedError.message,
+          status_code: _response.status,
+        });
+        
         // Still show alerts for critical errors (like auth)
         if (_response.status === 401) {
           Alert.alert(
@@ -900,6 +902,33 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setReasoningText
       );
       
+      // Check if the stream returned an error
+      if (res?.type === 'error') {
+        console.log('[Cloud] Stream returned error, saving as permanent message');
+        
+        // Save error as a permanent bot message in chat history
+        // This ensures the error persists and is saved in the conversation
+        const errorMessageContent = stream || `⚠️ **Unable to Complete Request**\n\n${res.error}\n\n*You can try again in a moment or adjust your request.*`;
+        
+        setMessages(prev => updateLastItem(prev, message => ({
+          ...message,
+          content: errorMessageContent,
+          timestamp: new Date().toISOString(),
+        })));
+        
+        // Track as failed response
+        await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
+          model_used: modelId,
+          is_local_model: false,
+          conversation_id: conversationId,
+          error_message: res.error || 'Stream error',
+        });
+        
+        // Don't track as successful or process additional_data
+        setPastedActive(false);
+        return;
+      }
+      
       // Handle additional_data after streaming completes
       if (res?.data?.additional_data) {
         // Update last message with additional_data
@@ -927,29 +956,52 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('[Cloud] Request cancelled/aborted');
         console.log('[Cloud] Abort reason:', e.message);
         // Reset streaming states on abort
+        isSendingRef.current = false;
+        setIsSending(false);
         setStreamWorking(false);
         setIntermediate('');
+        setChatLoading(false);
         return;
       }
       
       console.error('[Cloud] Unexpected error during message send:', e);
       
-      // Set network error if it's a network issue
+      // CRITICAL: Reset all streaming states immediately on error
+      // This prevents the UI from being stuck in loading state
+      isSendingRef.current = false;
+      setIsSending(false);
+      setChatLoading(false);
+      setStreamWorking(false);
+      setIntermediate('');
+      
+      // Determine error message based on error type
+      let errorMessage = 'Something went wrong. Please try again.';
+      let errorType: 'network' | 'generic' = 'generic';
+      
       if (e.message?.toLowerCase().includes('network') || 
           e.message?.toLowerCase().includes('fetch') ||
           e.message?.toLowerCase().includes('connection')) {
-        setChatError({
-          type: 'network',
-          message: 'Network error. Please check your connection and try again.',
-          statusCode: 0,
-        });
-      } else {
-        setChatError({
-          type: 'generic',
-          message: e instanceof Error ? e.message : 'Something went wrong. Please try again.',
-          statusCode: 0,
-        });
+        errorMessage = 'Network error. Please check your connection and try again.';
+        errorType = 'network';
+      } else if (e instanceof Error) {
+        errorMessage = e.message;
       }
+      
+      // Save error as a permanent bot message in chat history
+      const errorMessageContent = `⚠️ **Unable to Complete Request**\n\n${errorMessage}\n\n*Please try again or contact support if the issue persists.*`;
+      
+      setMessages(prev => updateLastItem(prev, message => ({
+        ...message,
+        content: errorMessageContent,
+        timestamp: new Date().toISOString(),
+      })));
+      
+      // Set chat error for banner display
+      setChatError({
+        type: errorType,
+        message: errorMessage,
+        statusCode: 0,
+      });
       
       // Track failed response
       const modelId = getDefaultModelId();
@@ -958,7 +1010,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         model_used: modelId,
         is_local_model: false,
         conversation_id: conversationId,
-        error_message: e instanceof Error ? e.message : String(e),
+        error_message: errorMessage,
       });
     } finally {
       // Always clean up streaming state
@@ -1339,10 +1391,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, setConversations, setCurrentRoom, resetChat, localModel.isLocal]);
 
   const contextValue = useMemo(() => {
-    // Temporarily disabled to investigate crash
-    // if (__DEV__) {
-    //   console.log('[useChat] Context value updated - isSending:', isSending, 'effectiveIsSending:', effectiveIsSending, 'hasIntermediate:', !!intermediate, 'streamLength:', stream?.length || 0);
-    // }
+    // Log context updates for debugging intermediate state
+    if (__DEV__) {
+      console.log('[useChat] 🔄 Context value updated:', {
+        isSending,
+        effectiveIsSending,
+        hasIntermediate: !!intermediate,
+        intermediateValue: intermediate,
+        streamLength: stream?.length || 0
+      });
+    }
     
     return {
       isChatLoading,

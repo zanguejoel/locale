@@ -183,6 +183,17 @@ const ChatPage = () => {
     }
   }, [reasoningText]);
   
+  // Debug: Monitor intermediate state changes
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('[ChatPage] 🔍 Intermediate state changed in ChatPage:', {
+        intermediate,
+        isSending,
+        hasIntermediate: !!intermediate
+      });
+    }
+  }, [intermediate, isSending]);
+  
   // File attachments state
   const [files, setFiles] = useState<SelectedFile[]>([]);
 
@@ -681,9 +692,26 @@ const ChatPage = () => {
     const isLastBotMessage = item.role === Role.Bot && index === displayMessages.length - 1;
     const hasNoContent = !item.content || item.content.trim() === '';
     
-    // Show loading state on the last bot message while sending
-    // This includes: loading dots (when no content) OR intermediate state (during streaming)
-    const showLoading = isLastBotMessage && isSending && (hasNoContent || !!intermediate);
+    // Show loading state ONLY when:
+    // 1. This is the last bot message
+    // 2. We're currently sending
+    // 3. No content has arrived yet
+    // Once streaming begins (content arrives), hide loading dots
+    // Intermediate states will be shown separately in ChatMessage
+    const showLoading = isLastBotMessage && isSending && hasNoContent;
+    
+    // Debug log for loading state in renderItem
+    if (__DEV__ && isLastBotMessage && isSending) {
+      console.log('[ChatPage] 🎯 renderItem for last bot message:', {
+        hasNoContent,
+        hasContent: !hasNoContent,
+        hasIntermediate: !!intermediate,
+        intermediateValue: intermediate,
+        showLoading,
+        isSending,
+        contentPreview: item.content?.substring(0, 50) + '...'
+      });
+    }
     
     // Show date separator if first message or different day from previous
     const showDateSeparator = 
@@ -733,7 +761,6 @@ const ChatPage = () => {
             )}
             <ChatMessage
               {...item}
-              intermediate={intermediate}
               loading={showLoading}
               isFirstInGroup={isFirstInGroup}
               isLastInGroup={isLastInGroup}
@@ -774,7 +801,7 @@ const ChatPage = () => {
         </SwipeableMessage>
       </>
     );
-  }, [displayMessages, isSending, intermediate, pinnedMessages, handleCopyMessage, handleDeleteMessage, handleRetryMessage, handleEditMessage, handleMessagePin, handleReplyToMessage, handleScrollToPinnedMessage, handleAddReaction, handleRemoveReaction]);
+  }, [displayMessages, isSending, pinnedMessages, handleCopyMessage, handleDeleteMessage, handleRetryMessage, handleEditMessage, handleMessagePin, handleReplyToMessage, handleScrollToPinnedMessage, handleAddReaction, handleRemoveReaction, getArtifactsForMessage, currentStreamingArtifact, reasoningText, id, fetchMessages, handleLikeMessage, handleDislikeMessage]);
 
   const CustomView = Platform.OS === 'ios' ? PanGestureHandler : View
 
@@ -934,8 +961,8 @@ const ChatPage = () => {
               }}
               estimatedItemSize={150}
               scrollEventThrottle={16}
-              // Disable automatic scrolling during streaming by not including extraData
-              // This prevents the list from re-rendering and jumping during stream updates
+              // ChatMessage components access intermediate state directly from context
+              // This avoids forcing FlashList re-renders for better performance
               // Add bottom spacer component for comfortable reading
               // Dynamic height ensures user message appears at top without showing previous response
               ListFooterComponent={<View style={{ height: dynamicBufferHeight }} />}

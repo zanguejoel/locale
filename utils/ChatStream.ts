@@ -46,10 +46,12 @@ export const processStream = async (
   let hasReceivedContent = false;
   let hasReceivedIntermediate = false;
   let reasoning = false; // Track if we're in reasoning mode
+  let shouldStopStreaming = false; // Flag to stop streaming on error
 
   if (!response) {
     handleError("No response stream available");
     setStreamWorking(false);
+    setIntermediate('');
     return null;
   }
 
@@ -64,6 +66,7 @@ export const processStream = async (
       // console.error("[ChatStream] Error: Unable to get stream reader");
       handleError("Unable to get stream reader");
       setStreamWorking(false);
+      setIntermediate('');
       return null;
     }
 
@@ -224,9 +227,25 @@ export const processStream = async (
                 case 'error':
                   if (data.error) {
                     console.error(`[ChatStream] ❌ Stream error: ${data.error}`);
+                    
+                    // Display error as bot message content for inline display
+                    // Format it nicely with proper markdown styling and helpful context
+                    const errorMessage = `⚠️ **Unable to Complete Request**\n\n${data.error}\n\n*You can try again in a moment or adjust your request.*`;
+                    setStream(errorMessage);
+                    
+                    // Also set chat error for banner display
+                    // This helps users see persistent errors (like quota limits) even if they scroll
                     handleError(data.error);
-                    // Clear intermediate state on error
+                    
+                    // Clear intermediate and stop streaming
                     setIntermediate('');
+                    setStreamWorking(false);
+                    
+                    // Return error as final result to stop processing
+                    res = data;
+                    
+                    // Signal to stop the streaming loop
+                    shouldStopStreaming = true;
                   }
                   break;
 
@@ -238,14 +257,24 @@ export const processStream = async (
               // console.error(`[ChatStream] Problematic data:`, data);
             }
           }
+          
+          // Check if we should stop streaming (e.g., due to error)
+          if (shouldStopStreaming) {
+            console.log('[ChatStream] Stopping stream due to error');
+            break;
+          }
         }
       } catch (readError) {
-        // console.error('[ChatStream] Error reading stream:', readError);
-        // Continue trying to read unless it's a critical error
+        console.error('[ChatStream] Error reading stream:', readError);
+        // Critical errors should stop streaming immediately
         if (readError instanceof TypeError || readError instanceof ReferenceError) {
           handleError(`Stream reading error: ${readError.message}`);
+          // Clear streaming states on critical read error
+          setStreamWorking(false);
+          setIntermediate('');
           break;
         }
+        // For non-critical errors, continue trying to read
       }
     }
 
@@ -274,18 +303,26 @@ export const processStream = async (
     console.error('[ChatStream] Stream processing error:', error);
     handleError(error instanceof Error ? error.message : String(error));
     
-    // Clear all streaming states on error to prevent UI from being stuck
+    // CRITICAL: Clear all streaming states immediately on error to prevent UI from being stuck
+    setStreamWorking(false);
     setStream('');
     setIntermediate('');
     if (setAdditionalData) {
       setAdditionalData([]);
     }
+    if (setReasoningText) {
+      setReasoningText('');
+    }
   } finally {
     setStreamWorking(false);
     
-    // Always clear intermediate state in finally block to prevent stuck states
-    console.log('[ChatStream] Finally block - ensuring intermediate state is cleared');
-    setIntermediate('');
+    // Defer intermediate state clearing to give React time to render any pending updates
+    // This prevents the clear from racing with the UI update
+    console.log('[ChatStream] Finally block - scheduling deferred intermediate state clear');
+    setTimeout(() => {
+      setIntermediate('');
+      console.log('[ChatStream] Deferred intermediate state cleared');
+    }, 150); // 150ms delay allows UI to render intermediate states
     
     // Clean up reader
     if (reader) {

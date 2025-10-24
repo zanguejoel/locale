@@ -19,6 +19,9 @@ export default {
     ios: {
         supportsTablet: true,
         bundleIdentifier: 'com.neptunetech.odyssey',
+        entitlements: {
+            'com.apple.developer.in-app-payments': ['merchant.com.neptunetech.odyssey'],
+        },
     },
     android: {
         package: 'com.neptunetech.odyssey',

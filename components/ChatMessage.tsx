@@ -48,6 +48,7 @@ import { extractThinkingFromStream, stripThinkingTags, hasThinkingTags } from '@
 import ThinkingBlock from './ThinkingBlock';
 import { extractReasoningFromStream, stripReasoningTags, hasReasoningTags } from '@/utils/ReasoningParser';
 import ReasoningBlock from './ReasoningBlock';
+import { useChat } from '@/hooks/useChat';
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -60,7 +61,7 @@ interface ChatMessageProps extends Message {
   streamWorking?: boolean
   sendingText?: string
   imageData?: string
-  intermediate?: string // Add intermediate prop for streaming
+  // intermediate removed - accessed directly from context
   additional_data?: Array<{
     data_type: string;
     data?: string;
@@ -233,7 +234,6 @@ const ChatMessage = memo(({
   isSending,
   streamWorking,
   imageData,
-  intermediate,
   timestamp,
   status,
   additional_data,
@@ -252,8 +252,27 @@ const ChatMessage = memo(({
   reaction,
   streamingReasoning,
 }: ChatMessageProps) => {
+  
+  // Access intermediate state directly from context
+  const { intermediate, isSending: contextIsSending } = useChat();
   const theme = useTheme();
   const styles = getStyles(theme);
+  
+  // Compute actual loading state based on content arrival
+  // 
+  // Show loading UI (dots/intermediate) ONLY when:
+  // 1. loading prop is true (indicates this is the last bot message being generated)
+  // 2. AND no content has arrived yet (!hasContent)
+  // 
+  // Once streaming begins and content arrives:
+  // - Hide loading dots immediately
+  // - Show the streaming content
+  // - Intermediate state (if present) will be shown above the content
+  // 
+  // This creates a smooth transition:
+  // 1. Loading dots → 2. Intermediate state + content → 3. Just content
+  const hasContent = content && content.trim().length > 0;
+  const shouldShowLoading = loading && !hasContent;
 
   // Extract thinking blocks from content
   const thinkingData = useMemo(() => {
@@ -372,8 +391,20 @@ const ChatMessage = memo(({
       Alert.alert('Error', 'Video reference not available');
     }
   };
-  // Force loading state to be a boolean
-  const isLoading = Boolean(loading);
+  
+  // Debug: Monitor loading and intermediate state changes
+  useEffect(() => {
+    if (__DEV__ && role === Role.Bot && (intermediate || loading)) {
+      console.log('[ChatMessage] 🎨 Loading state:', {
+        shouldShowLoading,
+        loading,
+        hasContent,
+        contentLength: content?.length || 0,
+        intermediate: intermediate || 'none',
+        contextIsSending,
+      });
+    }
+  }, [intermediate, loading, role, contextIsSending, shouldShowLoading, hasContent, content]);
 
   // Add subtle pulse animation for streaming content
   useEffect(() => {
@@ -403,7 +434,7 @@ const ChatMessage = memo(({
 
   // Handle fading in content when loaded
   useEffect(() => {
-    if (!isLoading && !contentLoaded) {
+    if (!shouldShowLoading && !contentLoaded) {
       const timer = setTimeout(() => {
         setContentLoaded(true);
         Animated.timing(fadeAnim, {
@@ -414,15 +445,15 @@ const ChatMessage = memo(({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, contentLoaded, fadeAnim]);
+  }, [shouldShowLoading, contentLoaded, fadeAnim]);
 
   // Reset content loaded state when loading changes
   useEffect(() => {
-    if (isLoading) {
+    if (shouldShowLoading) {
       setContentLoaded(false);
       fadeAnim.setValue(0);
     }
-  }, [isLoading, fadeAnim]);
+  }, [shouldShowLoading, fadeAnim]);
 
   // Retry loading image if it fails (up to MAX_IMAGE_RETRY_ATTEMPTS)
   useEffect(() => {
@@ -1350,7 +1381,7 @@ const ChatMessage = memo(({
   // Render action icons below message
   const renderActionIcons = () => {
     // Don't show actions while loading or sending
-    if (isLoading || isSending) return null;
+    if (shouldShowLoading || isSending) return null;
     
     const actions: Array<{
       key: string;
@@ -1451,9 +1482,9 @@ const ChatMessage = memo(({
       testID={`message-${role === Role.Bot ? 'bot' : 'user'}`}
     >
      
-      {isLoading ? (
+      {shouldShowLoading ? (
+        // Case 1 & 2: No content yet - show loading dots with/without intermediate
         <View style={styles.loadingStateContainer}>
-          {/* Show intermediate state indicator */}
           {intermediate ? (
             <View style={styles.intermediateContainer}>
               <View style={styles.intermediateIconContainer}>
@@ -1476,19 +1507,30 @@ const ChatMessage = memo(({
               </View>
             </View>
           )}
-          
-          {/* Show streaming content below intermediate state if it exists */}
-          {hasStreamingContent && (
-            <View style={[styles.messageWrapper, styles.streamingContentWrapper]}>
-              <View style={styles.messageContent} testID="message-content">
-                {renderContent()}
+        </View>
+      ) : (
+        // Case 3 & 4: Content has arrived - show content with optional intermediate above
+        <View style={styles.messageWrapper}>
+          {/* Show intermediate state above content during streaming 
+              (e.g., "Searching...", "Generating image..." while content is streaming) */}
+          {intermediate && isSending && (
+            <View style={styles.intermediateContainer}>
+              <View style={styles.intermediateIconContainer}>
+                  {intermediate.toLowerCase().includes('image') || intermediate.toLowerCase().includes('generating') ? (
+                    <Ionicons name="images" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                  ) : intermediate.toLowerCase().includes('video') ? (
+                    <Ionicons name="videocam" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                  ) : intermediate.toLowerCase().includes('search') ? (
+                    <Ionicons name="search" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                  ) : (
+                    <LoadingDots />
+                  )}
               </View>
+              <AnimatedText text={intermediate?.toString()} />
             </View>
           )}
-        </View>
-
-      ) : (
-        <View style={styles.messageWrapper}>
+          
+          {/* Message content */}
           <View style={styles.messageContent} testID="message-content">
             {renderContent()}
           </View>
@@ -1509,6 +1551,7 @@ const ChatMessage = memo(({
           )}
         </View>
       )}
+       
     </Animated.View>
   );
 });
@@ -2003,7 +2046,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     maxWidth: '100%',
   },
   intermediateIconContainer: {
-    // marginRight: 8,
+    marginRight: 12, // Space between icon/loading dots and intermediate text
   },
   intermediateIcon: {
     opacity: 0.8,
