@@ -28,13 +28,15 @@ export const processStream = async (
   setIntermediate: (value: string) => void,
   setStreamWorking: (v: boolean) => void,
   setAdditionalData?: (a: any[]) => void,
-  setReasoningText?: (value: string | ((prev: string) => string)) => void
+  setReasoningText?: (value: string | ((prev: string) => string)) => void,
+  setChatId?: (chatId: string) => void
 ): Promise<StreamData | null> => {
   console.log("[ChatStream] ═══════════════════════════════════════");
   console.log("[ChatStream] processStream called - CHUNK MODE (instant)");
   console.log("[ChatStream] - Response exists:", !!response);
   console.log("[ChatStream] - Has additionalData callback:", !!setAdditionalData);
   console.log("[ChatStream] - Has reasoning callback:", !!setReasoningText);
+  console.log("[ChatStream] - Has chatId callback:", !!setChatId);
   console.log("[ChatStream] - Streaming mode: Instant chunk display");
   console.log("[ChatStream] ═══════════════════════════════════════");
   
@@ -198,10 +200,14 @@ export const processStream = async (
                   break;
 
                 case 'meta':
-                  // Handle metadata during streaming (e.g., generated images)
+                  // Handle metadata during streaming (e.g., generated images, chat_id)
                   if (data?.data?.additional_data) {
                     console.log('[ChatStream] 📦 Received meta with additional_data:', data.data.additional_data.length, 'items');
                     setAdditionalData?.(data.data.additional_data);
+                  }
+                  if (data?.data?.chat_id) {
+                    console.log('[ChatStream] 🆔 Received chat_id from meta:', data.data.chat_id);
+                    setChatId?.(data.data.chat_id);
                   }
                   break;
 

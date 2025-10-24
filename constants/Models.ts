@@ -20,36 +20,6 @@ export interface Model {
 
 export const models: Model[] = [
   {
-    id: 'us.meta.llama3-3-70b-instruct-v1:0',
-    name: 'LLama 3.3 70B',
-    displayName: 'LLama 3.3 70B',
-    description: 'LLama 3.3 model with enhanced capabilities',
-    category: 'opensource',
-    capabilities: {
-      vision: true,
-      search: true,
-      pdf: true,
-      reasoning: false,
-      imageGeneration: false,
-      videoGeneration: false
-    }
-  },
-  {
-    id: 'us.meta.llama4-scout-17b-instruct-v1:0',
-    name: 'LLama 4 Scout 17B',
-    displayName: 'LLama 4 Scout 17B',
-    description: 'LLama 4 model with enhanced capabilities',
-    category: 'opensource',
-    capabilities: {
-      vision: true,
-      search: true,
-      pdf: true,
-      reasoning: false,
-      imageGeneration: false,
-      videoGeneration: false
-    }
-  },
-  {
     id: 'us.meta.llama4-maverick-17b-instruct-v1:0',
     name: 'LLama 4 Maverick 17B',
     displayName: 'LLama 4 Maverick 17B',
@@ -121,59 +91,7 @@ export const models: Model[] = [
     },
     isNew: false
   },
-  {
-    id: 'claude-3-7-sonnet-20250219',
-    name: 'Claude 3.7 Sonnet',
-    displayName: 'Claude 3.7 Sonnet',
-    description: 'Latest Claude model with enhanced reasoning',
-    category: 'claude',
-    capabilities: {
-      vision: true,
-      search: true,
-      pdf: true,
-      reasoning: false
-    },
-    isNew: false
-  },
-  {
-    id: 'claude-3-7-sonnet-20250219-thinking',
-    name: 'Claude 3.7 Sonnet Thinking',
-    displayName: 'Claude 3.7 Sonnet Thinking',
-    description: 'Latest Claude model with enhanced reasoning',
-    category: 'claude',
-    capabilities: {
-      vision: true,
-      search: true,
-      pdf: true,
-      reasoning: true
-    }
-  },
-
-  {
-    id: 'claude-3-5-sonnet-20241022',
-    name: 'Claude 3.5 Sonnet',
-    displayName: 'Claude 3.5 Sonnet',
-    description: 'Stable Claude model with good performance',
-    category: 'claude',
-    capabilities: {
-      vision: true,
-      search: true,
-      pdf: true
-    }
-  },
-  {
-    id: 'claude-3-5-haiku-20241022',
-    name: 'Claude 3.5 Haiku',
-    displayName: 'Claude 3.5 Haiku',
-    description: 'Fast Claude model optimized for speed',
-    category: 'claude',
-    capabilities: {
-      vision: true,
-      search: true,
-      pdf: true
-    },
-    isFast: true
-  },
+ 
   {
     id: 'gpt-5-chat-latest',
     name: 'ChatGPT 5',

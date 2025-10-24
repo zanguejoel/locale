@@ -127,6 +127,7 @@ interface ChatContextType {
   artifacts: Artifact[];
   currentStreamingArtifact: Artifact | null;
   getArtifactsForMessage: (messageId: string) => Artifact[];
+  updateMessageReaction: (messageId: string, reaction: 'like' | 'dislike' | null) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -146,6 +147,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ============ Message State ============
   const [messages, setMessages] = useState<Message[]>([]);
   const [additionalData, setAdditionalData] = useState<any[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   
   // ============ Loading & Sending State ============
   const [isLoading, setIsLoading] = useState(false);
@@ -298,7 +300,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Update the last bot message with streaming content
     // Word-by-word streaming - each word triggers an update for smooth display
     // This runs on every word addition to ensure smooth word-by-word streaming
-    if (!stream && additionalData?.length === 0) {
+    if (!stream && additionalData?.length === 0 && !currentChatId) {
       // Skip update if no content to show
       return;
     }
@@ -319,9 +321,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updatedMessage.additional_data = message.additional_data;
       }
       
+      // Update chat_id if we have one from the meta event
+      if (currentChatId) {
+        updatedMessage.chat_id = currentChatId;
+        if (__DEV__) {
+          console.log('[useChat] 🆔 Updated message with chat_id:', currentChatId);
+        }
+      }
+      
       return updatedMessage;
     }));
-  }, [stream, additionalData]);
+  }, [stream, additionalData, currentChatId]);
 
   // ============ Artifact Stream Processing ============
   // Throttle utility to reduce expensive artifact extraction calls
@@ -563,6 +573,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return artifacts.filter(artifact => artifact.messageId === messageId);
   }, [artifacts]);
 
+  // Update a specific message's reaction (optimistic update)
+  const updateMessageReaction = useCallback((messageId: string, reaction: 'like' | 'dislike' | null) => {
+    setMessages(prev => prev.map(msg => {
+      if ((msg.chat_id || msg.id) === messageId) {
+        return { ...msg, reaction };
+      }
+      return msg;
+    }));
+  }, []);
+
   // ---------------- Chat Operations ----------------
 
   const sendMessage = useCallback(async (
@@ -603,6 +623,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setReasoningText(''); // Clear reasoning text from previous message
     setAdditionalData([]); // Reset additional data for new message
     setStreamWorking(false); // Reset stream working state
+    setCurrentChatId(null); // Clear chat_id for new message
 
     setMessages(prev => [
       ...prev,
@@ -899,7 +920,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIntermediate,
         setStreamWorking,
         setAdditionalData,
-        setReasoningText
+        setReasoningText,
+        setCurrentChatId
       );
       
       // Check if the stream returned an error
@@ -1138,6 +1160,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isSendingRef.current = false;
     setIsSending(false);
     setAdditionalData([]);
+    setCurrentChatId(null); // Clear chat_id when switching conversations
     
     fetchControllerRef.current = new AbortController();
     const fetchConvId = conversationId; // Capture for closure
@@ -1267,6 +1290,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAdditionalData([]); // Reset additional data when clearing chat
     setChatError(null); // Clear any errors
     setCurrentConversationId(null); // Clear conversation ID to prevent refetch
+    setCurrentChatId(null); // Clear chat_id when resetting
     
     // Clear artifacts
     setArtifacts([]);
@@ -1439,6 +1463,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       artifacts,
       currentStreamingArtifact,
       getArtifactsForMessage,
+      updateMessageReaction,
     };
   }, [
     isChatLoading,
@@ -1472,6 +1497,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     artifacts,
     currentStreamingArtifact,
     getArtifactsForMessage,
+    updateMessageReaction,
   ]);
 
   return (
