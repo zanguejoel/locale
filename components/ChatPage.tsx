@@ -142,6 +142,7 @@ const ChatPage = () => {
     artifacts,
     currentStreamingArtifact,
     getArtifactsForMessage,
+    updateMessageReaction,
   } = chat;
 
   // Calculate dynamic buffer height based on last user message type
@@ -636,24 +637,34 @@ const ChatPage = () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       
+      // Optimistically update the message locally to avoid flash
+      updateMessageReaction(messageId, 'like');
+      
       const response = await apiClient.submitChatFeedback(String(messageId), 'like');
       
       if (response.ok && response.data) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
-        // Refresh messages to show the updated reaction
-        if (id) {
+        // Only refresh messages if NOT currently streaming to avoid flash
+        // The optimistic update above will handle the UI update
+        if (id && !isSending) {
           fetchMessages(id);
         }
       } else {
+        // Revert optimistic update on error
+        updateMessageReaction(messageId, currentReaction || null);
+        
         const errorMsg = response.data?.detail || response.problem || 'Failed to submit feedback';
         Alert.alert('Error', errorMsg);
       }
     } catch (error) {
+      // Revert optimistic update on error
+      updateMessageReaction(messageId, currentReaction || null);
+      
       console.error('Error submitting like:', error);
       Alert.alert('Error', 'Failed to submit feedback. Please try again.');
     }
-  }, [id, fetchMessages]);
+  }, [id, fetchMessages, isSending, updateMessageReaction]);
 
   const handleDislikeMessage = useCallback(async (messageId: string, currentReaction?: 'like' | 'dislike' | null) => {
     // Don't do anything if already disliked
@@ -668,24 +679,34 @@ const ChatPage = () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       
+      // Optimistically update the message locally to avoid flash
+      updateMessageReaction(messageId, 'dislike');
+      
       const response = await apiClient.submitChatFeedback(String(messageId), 'dislike');
       
       if (response.ok && response.data) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
-        // Refresh messages to show the updated reaction
-        if (id) {
+        // Only refresh messages if NOT currently streaming to avoid flash
+        // The optimistic update above will handle the UI update
+        if (id && !isSending) {
           fetchMessages(id);
         }
       } else {
+        // Revert optimistic update on error
+        updateMessageReaction(messageId, currentReaction || null);
+        
         const errorMsg = response.data?.detail || response.problem || 'Failed to submit feedback';
         Alert.alert('Error', errorMsg);
       }
     } catch (error) {
+      // Revert optimistic update on error
+      updateMessageReaction(messageId, currentReaction || null);
+      
       console.error('Error submitting dislike:', error);
       Alert.alert('Error', 'Failed to submit feedback. Please try again.');
     }
-  }, [id, fetchMessages]);
+  }, [id, fetchMessages, isSending, updateMessageReaction]);
 
   const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => {
     // In normal list, last index is the newest message
