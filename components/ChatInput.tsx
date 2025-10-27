@@ -99,29 +99,95 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
     }
   }, [currentModelId, mediaCapabilities.image, mediaCapabilities.video, isLocal]);
 
-  const startRecording = async () => {
-    // Haptic feedback on recording start
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  // ============================================================================
+  // AUDIO RECORDING CONFIGURATION
+  // ============================================================================
+  
+  /**
+   * Audio session configuration constants
+   * Based on iOS audio session activation timing requirements
+   */
+  const AUDIO_CONFIG = {
+    // Polling configuration for audio session readiness
+    POLL_INTERVAL_MS: 50,           // Check every 50ms
+    MAX_POLL_ATTEMPTS: 20,          // Max 20 attempts = 1000ms total
     
-    try {
-      const { status } = await Audio.getPermissionsAsync();
-      if (status !== 'granted') {
-        const { status: newStatus } = await Audio.requestPermissionsAsync();
-        if (newStatus !== 'granted') {
-          handleError(new Error('Microphone permission not granted'), 'Recording');
-          return;
+    // Retry configuration for recording initialization
+    MAX_RETRY_ATTEMPTS: 2,          // Retry up to 2 times on failure
+    RETRY_DELAY_MS: 300,            // Wait 300ms between retries
+    
+    // Minimum delay after audio mode configuration (iOS only)
+    MIN_IOS_DELAY_MS: 100,          // Minimum wait for iOS audio session
+  } as const;
+
+  /**
+   * Polls iOS audio session to check if it's ready for recording
+   * This replaces fixed delays with adaptive waiting based on actual state
+   * 
+   * @param maxAttempts - Maximum number of polling attempts
+   * @returns Promise that resolves when audio session is ready
+   */
+  const waitForAudioSessionReady = async (maxAttempts: number = AUDIO_CONFIG.MAX_POLL_ATTEMPTS): Promise<boolean> => {
+    // Android doesn't need polling - audio is immediately ready
+    if (Platform.OS !== 'ios') {
+      return true;
+    }
+
+    let attempts = 0;
+    while (attempts < maxAttempts) {
+      try {
+        // Try to get the audio session status
+        // If this succeeds without error, audio session is ready
+        const status = await Audio.getPermissionsAsync();
+        if (status.granted && status.canAskAgain !== undefined) {
+          console.log(`[Audio] Session ready after ${attempts * AUDIO_CONFIG.POLL_INTERVAL_MS}ms`);
+          return true;
         }
+      } catch (error) {
+        // Session not ready yet, continue polling
       }
+      
+      await new Promise(resolve => setTimeout(resolve, AUDIO_CONFIG.POLL_INTERVAL_MS));
+      attempts++;
+    }
+    
+    console.warn(`[Audio] Session check timed out after ${maxAttempts * AUDIO_CONFIG.POLL_INTERVAL_MS}ms`);
+    return true; // Continue anyway after timeout
+  };
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-      });
+  /**
+   * Configures audio mode for recording
+   * Always reconfigures to ensure proper state (no caching to avoid iOS issues)
+   */
+  const configureAudioMode = async (): Promise<void> => {
+    console.log('[Audio] Configuring audio mode...');
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+      interruptionModeAndroid: 2, // DuckOthers
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    });
+    
+    console.log('[Audio] Audio mode configured successfully');
+  };
 
-      const newRecording = new Audio.Recording();
-      await newRecording.prepareToRecordAsync({
+  /**
+   * Attempts to prepare the audio recording with retry logic
+   * 
+   * @param recording - Audio.Recording instance to prepare
+   * @param attempt - Current attempt number (for retry logic)
+   * @returns Promise that resolves when recording is prepared
+   */
+  const prepareRecordingWithRetry = async (
+    recording: Audio.Recording, 
+    attempt: number = 0
+  ): Promise<void> => {
+    try {
+      console.log(`[Audio] Preparing recording (attempt ${attempt + 1}/${AUDIO_CONFIG.MAX_RETRY_ATTEMPTS + 1})...`);
+      
+      await recording.prepareToRecordAsync({
         android: {
           extension: '.m4a',
           outputFormat: Audio.AndroidOutputFormat.MPEG_4,
@@ -143,13 +209,95 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
           bitsPerSecond: CHAT_INPUT.AUDIO.BIT_RATE,
         },
       });
+      
+      console.log('[Audio] Recording prepared successfully');
+    } catch (error) {
+      // If this isn't the last attempt, retry with delay
+      if (attempt < AUDIO_CONFIG.MAX_RETRY_ATTEMPTS) {
+        console.log(`[Audio] Prepare failed, retrying in ${AUDIO_CONFIG.RETRY_DELAY_MS}ms...`);
+        await new Promise(resolve => setTimeout(resolve, AUDIO_CONFIG.RETRY_DELAY_MS));
+        return prepareRecordingWithRetry(recording, attempt + 1);
+      }
+      
+      // Last attempt failed, throw error
+      throw error;
+    }
+  };
+
+  // ============================================================================
+  // RECORDING FUNCTIONS
+  // ============================================================================
+
+  /**
+   * Starts audio recording with intelligent session management
+   * Uses polling instead of fixed delays for better reliability and UX
+   * Implements retry logic for robust error handling
+   * Always reconfigures audio mode to ensure proper iOS state
+   */
+  const startRecording = async () => {
+    // Haptic feedback on recording start
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    const startTime = Date.now();
+    
+    try {
+      // Step 1: Request permissions if needed
+      console.log('[Audio] Checking permissions...');
+      const { status } = await Audio.getPermissionsAsync();
+      let permissionJustGranted = false;
+      
+      if (status !== 'granted') {
+        console.log('[Audio] Requesting microphone permission...');
+        const { status: newStatus } = await Audio.requestPermissionsAsync();
+        
+        if (newStatus !== 'granted') {
+          handleError(new Error('Microphone permission not granted'), 'Recording');
+          return;
+        }
+        
+        permissionJustGranted = true;
+        console.log('[Audio] Permission granted');
+      }
+
+      // Step 2: Configure audio mode (always reconfigure for reliability)
+      await configureAudioMode();
+
+      // Step 3: Poll for audio session readiness (iOS only, adaptive timing)
+      if (Platform.OS === 'ios') {
+        console.log('[Audio] Polling for audio session readiness...');
+        await waitForAudioSessionReady();
+        
+        // Add minimum delay after polling to ensure stability
+        await new Promise(resolve => setTimeout(resolve, AUDIO_CONFIG.MIN_IOS_DELAY_MS));
+      }
+
+      // Step 4: Create recording instance
+      console.log('[Audio] Creating recording instance...');
+      const newRecording = new Audio.Recording();
+      
+      // Step 5: Prepare recording with retry logic
+      await prepareRecordingWithRetry(newRecording);
+      
+      // Step 6: Start recording
+      console.log('[Audio] Starting recording...');
       await newRecording.startAsync();
 
+      // Step 7: Update state
       setRecording(newRecording);
       setIsRecording(true);
-      recordingStartTime.current = Date.now(); // Track start time for duration calculation
+      recordingStartTime.current = Date.now();
+      
+      const totalTime = Date.now() - startTime;
+      console.log(`[Audio] ✅ Recording started successfully (total time: ${totalTime}ms)`);
     } catch (err) {
+      const totalTime = Date.now() - startTime;
+      console.error(`[Audio] ❌ Recording failed after ${totalTime}ms:`, err);
       handleError(err, 'Recording');
+      
+      // Clean up on error
+      setRecording(null);
+      setIsRecording(false);
+      recordingStartTime.current = null;
     }
   };
 
@@ -174,12 +322,24 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
         ? Math.floor((Date.now() - recordingStartTime.current) / 1000) 
         : 1; // Default to 1 second if no start time
       
-      console.log('Recording stopped, duration:', duration, 'seconds');
+      console.log('[Audio] Recording stopped, duration:', duration, 'seconds');
+
+      // Reset audio mode to allow playback
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        // interruptionModeAndroid values: 1 = DoNotMix, 2 = DuckOthers
+        interruptionModeAndroid: 1, // DoNotMix - normal playback mode
+        shouldDuckAndroid: false,
+        playThroughEarpieceAndroid: false,
+      });
 
       // Pass audio duration to backend (same as web app)
       onShouldSend(uri, 'audio', null, undefined, { audio_duration: duration });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
+      console.error('[Audio] Recording stop failed:', err);
       handleError(err, 'Recording');
     } finally {
       setRecording(null);
@@ -196,9 +356,23 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
     setIsRecording(false);
     try {
       await recording.stopAndUnloadAsync();
+      
+      // Reset audio mode to allow playback
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        // interruptionModeAndroid values: 1 = DoNotMix, 2 = DuckOthers
+        interruptionModeAndroid: 1, // DoNotMix - normal playback mode
+        shouldDuckAndroid: false,
+        playThroughEarpieceAndroid: false,
+      });
+      
+      console.log('[Audio] Recording cancelled successfully');
       // Don't send the recording, just discard it
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } catch (err) {
+      console.error('[Audio] Recording cancel failed:', err);
       handleError(err, 'Recording', { showAlert: false }); // Silent error for cancel
     } finally {
       setRecording(null);
