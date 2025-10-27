@@ -70,22 +70,29 @@ const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
       return [...artifacts, streamingArtifact];
     }
     return artifacts;
-  }, [artifacts, streamingArtifact, streamingArtifact?.content]);
+  }, [artifacts, streamingArtifact, streamingArtifact?.content, streamingArtifact?.isStreaming]);
 
   const currentArtifact = allArtifacts[currentIndex];
   const hasMultiple = allArtifacts.length > 1;
   const canToggleView = currentArtifact && supportsCodeView(currentArtifact.type);
 
   // Force component to re-render when streaming artifact content updates
+  // Use content length as key to ensure React detects changes
   const [renderKey, setRenderKey] = useState(0);
+  const [lastContentLength, setLastContentLength] = useState(0);
   
   useEffect(() => {
     if (streamingArtifact && streamingArtifact.isStreaming) {
-      // Force re-render by incrementing key
-      setRenderKey(prev => prev + 1);
-      console.log('[ArtifactViewerModal] Streaming artifact updated, content length:', streamingArtifact.content?.length);
+      const newLength = streamingArtifact.content?.length || 0;
+      
+      // Only update if content actually changed
+      if (newLength !== lastContentLength) {
+        setRenderKey(prev => prev + 1);
+        setLastContentLength(newLength);
+        console.log('[ArtifactViewerModal] 🔄 Streaming artifact updated, content length:', newLength);
+      }
     }
-  }, [streamingArtifact?.content]);
+  }, [streamingArtifact?.content, streamingArtifact?.isStreaming, lastContentLength]);
 
   const handleCopy = async () => {
     if (!currentArtifact) return;
@@ -387,6 +394,7 @@ const getStyles = (theme: Theme) =>
       flex: 2,
       alignItems: 'center',
       paddingHorizontal: 8,
+      minWidth: 0, // Allow flex shrinking
     },
     headerRight: {
       flex: 1,
@@ -424,13 +432,15 @@ const getStyles = (theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
+      width: '100%', // Take full width of parent
     },
     headerTitle: {
       fontSize: 18,
       fontWeight: '600',
       color: theme.colors.text,
       textAlign: 'center',
-      flex: 0,
+      flexShrink: 1, // Allow text to shrink
+      maxWidth: '60%', // Prevent taking full width, leave room for streaming indicator
     },
     headerSubtitle: {
       fontSize: 12,
@@ -493,17 +503,19 @@ const getStyles = (theme: Theme) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      paddingHorizontal: 10,
+      paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 8,
       backgroundColor: theme.isDark
         ? 'rgba(59, 130, 246, 0.2)'
         : 'rgba(59, 130, 246, 0.15)',
+      flexShrink: 0, // Don't shrink the streaming indicator
     },
     streamingText: {
       fontSize: 12,
       fontWeight: '600',
       color: theme.colors.primary,
+      whiteSpace: 'nowrap', // Prevent text wrapping in indicator
     },
   });
 

@@ -585,6 +585,52 @@ const ChatPage = () => {
   const displayMessages = useMemo(() => {
     return messages; // No reversal needed
   }, [messages]);
+  
+  // Track previous message count to detect new messages
+  const prevMessageCountRef = useRef(messages.length);
+  
+  // Auto-scroll to newly sent user messages
+  useEffect(() => {
+    const currentCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+    
+    // Only act if messages were added (not removed or initial load)
+    if (currentCount > prevCount) {
+      // Check if the last message is from the user
+      const lastMessage = messages[messages.length - 1];
+      
+      if (lastMessage && lastMessage.role === Role.User) {
+        // Scroll to bring the new user message to the top of the screen
+        // Use a slight delay to ensure the message has rendered
+        setTimeout(() => {
+          try {
+            if (messageListRef.current && messages.length > 0) {
+              // Scroll to the last item (newest message)
+              // viewPosition: 0 means item appears at the top of the viewport
+              messageListRef.current.scrollToIndex({
+                index: messages.length - 1,
+                animated: true,
+                viewPosition: 0, // 0 = top, 0.5 = middle, 1 = bottom
+              });
+              
+              console.log('[ChatPage] 📍 Auto-scrolled to new user message at index:', messages.length - 1);
+            }
+          } catch (error) {
+            // Fallback to scrollToEnd if scrollToIndex fails (e.g., item not measured yet)
+            console.log('[ChatPage] ⚠️ scrollToIndex failed, using scrollToEnd fallback');
+            try {
+              messageListRef.current?.scrollToEnd({ animated: true });
+            } catch (fallbackError) {
+              console.warn('[ChatPage] Auto-scroll failed:', fallbackError);
+            }
+          }
+        }, 150); // Small delay for render
+      }
+    }
+    
+    // Update the ref for next comparison
+    prevMessageCountRef.current = currentCount;
+  }, [messages]);
 
   // New feature handlers
   const handleSearch = useCallback((query: string) => {
@@ -683,11 +729,11 @@ const ChatPage = () => {
       if (response.ok && response.data) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
-        // Only refresh messages if NOT currently streaming to avoid flash
-        // The optimistic update above will handle the UI update
-        if (id && !isSending) {
-          fetchMessages(id);
-        }
+        // Don't refetch messages - optimistic update is sufficient
+        // Refetching causes a flash as FlashList re-renders all items
+        // The reaction is already updated locally and will sync naturally
+        // on next conversation switch or app reload
+        console.log('[ChatPage] ✅ Like submitted successfully (using optimistic update)');
       } else {
         // Revert optimistic update on error
         updateMessageReaction(messageId, currentReaction || null);
@@ -702,7 +748,7 @@ const ChatPage = () => {
       console.error('Error submitting like:', error);
       Alert.alert('Error', 'Failed to submit feedback. Please try again.');
     }
-  }, [id, fetchMessages, isSending, updateMessageReaction]);
+  }, [id, updateMessageReaction]);
 
   const handleDislikeMessage = useCallback(async (messageId: string, currentReaction?: 'like' | 'dislike' | null) => {
     // Don't do anything if already disliked
@@ -710,7 +756,7 @@ const ChatPage = () => {
     
     // Validate chat_id - should be a UUID or at least not be a temporary msg- ID
     if (!messageId || String(messageId).startsWith('msg-')) {
-      Alert.alert('Error', 'Cannot submit feedback - message not synced yet');
+      // Alert.alert('Error', 'Cannot submit feedback - message not synced yet');
       return;
     }
     
@@ -725,26 +771,26 @@ const ChatPage = () => {
       if (response.ok && response.data) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
-        // Only refresh messages if NOT currently streaming to avoid flash
-        // The optimistic update above will handle the UI update
-        if (id && !isSending) {
-          fetchMessages(id);
-        }
+        // Don't refetch messages - optimistic update is sufficient
+        // Refetching causes a flash as FlashList re-renders all items
+        // The reaction is already updated locally and will sync naturally
+        // on next conversation switch or app reload
+        console.log('[ChatPage] ✅ Dislike submitted successfully (using optimistic update)');
       } else {
         // Revert optimistic update on error
         updateMessageReaction(messageId, currentReaction || null);
         
         const errorMsg = response.data?.detail || response.problem || 'Failed to submit feedback';
-        Alert.alert('Error', errorMsg);
+        // Alert.alert('Error', errorMsg);
       }
     } catch (error) {
       // Revert optimistic update on error
       updateMessageReaction(messageId, currentReaction || null);
       
       console.error('Error submitting dislike:', error);
-      Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+      // Alert.alert('Error', 'Failed to submit feedback. Please try again.');
     }
-  }, [id, fetchMessages, isSending, updateMessageReaction]);
+  }, [id, updateMessageReaction]);
 
   const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => {
     // In normal list, last index is the newest message

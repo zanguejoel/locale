@@ -974,6 +974,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...message,
           content: errorMessageContent,
           timestamp: new Date().toISOString(),
+          chat_id: currentChatId || message.chat_id, // Include chat_id even on error
         })));
         
         // Track as failed response
@@ -991,11 +992,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Handle additional_data after streaming completes
       if (res?.data?.additional_data) {
-        // Update last message with additional_data
+        // Update last message with additional_data and chat_id
         // DON'T create separate messages for videos - they're already in files[]
         setMessages(prev => updateLastItem(prev, message => ({
           ...message,
-          additional_data: res?.data?.additional_data || []
+          additional_data: res?.data?.additional_data || [],
+          chat_id: currentChatId || message.chat_id, // Ensure chat_id is included
         })));
       }
       
@@ -1054,6 +1056,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...message,
         content: errorMessageContent,
         timestamp: new Date().toISOString(),
+        chat_id: currentChatId || message.chat_id, // Include chat_id even on error
       })));
       
       // Set chat error for banner display
@@ -1095,10 +1098,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMessages(prev => updateLastItem(prev, message => ({
           ...message,
           content: finalContent,
+          chat_id: currentChatId || message.chat_id, // Include chat_id from meta chunk
         })));
         
         // Clear reasoning text after adding to content
         setReasoningText('');
+      }
+      
+      // Update message with chat_id even if there's no reasoning
+      // This ensures the chat_id from meta chunk is always saved
+      if (currentChatId) {
+        console.log('[Chat] 🆔 Updating message with chat_id from meta:', currentChatId);
+        setMessages(prev => updateLastItem(prev, message => ({
+          ...message,
+          chat_id: currentChatId,
+        })));
       }
       
       // Finalize artifacts after streaming completes (with error recovery)
