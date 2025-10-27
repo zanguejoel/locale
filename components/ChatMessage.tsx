@@ -87,6 +87,7 @@ interface ChatMessageProps extends Message {
   onLike?: () => void;
   onDislike?: () => void;
   reaction?: 'like' | 'dislike' | null;
+  chat_id?: string; // Required for like/dislike actions
 }
 
 const contextItems = [
@@ -251,6 +252,7 @@ const ChatMessage = memo(({
   onDislike,
   reaction,
   streamingReasoning,
+  chat_id,
 }: ChatMessageProps) => {
   
   // Access intermediate state directly from context
@@ -1501,8 +1503,17 @@ const ChatMessage = memo(({
       isActive?: boolean;
     }> = [];
     
-    // Like/Dislike actions - only for bot messages
-    if (role === Role.Bot) {
+    // Check if message has media content
+    const hasMedia = !!(
+      (imageData && (isImage(imageData) || isAudio(imageData) || isDocument(imageData))) ||
+      (files && files.length > 0) ||
+      (additional_data && additional_data.length > 0 && additional_data.some(item => 
+        item.data_type === 'img' || item.data_type === 'video' || item.data_type === 'voice' || item.data_type === 'document'
+      ))
+    );
+    
+    // Like/Dislike actions - only for bot messages with chat_id
+    if (role === Role.Bot && chat_id) {
       if (onLike) {
         actions.push({
           key: 'like',
@@ -1526,8 +1537,8 @@ const ChatMessage = memo(({
       }
     }
     
-    // Copy action - available for all messages
-    if (onCopy) {
+    // Copy action - available for non-media messages only
+    if (onCopy && !hasMedia) {
       actions.push({
         key: 'copy',
         icon: 'copy-outline',
@@ -1548,8 +1559,8 @@ const ChatMessage = memo(({
     //   });
     // }
     
-    // Retry action - only for failed user messages
-    if (canRetry && onRetry && role === Role.User) {
+    // Retry action - only for user messages that failed (backend error)
+    if (error && onRetry && role === Role.User) {
       actions.push({
         key: 'retry',
         icon: 'refresh-outline',
@@ -1626,11 +1637,11 @@ const ChatMessage = memo(({
             <View style={styles.intermediateContainer}>
               <View style={styles.intermediateIconContainer}>
                   {intermediate.toLowerCase().includes('image') || intermediate.toLowerCase().includes('generating') ? (
-                    <Ionicons name="images" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                    <Ionicons name="images" size={20} color={theme.colors.text} style={styles.intermediateIcon} />
                   ) : intermediate.toLowerCase().includes('video') ? (
-                    <Ionicons name="videocam" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                    <Ionicons name="videocam" size={20} color={theme.colors.text} style={styles.intermediateIcon} />
                   ) : intermediate.toLowerCase().includes('search') ? (
-                    <Ionicons name="search" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                    <Ionicons name="search" size={20} color={theme.colors.text} style={styles.intermediateIcon} />
                   ) : (
                     <LoadingDots />
                   )}
@@ -1744,6 +1755,9 @@ const areChatMessagePropsEqual = (
   if (prev.isFirstInGroup !== next.isFirstInGroup) return false;
   if (prev.isLastInGroup !== next.isLastInGroup) return false;
   if (prev.isOnlyInGroup !== next.isOnlyInGroup) return false;
+  
+  // Check chat_id changes (affects like/dislike visibility)
+  if (prev.chat_id !== next.chat_id) return false;
   
   // All critical props are equal - skip re-render
   return true;
@@ -2017,7 +2031,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     width: CHAT_MESSAGE.LOADING_DOTS.SIZE,
     height: CHAT_MESSAGE.LOADING_DOTS.SIZE,
     borderRadius: 5,
-    backgroundColor: Colors.common.primary,
+    backgroundColor: theme.colors.text,
     marginHorizontal: CHAT_MESSAGE.LOADING_DOTS.SPACING,
   },
   errorContainer: {

@@ -43,7 +43,7 @@ const AnimatedText = ({ text }: IAnimatedText) => {
         inputRange: [0, 0.5, 1],
         outputRange: [
             theme.colors.textSecondary,
-            theme.colors.primary,
+            theme.colors.text,
             theme.colors.textSecondary,
         ],
     });
