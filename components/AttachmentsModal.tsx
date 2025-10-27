@@ -358,7 +358,8 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
               style={[
                 styles.singleLineCard,
                 generationOptions.generateVideo !== 'none' && styles.singleLineCardActive,
-                !canGenerateVideo && styles.disabledCard
+                !canGenerateVideo && styles.disabledCard,
+                { marginBottom: 16 }
               ]}
               onPress={() => {
                 if (!canGenerateVideo) return;

@@ -6,6 +6,7 @@
  */
 
 import { Artifact, ArtifactType, ArtifactMetadata } from './ArtifactTypes';
+import { DocumentBlock } from './DocumentTypes';
 
 /**
  * Extract artifact from streaming content
@@ -156,11 +157,12 @@ export const extractArtifactsFromMessage = (
 };
 
 /**
- * Content segment type - either text or artifact
+ * Content segment type - text, artifact, or document
  */
 export type ContentSegment = 
   | { type: 'text'; content: string }
-  | { type: 'artifact'; artifact: Artifact; originalTag: string };
+  | { type: 'artifact'; artifact: Artifact; originalTag: string }
+  | { type: 'document'; document: DocumentBlock; originalTag: string };
 
 /**
  * Parse content into segments (text and artifacts in order)

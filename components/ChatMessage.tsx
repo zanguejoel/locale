@@ -41,13 +41,17 @@ import { shadows } from '@/constants/Shadows';
 import { isAudio, isImage, isDocument } from '@/utils/FileTypeHelpers';
 import { CHAT_MESSAGE } from '@/constants/ChatConstants';
 import { handleErrorSilent } from '@/utils/ErrorHandler';
-import { extractArtifactsFromMessage, stripArtifactTags, parseContentSegments, ContentSegment } from '@/utils/ArtifactParser';
+import { extractArtifactsFromMessage, stripArtifactTags, ContentSegment } from '@/utils/ArtifactParser';
+import { parseContentSegments } from '@/utils/ContentParser';
 import ArtifactIndicator from './artifacts/ArtifactIndicator';
 import { Artifact } from '@/utils/ArtifactTypes';
 import { extractThinkingFromStream, stripThinkingTags, hasThinkingTags } from '@/utils/ThinkingParser';
 import ThinkingBlock from './ThinkingBlock';
 import { extractReasoningFromStream, stripReasoningTags, hasReasoningTags } from '@/utils/ReasoningParser';
 import ReasoningBlock from './ReasoningBlock';
+import { DocumentBlock } from '@/utils/DocumentTypes';
+import DocumentIndicator from './DocumentIndicator';
+import DocumentPreviewModal from './DocumentPreviewModal';
 import { useChat } from '@/hooks/useChat';
 
 interface ChatMessageProps extends Message {
@@ -260,6 +264,21 @@ const ChatMessage = memo(({
   const theme = useTheme();
   const styles = getStyles(theme);
   
+  // Document preview modal state
+  const [selectedDocument, setSelectedDocument] = useState<DocumentBlock | null>(null);
+  const [isDocumentModalVisible, setIsDocumentModalVisible] = useState(false);
+  
+  const handleDocumentPress = useCallback((document: DocumentBlock) => {
+    setSelectedDocument(document);
+    setIsDocumentModalVisible(true);
+  }, []);
+  
+  const handleCloseDocumentModal = useCallback(() => {
+    setIsDocumentModalVisible(false);
+    // Clear selection after animation completes
+    setTimeout(() => setSelectedDocument(null), 300);
+  }, []);
+  
   // Compute actual loading state based on content arrival
   // 
   // Show loading UI (dots/intermediate) ONLY when:
@@ -307,15 +326,16 @@ const ChatMessage = memo(({
     return { reasoning: null, contentWithoutReasoning: thinkingData.contentWithoutThinking };
   }, [thinkingData.contentWithoutThinking, role]);
 
-  // Parse content into segments (text and artifacts) to preserve original positions
+  // Parse content into segments (text, artifacts, and documents) to preserve original positions
   // Use content without thinking and reasoning tags for display
   const contentSegments = useMemo(() => {
-    // Parse into segments for bot messages - preserves artifact positions
+    // Parse into segments for bot messages - preserves artifact and document positions
     if (role === Role.Bot && reasoningData.contentWithoutReasoning) {
       const segments = parseContentSegments(reasoningData.contentWithoutReasoning, 'message-' + (timestamp || Date.now()));
       if (segments.length > 0) {
         const artifactCount = segments.filter(s => s.type === 'artifact').length;
-        console.log('[ChatMessage] ✅ Parsed content into', segments.length, 'segments (', artifactCount, 'artifacts)');
+        const documentCount = segments.filter(s => s.type === 'document').length;
+        console.log('[ChatMessage] ✅ Parsed content into', segments.length, 'segments (', artifactCount, 'artifacts,', documentCount, 'documents)');
       }
       return segments;
     }
@@ -383,7 +403,7 @@ const ChatMessage = memo(({
         soundRef.current = new Audio.Sound();
         
         // Set up status callback once during initialization
-        soundRef.current.setOnPlaybackStatusUpdate((status) => {
+        soundRef.current.setOnPlaybackStatusUpdate(async (status) => {
           if (status.isLoaded) {
             setDuration(status.durationMillis || 0);
             setPosition(status.positionMillis || 0);
@@ -392,6 +412,12 @@ const ChatMessage = memo(({
             if (status.didJustFinish) {
               setIsPlaying(false);
               setPosition(0);
+              // Reset audio to beginning for next play
+              try {
+                await soundRef.current?.setPositionAsync(0);
+              } catch (error) {
+                console.error('[ChatMessage] Error resetting audio position:', error);
+              }
             }
           } else if ('error' in status) {
             console.error('[ChatMessage] Audio playback error:', status.error);
@@ -636,6 +662,12 @@ const ChatMessage = memo(({
             { progressUpdateIntervalMillis: 100 }
           );
           setIsAudioLoaded(true);
+        }
+        
+        // Check if audio is at the end and reset to beginning if needed
+        if (duration > 0 && position >= duration - 100) {
+          console.log('[ChatMessage] Audio at end, resetting to beginning');
+          await soundRef.current.setPositionAsync(0);
         }
         
         // Play or resume audio
@@ -991,7 +1023,7 @@ const ChatMessage = memo(({
     );
   };
 
-  // Render content segments inline (text and artifacts in original order)
+  // Render content segments inline (text, artifacts, and documents in original order)
   const renderContentSegments = () => {
     return contentSegments.map((segment, index) => {
       if (segment.type === 'text') {
@@ -1004,7 +1036,7 @@ const ChatMessage = memo(({
             <MarkdownDisplay>{textContent}</MarkdownDisplay>
           </View>
         );
-      } else {
+      } else if (segment.type === 'artifact') {
         // Render artifact indicator inline
         return (
           <View key={`artifact-${index}`} style={styles.segmentContainer}>
@@ -1014,7 +1046,18 @@ const ChatMessage = memo(({
             />
           </View>
         );
+      } else if (segment.type === 'document') {
+        // Render document indicator inline
+        return (
+          <View key={`document-${index}`} style={styles.segmentContainer}>
+            <DocumentIndicator
+              document={segment.document}
+              onPress={() => handleDocumentPress(segment.document)}
+            />
+          </View>
+        );
       }
+      return null;
     });
   };
 
@@ -1043,94 +1086,106 @@ const ChatMessage = memo(({
           <ContextMenu.Root>
             <ContextMenu.Trigger>
                 {role === Role.User ? (
-                  // User message with gradient - includes text and media
-                  <LinearGradient
-                    colors={theme.isDark 
-                      ? ['#1e3a8a', '#1e40af'] // Dark blue gradient for dark mode
-                      : ['#3b82f6', '#2563eb'] // Light to darker blue gradient
-                    }
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[
-                      styles.contentContainer,
-                      styles.userContent,
-                      streamingContent && styles.streamingContent,
-                    ]}
-                  >
-                    <Pressable
-                      onLongPress={showTextContextMenu}
-                      onPress={handlePress}
-                      accessible={true}
-                      accessibilityLabel={`Your message: ${getDisplayText()}`}
-                      accessibilityRole="text"
-                      testID="markdown-container"
-                    >
-                      {/* Render media first for user messages */}
-                      {(() => {
-                        const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
-                        const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
-                        
-                        return (
-                          <>
-                            {hasFileImage && (
-                              <View style={styles.mediaInMessage}>
-                                {renderImageContent()}
-                              </View>
-                            )}
-                            {hasFileVideo && content === '' && (
-                              <View style={styles.mediaInMessage}>
-                                {renderVideo()}
-                              </View>
-                            )}
-                          </>
-                        );
-                      })()}
+                  // User message - media outside bubble, text in gradient bubble
+                  <>
+                    {/* Render media OUTSIDE gradient bubble for cleaner look */}
+                    {(() => {
+                      const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
+                      const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
+                      const hasAudioContent = isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice';
                       
-                      {/* Text content */}
-                      {(() => {
-                        const displayText = getDisplayText();
-                        return displayText && !isAudio(displayText) && (
-                          <Animated.View
-                            style={[
-                              styles.markdownContainer,
-                              streamingContent && { transform: [] },
-                              streamingContent && { backgroundColor: `transparent` },
-                            ]}
-                          >
-                            <View style={styles.userTextWrapper}>
-                              <MarkdownDisplay additionalStyles={{
-                                body: { color: '#FFFFFF', lineHeight: 28 },
-                                heading1: { color: '#FFFFFF' },
-                                heading2: { color: '#FFFFFF' },
-                                heading3: { color: '#FFFFFF' },
-                                heading4: { color: '#FFFFFF' },
-                                heading5: { color: '#FFFFFF' },
-                                heading6: { color: '#FFFFFF' },
-                                paragraph: { color: '#FFFFFF', lineHeight: 28 },
-                                text: { color: '#FFFFFF', lineHeight: 28 },
-                              }}>
-                                {displayText}
-                              </MarkdownDisplay>
+                      return (
+                        <>
+                          {hasFileImage && (
+                            <View style={styles.userMediaContainer}>
+                              {renderImageContent()}
                             </View>
-                          </Animated.View>
-                        );
-                      })()}
+                          )}
+                          {hasFileVideo && (
+                            <View style={styles.userMediaContainer}>
+                              {renderVideo()}
+                            </View>
+                          )}
+                          {hasAudioContent && (
+                            <View style={styles.userMediaContainer}>
+                              {renderAudio()}
+                            </View>
+                          )}
+                        </>
+                      );
+                    })()}
+                    
+                    {/* Text bubble - only render if there's text or document content */}
+                    {(() => {
+                      const displayText = getDisplayText();
+                      const hasTextContent = displayText && !isAudio(displayText);
+                      const hasDocumentContent = isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document';
                       
-                      {/* Audio content within message bubble */}
-                      {(isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice') && (
-                        <View style={styles.audioInMessage}>
-                          {renderAudio()}
-                        </View>
-                      )}
+                      // Only render gradient bubble if there's text or document content
+                      if (!hasTextContent && !hasDocumentContent) {
+                        return null;
+                      }
                       
-                      {/* Document content within message bubble */}
-                      {(isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document') && (
-                        <View style={styles.documentInMessage}>
-                          {renderDocument()}
-                        </View>
-                      )}
-                    </Pressable>
-                  </LinearGradient>
+                      return (
+                        <LinearGradient
+                          colors={theme.isDark 
+                            ? ['#1e3a8a', '#1e40af'] // Dark blue gradient for dark mode
+                            : ['#3b82f6', '#2563eb'] // Light to darker blue gradient
+                          }
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={[
+                            styles.contentContainer,
+                            styles.userContent,
+                            streamingContent && styles.streamingContent,
+                          ]}
+                        >
+                          <Pressable
+                            onLongPress={showTextContextMenu}
+                            onPress={handlePress}
+                            accessible={true}
+                            accessibilityLabel={`Your message: ${displayText}`}
+                            accessibilityRole="text"
+                            testID="markdown-container"
+                          >
+                            {/* Text content */}
+                            {hasTextContent && (
+                              <Animated.View
+                                style={[
+                                  styles.markdownContainer,
+                                  streamingContent && { transform: [] },
+                                  streamingContent && { backgroundColor: `transparent` },
+                                ]}
+                              >
+                                <View style={styles.userTextWrapper}>
+                                  <MarkdownDisplay additionalStyles={{
+                                    body: { color: '#FFFFFF', lineHeight: 28 },
+                                    heading1: { color: '#FFFFFF' },
+                                    heading2: { color: '#FFFFFF' },
+                                    heading3: { color: '#FFFFFF' },
+                                    heading4: { color: '#FFFFFF' },
+                                    heading5: { color: '#FFFFFF' },
+                                    heading6: { color: '#FFFFFF' },
+                                    paragraph: { color: '#FFFFFF', lineHeight: 28 },
+                                    text: { color: '#FFFFFF', lineHeight: 28 },
+                                  }}>
+                                    {displayText}
+                                  </MarkdownDisplay>
+                                </View>
+                              </Animated.View>
+                            )}
+                            
+                            {/* Document content within message bubble */}
+                            {hasDocumentContent && (
+                              <View style={styles.documentInMessage}>
+                                {renderDocument()}
+                              </View>
+                            )}
+                          </Pressable>
+                        </LinearGradient>
+                      );
+                    })()}
+                  </>
                 ) : (
                   // Bot message without gradient - includes text and media
                   <Pressable
@@ -1280,94 +1335,106 @@ const ChatMessage = memo(({
       return (
         <>
           {role === Role.User ? (
-            // User message with gradient - includes text and media
-            <LinearGradient
-              colors={theme.isDark 
-                ? ['#1e3a8a', '#1e40af'] // Dark blue gradient for dark mode
-                : ['#3b82f6', '#2563eb'] // Light to darker blue gradient
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.contentContainer,
-                styles.userContent,
-                streamingContent && styles.streamingContent,
-              ]}
-            >
-              <Pressable
-                onLongPress={showTextContextMenu}
-                onPress={handlePress}
-                accessible={true}
-                accessibilityLabel={`Your message: ${getDisplayText()}`}
-                accessibilityRole="text"
-                testID="markdown-container"
-              >
-                {/* Render media first for user messages */}
-                {(() => {
-                  const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
-                  const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
-                  
-                  return (
-                    <>
-                      {hasFileImage && (
-                        <View style={styles.mediaInMessage}>
-                          {renderImageContent()}
-                        </View>
-                      )}
-                      {hasFileVideo && content === '' && (
-                        <View style={styles.mediaInMessage}>
-                          {renderVideo()}
-                        </View>
-                      )}
-                    </>
-                  );
-                })()}
+            // User message - media outside bubble, text in gradient bubble
+            <>
+              {/* Render media OUTSIDE gradient bubble for cleaner look */}
+              {(() => {
+                const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
+                const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
+                const hasAudioContent = isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice';
                 
-                {/* Text content */}
-                {(() => {
-                  const displayText = getDisplayText();
-                  return displayText && !isAudio(displayText) && (
-                    <Animated.View
-                      style={[
-                        styles.markdownContainer,
-                        streamingContent && { transform: [] },
-                        streamingContent && { backgroundColor: `transparent` },
-                      ]}
-                    >
-                      <View style={styles.userTextWrapper}>
-                        <MarkdownDisplay additionalStyles={{
-                          body: { color: '#FFFFFF', lineHeight: 28 },
-                          heading1: { color: '#FFFFFF' },
-                          heading2: { color: '#FFFFFF' },
-                          heading3: { color: '#FFFFFF' },
-                          heading4: { color: '#FFFFFF' },
-                          heading5: { color: '#FFFFFF' },
-                          heading6: { color: '#FFFFFF' },
-                          paragraph: { color: '#FFFFFF', lineHeight: 28 },
-                          text: { color: '#FFFFFF', lineHeight: 28 },
-                        }}>
-                          {displayText}
-                        </MarkdownDisplay>
+                return (
+                  <>
+                    {hasFileImage && (
+                      <View style={styles.userMediaContainer}>
+                        {renderImageContent()}
                       </View>
-                    </Animated.View>
-                  );
-                })()}
+                    )}
+                    {hasFileVideo && (
+                      <View style={styles.userMediaContainer}>
+                        {renderVideo()}
+                      </View>
+                    )}
+                    {hasAudioContent && (
+                      <View style={styles.userMediaContainer}>
+                        {renderAudio()}
+                      </View>
+                    )}
+                  </>
+                );
+              })()}
+              
+              {/* Text bubble - only render if there's text or document content */}
+              {(() => {
+                const displayText = getDisplayText();
+                const hasTextContent = displayText && !isAudio(displayText);
+                const hasDocumentContent = isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document';
                 
-                {/* Audio content within message bubble */}
-                {(isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice') && (
-                  <View style={styles.audioInMessage}>
-                    {renderAudio()}
-                  </View>
-                )}
+                // Only render gradient bubble if there's text or document content
+                if (!hasTextContent && !hasDocumentContent) {
+                  return null;
+                }
                 
-                {/* Document content within message bubble */}
-                {(isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document') && (
-                  <View style={styles.documentInMessage}>
-                    {renderDocument()}
-                  </View>
-                )}
-              </Pressable>
-            </LinearGradient>
+                return (
+                  <LinearGradient
+                    colors={theme.isDark 
+                      ? ['#1e3a8a', '#1e40af'] // Dark blue gradient for dark mode
+                      : ['#3b82f6', '#2563eb'] // Light to darker blue gradient
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[
+                      styles.contentContainer,
+                      styles.userContent,
+                      streamingContent && styles.streamingContent,
+                    ]}
+                  >
+                    <Pressable
+                      onLongPress={showTextContextMenu}
+                      onPress={handlePress}
+                      accessible={true}
+                      accessibilityLabel={`Your message: ${displayText}`}
+                      accessibilityRole="text"
+                      testID="markdown-container"
+                    >
+                      {/* Text content */}
+                      {hasTextContent && (
+                        <Animated.View
+                          style={[
+                            styles.markdownContainer,
+                            streamingContent && { transform: [] },
+                            streamingContent && { backgroundColor: `transparent` },
+                          ]}
+                        >
+                          <View style={styles.userTextWrapper}>
+                            <MarkdownDisplay additionalStyles={{
+                              body: { color: '#FFFFFF', lineHeight: 28 },
+                              heading1: { color: '#FFFFFF' },
+                              heading2: { color: '#FFFFFF' },
+                              heading3: { color: '#FFFFFF' },
+                              heading4: { color: '#FFFFFF' },
+                              heading5: { color: '#FFFFFF' },
+                              heading6: { color: '#FFFFFF' },
+                              paragraph: { color: '#FFFFFF', lineHeight: 28 },
+                              text: { color: '#FFFFFF', lineHeight: 28 },
+                            }}>
+                              {displayText}
+                            </MarkdownDisplay>
+                          </View>
+                        </Animated.View>
+                      )}
+                      
+                      {/* Document content within message bubble */}
+                      {hasDocumentContent && (
+                        <View style={styles.documentInMessage}>
+                          {renderDocument()}
+                        </View>
+                      )}
+                    </Pressable>
+                  </LinearGradient>
+                );
+              })()}
+            </>
           ) : (
             // Bot message without gradient - includes text and media
             <Pressable
@@ -1671,6 +1738,13 @@ const ChatMessage = memo(({
           )}
         </View>
       )}
+      
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        visible={isDocumentModalVisible}
+        document={selectedDocument}
+        onClose={handleCloseDocumentModal}
+      />
        
     </Animated.View>
   );
@@ -1794,7 +1868,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   userContainer: {
     alignSelf: 'flex-end',
     flexDirection: 'row-reverse',
-    maxWidth: '80%', // Better readability constraint
+    maxWidth: '85%', // Increased for better media display
   },
   avatarContainer: {
     marginRight: 8,
@@ -1847,8 +1921,33 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   mediaInMessage: {
     marginBottom: 8,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
+  },
+  // User media styles (outside bubble)
+  userMediaContainer: {
+    minWidth: '80%',
+    marginBottom: 6,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.background,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  userMediaImage: {
+    width: '100%',
+    minHeight: 200,
+    maxHeight: 320,
+    borderRadius: 16,
+  },
+  userMediaVideo: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    minHeight: 200,
+    borderRadius: 16,
   },
   audioInMessage: {
     width: '100%',
@@ -1950,21 +2049,20 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     paddingVertical: 5,
   },
   imageContainer: {
-    marginTop: 12,
     position: 'relative',
     width: '100%',
-    height: 200,
-    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
+    minHeight: 200,
+    maxHeight: 320,
+    borderRadius: 16,
     overflow: 'hidden',
     alignSelf: 'center',
-    backgroundColor: '#f5f5f5',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: theme.colors.backgroundLight,
   },
   previewImage: {
     width: '100%',
-    height: 200,
-    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
+    minHeight: 200,
+    maxHeight: 320,
+    borderRadius: 16,
   },
   imageLoadingOverlay: {
     position: 'absolute',
@@ -1988,11 +2086,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   imageErrorContainer: {
     width: '100%',
-    height: 200,
-    borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
-    backgroundColor: '#f5f5f5',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    minHeight: 200,
+    maxHeight: 320,
+    borderRadius: 16,
+    backgroundColor: theme.colors.backgroundLight,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',

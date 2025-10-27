@@ -67,19 +67,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
         }
     }, [isPlaying, pulseAnim]);
 
-    return (
-        <Pressable
-            onLongPress={onLongPress}
-            onPress={handlePress}
-            style={[
-                styles.contentContainer,
-                role === Role.Bot ? styles.botContent : styles.userContent,
-            ]}
-            accessible
-            accessibilityLabel={`${role === Role.Bot ? 'Assistant' : 'Your'} audio message`}
-            accessibilityRole="button"
-            testID="audio-player-container"
-        >
+    const AudioContent = (
+        <>
             {/* Play/Pause Button with modern circular design */}
             <Pressable 
                 style={styles.playButtonContainer} 
@@ -94,14 +83,14 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
                     {!isPlaying ? (
                         <Ionicons 
                             name="play" 
-                            size={20} 
+                            size={18} 
                             color={role === Role.User ? '#FFFFFF' : theme.colors.primary} 
                             style={styles.playIcon}
                         />
                     ) : (
                         <Ionicons 
                             name="pause" 
-                            size={20} 
+                            size={18} 
                             color={role === Role.User ? '#FFFFFF' : theme.colors.primary} 
                         />
                     )}
@@ -125,6 +114,43 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
                     </Text>
                 </View>
             </View>
+        </>
+    );
+
+    return role === Role.User ? (
+        // User audio with gradient background (matching text bubble)
+        <Pressable
+            onLongPress={onLongPress}
+            onPress={handlePress}
+            accessible
+            accessibilityLabel="Your audio message"
+            accessibilityRole="button"
+            testID="audio-player-container"
+        >
+            <LinearGradient
+                colors={theme.isDark 
+                    ? ['#1e3a8a', '#1e40af'] // Dark blue gradient for dark mode
+                    : ['#3b82f6', '#2563eb'] // Light to darker blue gradient
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.contentContainer, styles.userContent]}
+            >
+                {AudioContent}
+            </LinearGradient>
+        </Pressable>
+    ) : (
+        // Bot audio with subtle background
+        <Pressable
+            onLongPress={onLongPress}
+            onPress={handlePress}
+            style={[styles.contentContainer, styles.botContent]}
+            accessible
+            accessibilityLabel="Assistant audio message"
+            accessibilityRole="button"
+            testID="audio-player-container"
+        >
+            {AudioContent}
         </Pressable>
     );
 };
@@ -135,12 +161,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     contentContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderRadius: 20,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
+        borderRadius: 16,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
         minWidth: 260,
         maxWidth: 320,
-        gap: 12,
+        gap: 10,
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
@@ -157,16 +183,22 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
     },
     userContent: {
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        // Gradient applied via LinearGradient component
+        // Enhanced shadow for user audio with primary color tint
+        shadowColor: theme.colors.primary,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
     playButtonContainer: {
         alignItems: 'center',
         justifyContent: 'center',
     },
     playButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
         alignItems: 'center',
         justifyContent: 'center',
@@ -182,15 +214,15 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     waveformContainer: {
         flex: 1,
-        gap: 8,
+        gap: 6,
     },
     durationContainer: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        marginTop: 4,
+        marginTop: 2,
     },
     durationText: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '600',
         color: theme.colors.textSecondary,
         opacity: 0.8,

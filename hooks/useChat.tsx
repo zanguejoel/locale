@@ -38,6 +38,8 @@ import { AIEvent } from '@/types/mixpanel';
 import { useLocalModel } from './useLocalModel';
 import { Artifact } from '@/utils/ArtifactTypes';
 import { extractArtifactFromStream, extractArtifactsFromMessage } from '@/utils/ArtifactParser';
+import { DocumentBlock } from '@/utils/DocumentTypes';
+import { extractDocumentFromStream, extractDocumentsFromMessage } from '@/utils/DocumentParser';
 import { StreamBatcher } from '@/utils/StreamBatcher';
 
 // Import API_URL_PROD from ApiClient configuration
@@ -128,6 +130,9 @@ interface ChatContextType {
   artifacts: Artifact[];
   currentStreamingArtifact: Artifact | null;
   getArtifactsForMessage: (messageId: string) => Artifact[];
+  documents: DocumentBlock[];
+  currentStreamingDocument: DocumentBlock | null;
+  getDocumentsForMessage: (messageId: string) => DocumentBlock[];
   updateMessageReaction: (messageId: string, reaction: 'like' | 'dislike' | null) => void;
 }
 
@@ -211,6 +216,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   // Track last successful artifact extraction for recovery
   const lastStreamingArtifactRef = useRef<Artifact | null>(null);
+  
+  // ============ Document State ============
+  const [documents, setDocuments] = useState<DocumentBlock[]>([]);
+  const [currentStreamingDocument, setCurrentStreamingDocument] = useState<DocumentBlock | null>(null);
+  
+  // Track last successful document extraction for recovery
+  const lastStreamingDocumentRef = useRef<DocumentBlock | null>(null);
   
   // ============ File Handling State ============
   const [files, setFiles] = useState<any[]>([]);
@@ -418,6 +430,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [stream, extractArtifactThrottled]);
 
+  // Throttled document extraction (max every 200ms to reduce CPU usage)
+  const extractDocumentThrottled = useRef(
+    throttle((streamContent: string, messageId: string, setDocument: (d: DocumentBlock | null) => void) => {
+      const document = extractDocumentFromStream(streamContent, messageId);
+      setDocument(document);
+    }, 200) // Extract at most every 200ms
+  ).current;
+
+  // Extract documents from stream with throttling for better performance
+  useEffect(() => {
+    if (stream) {
+      // Use throttled extraction to avoid expensive regex on every word update
+      const messageId = currentChatId || 'streaming';
+      extractDocumentThrottled(stream, messageId, (document) => {
+        setCurrentStreamingDocument(document);
+        // Save successful extraction for potential recovery
+        if (document && document.content) {
+          lastStreamingDocumentRef.current = document;
+        }
+      });
+    } else {
+      setCurrentStreamingDocument(null);
+    }
+  }, [stream, extractDocumentThrottled, currentChatId]);
+
   // Helper function to abort current stream and wait for cleanup
   const abortCurrentStream = useCallback(async () => {
     if (streamControllerRef.current) {
@@ -603,6 +640,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const getArtifactsForMessage = useCallback((messageId: string): Artifact[] => {
     return artifacts.filter(artifact => artifact.messageId === messageId);
   }, [artifacts]);
+
+  // ============ Document Management ============
+  
+  // Finalize documents when streaming completes
+  const finalizeDocuments = useCallback((messageContent: string, messageId: string) => {
+    const extractedDocuments = extractDocumentsFromMessage(messageContent, messageId);
+    
+    if (extractedDocuments.length > 0) {
+      setDocuments(prev => [...prev, ...extractedDocuments]);
+      console.log(`[Chat] Finalized ${extractedDocuments.length} documents for message ${messageId}`);
+    }
+  }, []);
+
+  // Get documents for a specific message
+  const getDocumentsForMessage = useCallback((messageId: string): DocumentBlock[] => {
+    return documents.filter(document => document.messageId === messageId);
+  }, [documents]);
 
   // Update a specific message's reaction (optimistic update)
   const updateMessageReaction = useCallback((messageId: string, reaction: 'like' | 'dislike' | null) => {
@@ -1143,13 +1197,37 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Clear the recovery reference
           lastStreamingArtifactRef.current = null;
         }
+        
+        // Finalize documents after streaming completes (with error recovery)
+        try {
+          // Try to finalize documents normally
+          finalizeDocuments(stream, messageId);
+        } catch (error) {
+          console.error('[Chat] Error finalizing documents:', error);
+          
+          // Attempt to recover partial document from last known good state
+          if (lastStreamingDocumentRef.current && lastStreamingDocumentRef.current.content) {
+            const partialDocument: DocumentBlock = {
+              ...lastStreamingDocumentRef.current,
+              id: `${messageId}-recovered`,
+              messageId,
+              isStreaming: false,
+            };
+            
+            setDocuments(prev => [...prev, partialDocument]);
+            console.log('[Chat] ✅ Recovered partial document:', partialDocument.name, '- Content length:', partialDocument.content.length);
+          }
+        } finally {
+          // Clear the recovery reference
+          lastStreamingDocumentRef.current = null;
+        }
       }
       
       // Don't reset additionalData here - it needs to persist in the message
       // Don't reset stream here - it's used for display and doesn't affect input state
     }
     
-  }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream, stream, reasoningText, finalizeArtifacts]);
+  }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream, stream, reasoningText, finalizeArtifacts, finalizeDocuments]);
 
   const fetchConversation = useCallback(async (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => {
     const effectiveLimit = limitValue || 20;
@@ -1529,6 +1607,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       artifacts,
       currentStreamingArtifact,
       getArtifactsForMessage,
+      documents,
+      currentStreamingDocument,
+      getDocumentsForMessage,
       updateMessageReaction,
     };
   }, [
@@ -1563,6 +1644,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     artifacts,
     currentStreamingArtifact,
     getArtifactsForMessage,
+    documents,
+    currentStreamingDocument,
+    getDocumentsForMessage,
     updateMessageReaction,
   ]);
 
