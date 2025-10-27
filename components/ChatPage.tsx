@@ -349,16 +349,17 @@ const ChatPage = () => {
     if (messages.length > 0 && isSending && !userHasScrolledUp && !userIsScrollingRef.current) {
       // Use a small delay to allow content to render before scrolling
       const scrollTimer = setTimeout(() => {
-        if (messageListRef.current && !userHasScrolledUp) {
+        // Re-check all conditions before scrolling (user might have started scrolling during delay)
+        if (messageListRef.current && !userHasScrolledUp && !userIsScrollingRef.current) {
           try {
             // Mark as auto-scrolling to prevent handleScroll interference
             isAutoScrollingRef.current = true;
             messageListRef.current.scrollToEnd({ animated: false }); // No animation during streaming for smoothness
             
-            // Reset flag quickly since we're not animating
+            // Keep flag set longer to cover full scroll event propagation
             setTimeout(() => {
               isAutoScrollingRef.current = false;
-            }, 50);
+            }, 150);
           } catch (error) {
             isAutoScrollingRef.current = false;
           }
@@ -969,16 +970,21 @@ const ChatPage = () => {
                 userIsScrollingRef.current = true;
               }}
               onScrollEndDrag={() => {
-                // User stopped dragging - clear scrolling flag after a short delay
+                // Don't clear immediately - user might start momentum scroll
+                // Keep the flag set briefly to prevent auto-scroll from interfering
+                setTimeout(() => {
+                  userIsScrollingRef.current = false;
+                }, 300);
+              }}
+              onMomentumScrollBegin={() => {
+                // Momentum scroll started - ensure flag stays set
+                userIsScrollingRef.current = true;
+              }}
+              onMomentumScrollEnd={() => {
+                // Momentum scrolling ended - clear flag after brief delay
                 setTimeout(() => {
                   userIsScrollingRef.current = false;
                 }, 200);
-              }}
-              onMomentumScrollEnd={() => {
-                // Momentum scrolling ended - ensure flag is cleared
-                setTimeout(() => {
-                  userIsScrollingRef.current = false;
-                }, 100);
               }}
               estimatedItemSize={150}
               scrollEventThrottle={16}
