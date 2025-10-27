@@ -355,6 +355,7 @@ const ChatMessage = memo(({
   const maxImageRetryAttempts = CHAT_MESSAGE.MAX_IMAGE_RETRY_ATTEMPTS
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
+  const [isAudioLoaded, setIsAudioLoaded] = useState(false);
   
 
   const MarkdownDisplay = useMarkdownDisplay();
@@ -363,12 +364,30 @@ const ChatMessage = memo(({
 
   const videoRef = useRef<Video>(null);
   
-  // Initialize and cleanup audio
+  // Initialize audio and setup status callback once
   useEffect(() => {
     // Initialize sound object only once
     const initSound = async () => {
       if (!soundRef.current) {
         soundRef.current = new Audio.Sound();
+        
+        // Set up status callback once during initialization
+        soundRef.current.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded) {
+            setDuration(status.durationMillis || 0);
+            setPosition(status.positionMillis || 0);
+            setIsPlaying(status.isPlaying);
+            
+            if (status.didJustFinish) {
+              setIsPlaying(false);
+              setPosition(0);
+            }
+          } else if ('error' in status) {
+            console.error('[ChatMessage] Audio playback error:', status.error);
+            setIsPlaying(false);
+            setIsAudioLoaded(false);
+          }
+        });
       }
     };
     initSound();
@@ -544,35 +563,52 @@ const ChatMessage = memo(({
   }, [onLongPress, handleCopyText, handleShareText]);
 
   const playAudio = async () => {
-    if (!soundRef.current) return;
+    if (!soundRef.current) {
+      console.warn('[ChatMessage] Sound ref not initialized');
+      return;
+    }
     
     try {
       if (isPlaying) {
+        // Pause the audio
+        console.log('[ChatMessage] Pausing audio');
         await soundRef.current.pauseAsync();
-        setIsPlaying(false);
+        // State will be updated by the status callback
       } else {
-        // Unload any previous audio
-        await soundRef.current.unloadAsync();
-
-        await soundRef.current.loadAsync(
-          { uri: content || imageData || files?.[0]?.s3_url || '' },
-          { progressUpdateIntervalMillis: 1 }
-        );
-        await soundRef.current.playAsync();
-        setIsPlaying(true);
-        soundRef.current.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded) {
-            setDuration(status.durationMillis || 0);
-            setPosition(status.positionMillis || 0);
-            setIsPlaying(status.isPlaying);
-            if (status.didJustFinish) {
-              setIsPlaying(false);
-            }
+        // If audio not loaded, load it first
+        if (!isAudioLoaded) {
+          console.log('[ChatMessage] Loading audio for first time');
+          const audioUri = content || imageData || files?.[0]?.s3_url || '';
+          
+          if (!audioUri) {
+            console.error('[ChatMessage] No audio URI available');
+            return;
           }
-        });
+
+          await soundRef.current.loadAsync(
+            { uri: audioUri },
+            { progressUpdateIntervalMillis: 100 }
+          );
+          setIsAudioLoaded(true);
+        }
+        
+        // Play or resume audio
+        console.log('[ChatMessage] Playing/resuming audio');
+        await soundRef.current.playAsync();
+        // State will be updated by the status callback
       }
     } catch (error) {
+      console.error('[ChatMessage] Audio playback error:', error);
       handleErrorSilent(error, 'Audio Player');
+      setIsPlaying(false);
+      setIsAudioLoaded(false);
+      
+      // Try to recover by unloading
+      try {
+        await soundRef.current.unloadAsync();
+      } catch (unloadError) {
+        // Ignore unload errors
+      }
     }
   };
 
@@ -792,11 +828,14 @@ const ChatMessage = memo(({
   };
 
   const renderAudio = () => {
-    const handleSeek = (newProgress: number) => {
-      if (soundRef.current && duration > 0) {
-        const newPosition = newProgress * duration;
-
-        soundRef.current.setPositionAsync(newPosition);
+    const handleSeek = async (newProgress: number) => {
+      if (soundRef.current && isAudioLoaded && duration > 0) {
+        try {
+          const newPosition = newProgress * duration;
+          await soundRef.current.setPositionAsync(newPosition);
+        } catch (error) {
+          console.error('[ChatMessage] Seek error:', error);
+        }
       }
     };
 
