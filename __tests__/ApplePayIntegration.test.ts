@@ -10,7 +10,7 @@
 
 import { jest } from '@jest/globals';
 import { Platform } from 'react-native';
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { applePayService } from '../utils/ApplePayService';
 import { useCreditsWithApplePay } from '../hooks/useCreditsWithApplePay';
 
