@@ -206,7 +206,7 @@ const StreamingCursor = memo(() => {
   return (
     <Animated.Text
       style={{
-        color: theme.colors.primary,
+        color: theme.colors.text,
         fontSize: 16,
         marginLeft: 2,
         opacity: opacityAnim,
@@ -263,16 +263,23 @@ const ChatMessage = memo(({
   // Show loading UI (dots/intermediate) ONLY when:
   // 1. loading prop is true (indicates this is the last bot message being generated)
   // 2. AND no content has arrived yet (!hasContent)
+  // 3. AND no additional data has arrived (images, files, etc.)
   // 
   // Once streaming begins and content arrives:
   // - Hide loading dots immediately
   // - Show the streaming content
   // - Intermediate state (if present) will be shown above the content
   // 
+  // For image/file generation (no text content):
+  // - Show loading dots + intermediate ("Generating image...")
+  // - When additional_data arrives, hide loading and show the image
+  // 
   // This creates a smooth transition:
-  // 1. Loading dots → 2. Intermediate state + content → 3. Just content
+  // 1. Loading dots → 2. Intermediate state + content/files → 3. Just content/files
   const hasContent = content && content.trim().length > 0;
-  const shouldShowLoading = loading && !hasContent;
+  const hasAdditionalData = (additional_data && additional_data.length > 0) || (files && files.length > 0);
+  const hasAnyContent = hasContent || hasAdditionalData;
+  const shouldShowLoading = loading && !hasAnyContent;
 
   // Extract thinking blocks from content
   const thinkingData = useMemo(() => {
@@ -356,6 +363,8 @@ const ChatMessage = memo(({
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   const [isAudioLoaded, setIsAudioLoaded] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [showVideoControls, setShowVideoControls] = useState(false);
   
 
   const MarkdownDisplay = useMarkdownDisplay();
@@ -410,6 +419,37 @@ const ChatMessage = memo(({
       Alert.alert('Error', 'Video reference not available');
     }
   };
+
+  const handleVideoPlayPause = async () => {
+    if (videoRef.current) {
+      try {
+        const status = await videoRef.current.getStatusAsync();
+        if (status.isLoaded) {
+          if (status.isPlaying) {
+            await videoRef.current.pauseAsync();
+            setIsVideoPlaying(false);
+            setShowVideoControls(true);
+          } else {
+            await videoRef.current.playAsync();
+            setIsVideoPlaying(true);
+            // Hide controls after a delay when playing
+            setTimeout(() => setShowVideoControls(false), 2000);
+          }
+        }
+      } catch (error) {
+        console.error('[ChatMessage] Video play/pause error:', error);
+      }
+    }
+  };
+
+  const handleVideoPress = () => {
+    // Toggle controls visibility
+    setShowVideoControls(!showVideoControls);
+    // Auto-hide controls after 3 seconds if video is playing
+    if (isVideoPlaying) {
+      setTimeout(() => setShowVideoControls(false), 3000);
+    }
+  };
   
   // Debug: Monitor loading and intermediate state changes
   useEffect(() => {
@@ -418,12 +458,16 @@ const ChatMessage = memo(({
         shouldShowLoading,
         loading,
         hasContent,
+        hasAdditionalData,
+        hasAnyContent,
         contentLength: content?.length || 0,
+        additionalDataCount: additional_data?.length || 0,
+        filesCount: files?.length || 0,
         intermediate: intermediate || 'none',
         contextIsSending,
       });
     }
-  }, [intermediate, loading, role, contextIsSending, shouldShowLoading, hasContent, content]);
+  }, [intermediate, loading, role, contextIsSending, shouldShowLoading, hasContent, hasAdditionalData, hasAnyContent, content, additional_data, files]);
 
   // Add subtle pulse animation for streaming content
   useEffect(() => {
@@ -681,7 +725,6 @@ const ChatMessage = memo(({
   // Render generated images and videos from additional_data
   const renderAdditionalData = () => {
     if (!additional_data || additional_data.length === 0) {
-      // console.log('[ChatMessage] No additional_data to render');
       return null;
     }
 
@@ -697,16 +740,11 @@ const ChatMessage = memo(({
     const videosToRender = hasFileVideo ? [] : videos;
     const imagesToRender = hasFileImage ? [] : images;
     
-    console.log('[ChatMessage] renderAdditionalData - hasFileVideo:', hasFileVideo, 'hasFileImage:', hasFileImage);
-    console.log('[ChatMessage] - Videos in additional_data:', videos.length, '→ Rendering:', videosToRender.length);
-    console.log('[ChatMessage] - Images in additional_data:', images.length, '→ Rendering:', imagesToRender.length);
-    
     // If nothing to render after filtering, return null
     if (videosToRender.length === 0 && imagesToRender.length === 0) {
-      console.log('[ChatMessage] Nothing to render from additional_data (all media in files[])');
       return null;
     }
-   
+    
     return (
       <View style={styles.additionalDataContainer}>
         {/* Images - using same renderImageContent as regular images */}
@@ -715,7 +753,6 @@ const ChatMessage = memo(({
           const imageUrl = item.data || item.s3_url || '';
           
           if (!imageUrl) {
-            console.warn('[ChatMessage] Image item missing URL:', item);
             return null;
           }
           
@@ -767,10 +804,6 @@ const ChatMessage = memo(({
 
     // Get the image URL with proper priority handling
     const imageUrl = instructionForImageChatDisplay(overrideUrl);
-    
-    // console.log('[ChatMessage] renderImageContent - imageUrl:', imageUrl);
-    // console.log('[ChatMessage] renderImageContent - files:', files);
-    // console.log('[ChatMessage] renderImageContent - imageData:', imageData);
 
     return (
       <ContextMenu.Root>
@@ -787,7 +820,7 @@ const ChatMessage = memo(({
               accessibilityLabel={`Image preview. ${prompt}`}
               accessibilityRole="image"
               testID="image-preview-pressable"
-              style={{width: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE}}
+              style={{width: '100%'}}
             >
               <LazyImage
                 uri={imageUrl}
@@ -869,25 +902,62 @@ const ChatMessage = memo(({
     };
 
     return (
-      <View>
+      <Pressable onPress={handleVideoPress} style={styles.videoWrapper}>
         <Video
           ref={videoRef}
           source={{ uri: videoUrl || '' }}
           style={styles.video}
-          useNativeControls
+          useNativeControls={false}
           isLooping
+          onPlaybackStatusUpdate={(status) => {
+            if (status.isLoaded) {
+              setIsVideoPlaying(status.isPlaying);
+            }
+          }}
         />
-        {isLoadingDownloadVideo && <ActivityIndicator style={styles.loadingVideo} size={'small'} color={Colors.light.background} />}
-        <TouchableOpacity style={styles.fullScreenButton} onPress={handleFullScreenVideo}>
-          <Feather name="maximize" size={15} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.downloadButton]}
-          onPress={handleDownloadVideo}
-        >
-          <Feather name="download" size={15} color="#fff" />
-        </TouchableOpacity>
-      </View >
+        
+        {/* Play/Pause Button Overlay - Always visible when paused or controls shown */}
+        {(!isVideoPlaying || showVideoControls) && (
+          <Pressable 
+            style={styles.videoPlayButton}
+            onPress={handleVideoPlayPause}
+          >
+            <View style={styles.videoPlayButtonCircle}>
+              <Ionicons 
+                name={isVideoPlaying ? "pause" : "play"} 
+                size={32} 
+                color="#fff" 
+                style={!isVideoPlaying && { marginLeft: 3 }} // Adjust play icon position
+              />
+            </View>
+          </Pressable>
+        )}
+        
+        {/* Loading Indicator */}
+        {isLoadingDownloadVideo && (
+          <View style={styles.loadingVideo}>
+            <ActivityIndicator size={'large'} color={Colors.light.background} />
+          </View>
+        )}
+        
+        {/* Control Buttons - Show when controls are visible */}
+        {showVideoControls && (
+          <>
+            <TouchableOpacity 
+              style={styles.fullScreenButton} 
+              onPress={handleFullScreenVideo}
+            >
+              <Feather name="maximize" size={18} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.downloadButton]}
+              onPress={handleDownloadVideo}
+            >
+              <Feather name="download" size={18} color="#fff" />
+            </TouchableOpacity>
+          </>
+        )}
+      </Pressable>
     );
   };
 
@@ -1528,11 +1598,11 @@ const ChatMessage = memo(({
             <View style={styles.intermediateContainer}>
               <View style={styles.intermediateIconContainer}>
                   {intermediate.toLowerCase().includes('image') || intermediate.toLowerCase().includes('generating') ? (
-                    <Ionicons name="images" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                    <Ionicons name="images" size={20} color={theme.colors.text} style={styles.intermediateIcon} />
                   ) : intermediate.toLowerCase().includes('video') ? (
-                    <Ionicons name="videocam" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                    <Ionicons name="videocam" size={20} color={theme.colors.text} style={styles.intermediateIcon} />
                   ) : intermediate.toLowerCase().includes('search') ? (
-                    <Ionicons name="search" size={20} color={theme.colors.primary} style={styles.intermediateIcon} />
+                    <Ionicons name="search" size={20} color={theme.colors.text} style={styles.intermediateIcon} />
                   ) : (
                     <LoadingDots />
                   )}
@@ -1594,6 +1664,93 @@ const ChatMessage = memo(({
     </Animated.View>
   );
 });
+
+/**
+ * Custom comparison function for ChatMessage memoization
+ * Optimized for smooth streaming performance while allowing critical updates
+ * 
+ * Strategy:
+ * - Compare critical props that affect rendering
+ * - Allow streaming content updates
+ * - Allow image/file updates
+ * - Prevent re-renders for unchanged content
+ * 
+ * Returns TRUE if props are equal (skip re-render)
+ * Returns FALSE if props differ (allow re-render)
+ */
+const areChatMessagePropsEqual = (
+  prev: ChatMessageProps,
+  next: ChatMessageProps
+): boolean => {
+  // Always update if content changed (streaming updates)
+  if (prev.content !== next.content) return false;
+  
+  // Always update if loading state changed
+  if (prev.loading !== next.loading) return false;
+  
+  // Always update if error state changed
+  if (prev.error !== next.error) return false;
+  
+  // Always update if reaction changed
+  if (prev.reaction !== next.reaction) return false;
+  
+  // Always update if streaming state changed
+  if (prev.streamingContent !== next.streamingContent) return false;
+  if (prev.isSending !== next.isSending) return false;
+  if (prev.streamWorking !== next.streamWorking) return false;
+  
+  // Always update if status changed
+  if (prev.status !== next.status) return false;
+  
+  // Always update if pin state changed
+  if (prev.isPinned !== next.isPinned) return false;
+  
+  // Check for image changes (URL, data, or error state)
+  if (prev.imageUrl !== next.imageUrl) return false;
+  if (prev.imageData !== next.imageData) return false;
+  
+  // Check for file changes
+  if (prev.files?.length !== next.files?.length) return false;
+  if (prev.files && next.files) {
+    for (let i = 0; i < prev.files.length; i++) {
+      if (prev.files[i].s3_url !== next.files[i].s3_url) return false;
+      if (prev.files[i].file_path !== next.files[i].file_path) return false;
+    }
+  }
+  
+  // Check for artifact changes
+  if (prev.artifacts?.length !== next.artifacts?.length) return false;
+  if (prev.streamingArtifact?.id !== next.streamingArtifact?.id) return false;
+  if (prev.streamingArtifact?.content !== next.streamingArtifact?.content) return false;
+  
+  // Check for reasoning changes
+  if (prev.streamingReasoning !== next.streamingReasoning) return false;
+  
+  // Check for additional_data changes (images, files, etc.)
+  if (prev.additional_data?.length !== next.additional_data?.length) return false;
+  if (prev.additional_data && next.additional_data) {
+    for (let i = 0; i < prev.additional_data.length; i++) {
+      // Check if URLs changed (critical for image/file updates)
+      if (prev.additional_data[i].s3_url !== next.additional_data[i].s3_url) return false;
+      if (prev.additional_data[i].file_path !== next.additional_data[i].file_path) return false;
+      if (prev.additional_data[i].data_type !== next.additional_data[i].data_type) return false;
+    }
+  }
+  
+  // Check timestamp changes (affects formatting)
+  if (prev.timestamp !== next.timestamp) return false;
+  
+  // Check grouping changes (affects layout)
+  if (prev.isFirstInGroup !== next.isFirstInGroup) return false;
+  if (prev.isLastInGroup !== next.isLastInGroup) return false;
+  if (prev.isOnlyInGroup !== next.isOnlyInGroup) return false;
+  
+  // All critical props are equal - skip re-render
+  return true;
+};
+
+// Export memoized component with custom comparison
+const MemoizedChatMessage = memo(ChatMessage, areChatMessagePropsEqual);
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
@@ -1725,12 +1882,41 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     top: 0,
     bottom: 0,
     left: 0,
-    right: 0
+    right: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 12,
+  },
+  videoWrapper: {
+    width: '100%',
+    aspectRatio: 16 / 9, // Widescreen aspect ratio
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    position: 'relative',
   },
   video: {
-    width: CHAT_MESSAGE.VIDEO.WIDTH,
-    height: CHAT_MESSAGE.VIDEO.HEIGHT,
+    width: '100%',
+    height: '100%',
     borderRadius: 12,
+  },
+  videoPlayButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -35 }, { translateY: -35 }],
+    zIndex: 10,
+  },
+  videoPlayButtonCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
   },
   fullScreenContainer: {
     flex: 1,
@@ -1752,8 +1938,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   imageContainer: {
     marginTop: 12,
     position: 'relative',
-    width: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
-    height: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
+    width: '100%',
+    height: 200,
     borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
     overflow: 'hidden',
     alignSelf: 'center',
@@ -1787,8 +1973,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     overflow: 'hidden',
   },
   imageErrorContainer: {
-    width: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
-    height: CHAT_MESSAGE.IMAGE_PREVIEW_SIZE,
+    width: '100%',
+    height: 200,
     borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
     backgroundColor: '#f5f5f5',
     borderWidth: 1,
@@ -2027,8 +2213,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   // Video Styles
   generatedVideoContainer: {
-    width: CHAT_MESSAGE.GENERATED.VIDEO_WIDTH,
-    height: CHAT_MESSAGE.GENERATED.VIDEO_HEIGHT,
+    width: '100%',
+    aspectRatio: 16 / 9, // Widescreen aspect ratio for generated videos
     borderRadius: CHAT_MESSAGE.BORDER_RADIUS,
     overflow: 'hidden',
     position: 'relative',
@@ -2132,4 +2318,4 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
 });
 
-export default ChatMessage;
+export default MemoizedChatMessage;

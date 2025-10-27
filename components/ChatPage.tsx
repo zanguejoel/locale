@@ -262,11 +262,22 @@ const ChatPage = () => {
           // Auto-scroll to bottom ONE time when conversation is loaded from history
           // Use timeout to ensure messages are rendered before scrolling
           setTimeout(() => {
-            if (messageListRef.current) {
+            if (messageListRef.current && messages.length > 0) {
               try {
-                messageListRef.current.scrollToEnd({ animated: false });
+                // Use scrollToIndex for more reliable initial scroll
+                const lastIndex = messages.length - 1;
+                messageListRef.current.scrollToIndex({ 
+                  index: lastIndex, 
+                  animated: false,
+                  viewPosition: 1,
+                });
               } catch (error) {
-                // Silently fail if scroll doesn't work
+                // Fallback to scrollToEnd
+                try {
+                  messageListRef.current.scrollToEnd({ animated: false });
+                } catch (fallbackError) {
+                  // Silently fail if scroll doesn't work
+                }
               }
             }
           }, 300); // Wait for messages to render
@@ -350,17 +361,30 @@ const ChatPage = () => {
       // Use a small delay to allow content to render before scrolling
       const scrollTimer = setTimeout(() => {
         // Re-check all conditions before scrolling (user might have started scrolling during delay)
-        if (messageListRef.current && !userHasScrolledUp && !userIsScrollingRef.current) {
+        if (messageListRef.current && !userHasScrolledUp && !userIsScrollingRef.current && messages.length > 0) {
           try {
             // Mark as auto-scrolling to prevent handleScroll interference
             isAutoScrollingRef.current = true;
-            messageListRef.current.scrollToEnd({ animated: false }); // No animation during streaming for smoothness
+            
+            // Use scrollToIndex for more reliable scrolling during streaming
+            const lastIndex = messages.length - 1;
+            messageListRef.current.scrollToIndex({ 
+              index: lastIndex, 
+              animated: false, // No animation during streaming for smoothness
+              viewPosition: 1, 
+            });
             
             // Keep flag set longer to cover full scroll event propagation
             setTimeout(() => {
               isAutoScrollingRef.current = false;
             }, 150);
           } catch (error) {
+            // Fallback to scrollToEnd if scrollToIndex fails
+            try {
+              messageListRef.current.scrollToEnd({ animated: false });
+            } catch (fallbackError) {
+              // Silent fail
+            }
             isAutoScrollingRef.current = false;
           }
         }
@@ -412,13 +436,19 @@ const ChatPage = () => {
 
   const scrollToBottom = async (animated: boolean = true) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (messageListRef.current) {
+    if (messageListRef.current && displayMessages.length > 0) {
       try {
         // Mark that we're auto-scrolling to prevent handleScroll from interfering
         isAutoScrollingRef.current = true;
         
-        // Scroll to the end (bottom) of the list where newest messages are
-        messageListRef.current.scrollToEnd({ animated });
+        // Use scrollToIndex to scroll to last message (more reliable than scrollToEnd with FlashList)
+        // viewPosition: 1 means the item will be at the bottom of the viewport
+        const lastIndex = displayMessages.length - 1;
+        messageListRef.current.scrollToIndex({ 
+          index: lastIndex, 
+          animated,
+          viewPosition: 1, // Position at bottom of viewport
+        });
         setUserHasScrolledUp(false);
         
         // Reset auto-scrolling flag after animation completes
@@ -426,6 +456,13 @@ const ChatPage = () => {
           isAutoScrollingRef.current = false;
         }, animated ? 350 : 0); // Animation typically takes ~300ms
       } catch (error) {
+        // Fallback to scrollToEnd if scrollToIndex fails
+        try {
+          messageListRef.current.scrollToEnd({ animated });
+          setUserHasScrolledUp(false);
+        } catch (fallbackError) {
+          // Silent fail
+        }
         isAutoScrollingRef.current = false;
         // console.error('Failed to scroll to bottom:', error);
       }
@@ -987,7 +1024,10 @@ const ChatPage = () => {
                 }, 200);
               }}
               estimatedItemSize={150}
-              scrollEventThrottle={16}
+              // PERFORMANCE OPTIMIZATION: Reduce scroll event frequency during streaming
+              // During streaming: 100ms throttle (reduces scroll event overhead)
+              // Normal state: 16ms for 60 FPS responsiveness
+              scrollEventThrottle={isSending ? 100 : 16}
               // ChatMessage components access intermediate state directly from context
               // This avoids forcing FlashList re-renders for better performance
               // Add bottom spacer component for comfortable reading
@@ -1028,8 +1068,8 @@ const ChatPage = () => {
               accessibilityRole="button"
               activeOpacity={0.6}
             >
-              <Text style={styles.textScrollDown}>
-                {isSending ? 'Streaming...' : 'New messages'}
+              <Text style={isSending && styles.textScrollDown}>
+                {isSending ? 'Streaming...' : ''}
               </Text>
               <Ionicons name="chevron-down" size={16} color={theme.isDark ? theme.colors.text : Colors.common.grey} />
             </TouchableOpacity>

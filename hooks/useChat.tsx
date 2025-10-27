@@ -38,6 +38,7 @@ import { AIEvent } from '@/types/mixpanel';
 import { useLocalModel } from './useLocalModel';
 import { Artifact } from '@/utils/ArtifactTypes';
 import { extractArtifactFromStream, extractArtifactsFromMessage } from '@/utils/ArtifactParser';
+import { StreamBatcher } from '@/utils/StreamBatcher';
 
 // Import API_URL_PROD from ApiClient configuration
 const BASE_URL = API_URL_PROD;
@@ -164,6 +165,41 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const intermediateRef = useRef(intermediate);
   const reasoningTextRef = useRef(reasoningText);
   const streamRef = useRef(stream);
+  
+  // ============ Stream Batching for Performance ============
+  // RAF-based batching to prevent excessive re-renders during streaming
+  // Limits updates to maximum 60 per second (1 per frame) for smoother UX
+  const streamBatcherRef = useRef<StreamBatcher | null>(null);
+  
+  // Initialize batcher on mount
+  if (!streamBatcherRef.current) {
+    streamBatcherRef.current = new StreamBatcher();
+  }
+  
+  // Batched version of setStream for use in streaming
+  // Accumulates content in a ref and schedules RAF-batched UI updates
+  const accumulatedStreamRef = useRef('');
+  
+  const setBatchedStream = useCallback((value: string | ((prev: string) => string)) => {
+    // Handle function updates (e.g., prev => prev + newChunk)
+    if (typeof value === 'function') {
+      const newValue = value(accumulatedStreamRef.current);
+      accumulatedStreamRef.current = newValue;
+      
+      // Schedule batched UI update
+      if (streamBatcherRef.current) {
+        streamBatcherRef.current.schedule(newValue, setStream);
+      }
+    } else {
+      // Direct value updates
+      accumulatedStreamRef.current = value;
+      
+      // Schedule batched UI update
+      if (streamBatcherRef.current) {
+        streamBatcherRef.current.schedule(value, setStream);
+      }
+    }
+  }, []);
   
   // ============ Error State ============
   const [error, setError] = useState('');
@@ -305,8 +341,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     
-    // console.log(`[useChat] 📝 Updating message with stream content (${stream.length} chars total) - WORD-BY-WORD`);
-    
     setMessages(prev => updateLastItem(prev, message => {
       const updatedMessage = {
         ...message,
@@ -324,9 +358,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Update chat_id if we have one from the meta event
       if (currentChatId) {
         updatedMessage.chat_id = currentChatId;
-        if (__DEV__) {
-          console.log('[useChat] 🆔 Updated message with chat_id:', currentChatId);
-        }
       }
       
       return updatedMessage;
@@ -618,6 +649,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setChatLoading(true)
     setError('');
     setChatError(null); // Clear any previous errors
+    
+    // Flush any pending batched stream updates before starting new message
+    if (streamBatcherRef.current) {
+      streamBatcherRef.current.flush();
+    }
+    accumulatedStreamRef.current = '';
+    
     setStream('');
     setIntermediate(''); // Clear intermediate initially - will be set by stream or remain empty for loading dots
     setReasoningText(''); // Clear reasoning text from previous message
@@ -915,7 +953,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const res = await processStream(
         _response.body,
-        setStream,
+        setBatchedStream, // Use batched version for smooth 60 FPS updates
         handleError,
         setIntermediate,
         setStreamWorking,
@@ -1153,6 +1191,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Reset all streaming states when switching conversations
     // Do this after abort completes to prevent race conditions
+    
+    // Flush any pending batched stream updates
+    if (streamBatcherRef.current) {
+      streamBatcherRef.current.flush();
+    }
+    accumulatedStreamRef.current = '';
+    
     setStream('');
     setIntermediate('');
     setReasoningText(''); // Clear reasoning text when switching conversations
@@ -1280,6 +1325,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     // Reset all chat and streaming states
+    
+    // Flush any pending batched stream updates
+    if (streamBatcherRef.current) {
+      streamBatcherRef.current.flush();
+    }
+    accumulatedStreamRef.current = '';
+    
     setMessages([]);
     setStream('');
     setIntermediate('');

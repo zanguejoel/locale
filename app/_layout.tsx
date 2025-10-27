@@ -24,6 +24,7 @@ import { MixpanelProvider } from "@/utils/mixpanel/MixpanelProvider";
 import LocalModelErrorBoundary from "@/components/LocalModelErrorBoundary";
 import { IntegrationsProvider } from "@/contexts/IntegrationsContext";
 import { StripeProvider } from "@/providers/StripeProvider";
+import { StreamingStateProvider } from "@/contexts/StreamingStateContext";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -289,17 +290,19 @@ function RootLayoutNav() {
       <StripeProvider>
         <LocalModelErrorBoundary>
           <ChatProvider>
-            <IntegrationsProvider>
-              <MixpanelProvider>
-                <ThemeProvider
-                  value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-                >
-                  <GestureHandlerRootView style={{ flex: 1 }}>
-                    <Layout />
-                  </GestureHandlerRootView>
-                </ThemeProvider>
-              </MixpanelProvider>
-            </IntegrationsProvider>
+            <StreamingStateProvider>
+              <IntegrationsProvider>
+                <MixpanelProvider>
+                  <ThemeProvider
+                    value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+                  >
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                      <Layout />
+                    </GestureHandlerRootView>
+                  </ThemeProvider>
+                </MixpanelProvider>
+              </IntegrationsProvider>
+            </StreamingStateProvider>
           </ChatProvider>
         </LocalModelErrorBoundary>
       </StripeProvider>
