@@ -42,7 +42,7 @@ import { isAudio, isImage, isDocument } from '@/utils/FileTypeHelpers';
 import { CHAT_MESSAGE } from '@/constants/ChatConstants';
 import { handleErrorSilent } from '@/utils/ErrorHandler';
 import { extractArtifactsFromMessage, stripArtifactTags, ContentSegment } from '@/utils/ArtifactParser';
-import { parseContentSegments } from '@/utils/ContentParser';
+import { parseContentSegments, stripStreamingArtifactTags, hasArtifactTags } from '@/utils/ContentParser';
 import ArtifactIndicator from './artifacts/ArtifactIndicator';
 import { Artifact } from '@/utils/ArtifactTypes';
 import { extractThinkingFromStream, stripThinkingTags, hasThinkingTags } from '@/utils/ThinkingParser';
@@ -326,21 +326,42 @@ const ChatMessage = memo(({
     return { reasoning: null, contentWithoutReasoning: thinkingData.contentWithoutThinking };
   }, [thinkingData.contentWithoutThinking, role]);
 
+  // Strip streaming artifact tags from display content during active streaming
+  // This prevents raw tags from being visible while artifacts are being generated
+  // The actual artifacts are extracted separately for display in indicators
+  const contentForDisplay = useMemo(() => {
+    if (role === Role.Bot && reasoningData.contentWithoutReasoning) {
+      // During streaming, strip artifact tags to prevent raw tag display
+      if (isSending && hasArtifactTags(reasoningData.contentWithoutReasoning)) {
+        const stripped = stripStreamingArtifactTags(reasoningData.contentWithoutReasoning);
+        console.log('[ChatMessage] 🔧 Stripped streaming artifact tags from content for display');
+        return stripped;
+      }
+      return reasoningData.contentWithoutReasoning;
+    }
+    return reasoningData.contentWithoutReasoning;
+  }, [reasoningData.contentWithoutReasoning, role, isSending]);
+
   // Parse content into segments (text, artifacts, and documents) to preserve original positions
-  // Use content without thinking and reasoning tags for display
+  // Use content without thinking, reasoning, and streaming tags for display
+  // Pass isStreaming flag to properly handle streaming artifacts
   const contentSegments = useMemo(() => {
     // Parse into segments for bot messages - preserves artifact and document positions
     if (role === Role.Bot && reasoningData.contentWithoutReasoning) {
-      const segments = parseContentSegments(reasoningData.contentWithoutReasoning, 'message-' + (timestamp || Date.now()));
+      const segments = parseContentSegments(
+        reasoningData.contentWithoutReasoning, 
+        'message-' + (timestamp || Date.now()),
+        isSending // Pass streaming flag to handle incomplete artifacts
+      );
       if (segments.length > 0) {
         const artifactCount = segments.filter(s => s.type === 'artifact').length;
         const documentCount = segments.filter(s => s.type === 'document').length;
-        console.log('[ChatMessage] ✅ Parsed content into', segments.length, 'segments (', artifactCount, 'artifacts,', documentCount, 'documents)');
+        console.log('[ChatMessage] ✅ Parsed content into', segments.length, 'segments (', artifactCount, 'artifacts,', documentCount, 'documents, streaming:', isSending, ')');
       }
       return segments;
     }
-    return [{ type: 'text' as const, content: reasoningData.contentWithoutReasoning }];
-  }, [reasoningData.contentWithoutReasoning, role, timestamp]);
+    return [{ type: 'text' as const, content: contentForDisplay }];
+  }, [reasoningData.contentWithoutReasoning, role, timestamp, isSending, contentForDisplay]);
 
   // Extract all artifacts from segments for external use (e.g., passing to parent)
   // Combine finalized artifacts with streaming artifact if applicable
@@ -1025,9 +1046,37 @@ const ChatMessage = memo(({
 
   // Render content segments inline (text, artifacts, and documents in original order)
   const renderContentSegments = () => {
+    // During streaming, use stripped content to prevent raw tags
+    // After streaming completes, parse normally to show artifact indicators
+    if (isSending) {
+      // While streaming, display only the cleaned text without artifact tags
+      const cleanContent = contentForDisplay;
+      const hasCleanContent = cleanContent && cleanContent.trim() !== '';
+      
+      return (
+        <>
+          {hasCleanContent && (
+            <View key="streaming-text" style={styles.segmentContainer}>
+              <MarkdownDisplay>{cleanContent}</MarkdownDisplay>
+            </View>
+          )}
+          
+          {/* Show streaming artifact indicator during streaming */}
+          {streamingArtifact && streamingArtifact.isStreaming && (
+            <View key="streaming-artifact" style={styles.segmentContainer}>
+              <ArtifactIndicator
+                artifact={streamingArtifact}
+                onPress={() => onArtifactPress?.(streamingArtifact, messageArtifacts)}
+              />
+            </View>
+          )}
+        </>
+      );
+    }
+    
+    // After streaming completes, render full segments with artifact indicators
     return contentSegments.map((segment, index) => {
       if (segment.type === 'text') {
-        // Render text segment
         const textContent = segment.content;
         if (!textContent || textContent.trim() === '') return null;
         
@@ -1868,7 +1917,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   userContainer: {
     alignSelf: 'flex-end',
     flexDirection: 'row-reverse',
-    maxWidth: '85%', // Increased for better media display
+    maxWidth: '95%', // Increased for better media display
   },
   avatarContainer: {
     marginRight: 8,

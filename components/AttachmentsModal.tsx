@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   Switch,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
@@ -16,6 +17,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { GenerationOptionsState } from './GenerationOptions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 
 interface AttachmentsModalProps {
   visible: boolean;
@@ -46,11 +48,94 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
   const insets = useSafeAreaInsets();
   const styles = getStyles(theme, insets);
 
+  // Animated values for swipe gesture
+  const translateY = useRef(new Animated.Value(0)).current;
+  const overlayOpacity = useRef(new Animated.Value(1)).current;
+
+  // Animated close function
+  const handleClose = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 500,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+    });
+  }, [translateY, overlayOpacity, onClose]);
+
   const handleOptionPress = async (action: () => void) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onClose();
+    handleClose();
     setTimeout(() => action(), 100);
   };
+
+  // Handle swipe down gesture
+  const onGestureEvent = Animated.event(
+    [{ nativeEvent: { translationY: translateY } }],
+    { useNativeDriver: true }
+  );
+
+  const onHandlerStateChange = useCallback((event: any) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      const { translationY: translationYValue, velocityY } = event.nativeEvent;
+      
+      // If swiped down more than 100px or with high velocity, close the modal
+      if (translationYValue > 100 || velocityY > 500) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        handleClose();
+      } else {
+        // Snap back to original position
+        Animated.parallel([
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            damping: 20,
+            stiffness: 90,
+          }),
+          Animated.spring(overlayOpacity, {
+            toValue: 1,
+            useNativeDriver: true,
+            damping: 20,
+            stiffness: 90,
+          }),
+        ]).start();
+      }
+    }
+  }, [translateY, overlayOpacity, handleClose]);
+
+  // Animate modal entrance and reset on close
+  React.useEffect(() => {
+    if (visible) {
+      // Start from bottom and animate up
+      translateY.setValue(500);
+      overlayOpacity.setValue(0);
+      
+      Animated.parallel([
+        Animated.spring(translateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          damping: 25,
+          stiffness: 120,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Reset values when modal closes
+      translateY.setValue(0);
+      overlayOpacity.setValue(1);
+    }
+  }, [visible, translateY, overlayOpacity]);
 
   // Generation options handlers
   const handleToggleWebSearch = () => {
@@ -119,7 +204,7 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
       <View style={styles.header}>
         <Text style={styles.title}>Attachments</Text>
         <TouchableOpacity
-          onPress={onClose}
+          onPress={handleClose}
           style={styles.closeButton}
           accessibilityLabel="Close"
           accessibilityRole="button"
@@ -483,30 +568,59 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="none"
       onRequestClose={onClose}
       statusBarTranslucent
     >
       <View style={styles.container}>
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={onClose}
+        <Animated.View 
+          style={[
+            styles.overlay,
+            { opacity: overlayOpacity }
+          ]}
         >
-          {Platform.OS === 'ios' ? (
-            <BlurView intensity={50} tint={theme.isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
-              <View style={styles.blurContent} />
-            </BlurView>
-          ) : (
-            <View style={styles.androidOverlay} />
-          )}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={handleClose}
+          >
+            {Platform.OS === 'ios' ? (
+              <BlurView intensity={50} tint={theme.isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
+                <View style={styles.blurContent} />
+              </BlurView>
+            ) : (
+              <View style={styles.androidOverlay} />
+            )}
+          </TouchableOpacity>
+        </Animated.View>
 
-        <View style={styles.modalContent}>
-          <View style={styles.modalCard}>
-            {renderUnifiedView()}
-          </View>
-        </View>
+        <PanGestureHandler
+          onGestureEvent={onGestureEvent}
+          onHandlerStateChange={onHandlerStateChange}
+          activeOffsetY={10}
+          failOffsetY={-10}
+        >
+          <Animated.View 
+            style={[
+              styles.modalContent,
+              {
+                transform: [
+                  { 
+                    translateY: translateY.interpolate({
+                      inputRange: [0, 500],
+                      outputRange: [0, 500],
+                      extrapolate: 'clamp',
+                    })
+                  }
+                ]
+              }
+            ]}
+          >
+            <View style={styles.modalCard}>
+              {renderUnifiedView()}
+            </View>
+          </Animated.View>
+        </PanGestureHandler>
       </View>
     </Modal>
   );

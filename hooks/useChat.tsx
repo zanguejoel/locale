@@ -41,6 +41,7 @@ import { extractArtifactFromStream, extractArtifactsFromMessage } from '@/utils/
 import { DocumentBlock } from '@/utils/DocumentTypes';
 import { extractDocumentFromStream, extractDocumentsFromMessage } from '@/utils/DocumentParser';
 import { StreamBatcher } from '@/utils/StreamBatcher';
+import { getUserTimezone } from '@/utils/timezone';
 
 // Import API_URL_PROD from ApiClient configuration
 const BASE_URL = API_URL_PROD;
@@ -853,6 +854,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const modelId = options?.modelId || getDefaultModelId();
     formData.append('model', modelId);
     console.log('[sendMessage] Using model:', modelId);
+    
+    // Add timezone information for time-aware backend processing
+    const userTimezone = getUserTimezone();
+    const params = {
+      timezone: userTimezone,
+    };
+    formData.append('params', JSON.stringify(params));
+    console.log('[sendMessage] Sending timezone:', userTimezone);
     
     const conversationId = currentConversationId || '';
     

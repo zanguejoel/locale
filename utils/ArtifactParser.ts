@@ -30,13 +30,19 @@ export const extractArtifactFromStream = (stream: string): Artifact | null => {
   const typeMatch = attributeString.match(/type=["']([^"']+)["']/);
   const titleMatch = attributeString.match(/title=["']([^"']+)["']/);
   const languageMatch = attributeString.match(/language=["']([^"']+)["']/);
+  const identifierMatch = attributeString.match(/identifier=["']([^"']+)["']/);
 
   if (!typeMatch || !titleMatch) {
     return null; // Need at least type and title
   }
 
+  // Use identifier if provided, otherwise generate based on completion state
+  const artifactId = identifierMatch
+    ? (isComplete ? `artifact-${identifierMatch[1]}` : `streaming-${identifierMatch[1]}`)
+    : (isComplete ? `artifact-${Date.now()}` : 'streaming-artifact');
+
   const artifact: Artifact = {
-    id: isComplete ? `artifact-${Date.now()}` : 'streaming-artifact',
+    id: artifactId,
     type: typeMatch[1] as ArtifactType,
     title: titleMatch[1],
     content: content,
@@ -131,12 +137,18 @@ export const extractArtifactsFromMessage = (
     const typeMatch = attributeString.match(/type=["']([^"']+)["']/);
     const titleMatch = attributeString.match(/title=["']([^"']+)["']/);
     const languageMatch = attributeString.match(/language=["']([^"']+)["']/);
+    const identifierMatch = attributeString.match(/identifier=["']([^"']+)["']/);
 
-    console.log('[ArtifactParser] Parsed - type:', typeMatch?.[1], 'title:', titleMatch?.[1], 'language:', languageMatch?.[1]);
+    console.log('[ArtifactParser] Parsed - type:', typeMatch?.[1], 'title:', titleMatch?.[1], 'language:', languageMatch?.[1], 'identifier:', identifierMatch?.[1]);
 
     if (typeMatch && titleMatch) {
+      // Use identifier if provided, otherwise generate one
+      const artifactId = identifierMatch 
+        ? `${messageId}-${identifierMatch[1]}`
+        : `${messageId}-artifact-${artifacts.length}`;
+
       const artifact = {
-        id: `${messageId}-artifact-${artifacts.length}`,
+        id: artifactId,
         type: typeMatch[1] as ArtifactType,
         title: titleMatch[1],
         content: artifactContent,

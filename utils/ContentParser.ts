@@ -33,8 +33,12 @@ interface TagMatch {
  * Parse content into segments (text, artifacts, and documents in order)
  * This preserves the original position of all tags in the content
  * 
+ * Handles both complete and streaming (incomplete) artifacts to ensure
+ * smooth display without raw tag flash during streaming
+ * 
  * @param content - The message content to parse
  * @param messageId - The message ID to associate with extracted items
+ * @param isStreaming - Whether this content is actively streaming (optional)
  * @returns Array of content segments in original order
  * 
  * @example
@@ -46,19 +50,20 @@ interface TagMatch {
  */
 export const parseContentSegments = (
   content: string,
-  messageId: string
+  messageId: string,
+  isStreaming: boolean = false
 ): ContentSegment[] => {
   if (!content) {
     console.log('[ContentParser] No content to parse');
     return [];
   }
 
-  console.log('[ContentParser] Parsing content (length:', content.length, ')');
+  console.log('[ContentParser] Parsing content (length:', content.length, ', streaming:', isStreaming, ')');
 
   const segments: ContentSegment[] = [];
   const tagMatches: TagMatch[] = [];
 
-  // Find all artifact tags
+  // Find all complete artifact tags
   const artifactRegex = /<jmeArtifact\s+([^>]+)>([\s\S]*?)<\/jmeArtifact>/g;
   let artifactMatch;
   let artifactIndex = 0;
@@ -74,10 +79,16 @@ export const parseContentSegments = (
     const typeMatch = attributeString.match(/type=["']([^"']+)["']/);
     const titleMatch = attributeString.match(/title=["']([^"']+)["']/);
     const languageMatch = attributeString.match(/language=["']([^"']+)["']/);
+    const identifierMatch = attributeString.match(/identifier=["']([^"']+)["']/);
 
     if (typeMatch && titleMatch) {
+      // Use identifier if provided, otherwise generate one
+      const artifactId = identifierMatch 
+        ? `${messageId}-${identifierMatch[1]}`
+        : `${messageId}-artifact-${artifactIndex}`;
+
       const artifact: Artifact = {
-        id: `${messageId}-artifact-${artifactIndex}`,
+        id: artifactId,
         type: typeMatch[1] as ArtifactType,
         title: titleMatch[1],
         content: artifactContent,
@@ -95,8 +106,61 @@ export const parseContentSegments = (
         data: artifact,
       });
 
-      console.log('[ContentParser] Found artifact at index', startIndex, ':', artifact.title);
+      console.log('[ContentParser] Found complete artifact at index', startIndex, ':', artifact.title);
       artifactIndex++;
+    }
+  }
+  
+  // If streaming, also look for incomplete artifacts at the end
+  if (isStreaming) {
+    // Check if there's an unclosed artifact tag
+    const lastCompleteArtifactEnd = tagMatches.length > 0 
+      ? tagMatches[tagMatches.length - 1].endIndex 
+      : 0;
+    
+    const remainingContent = content.substring(lastCompleteArtifactEnd);
+    const streamingArtifactMatch = remainingContent.match(/<jmeArtifact\s+([^>]+)>([\s\S]*)$/);
+    
+    if (streamingArtifactMatch) {
+      const attributeString = streamingArtifactMatch[1];
+      const artifactContent = streamingArtifactMatch[2];
+      const matchIndex = streamingArtifactMatch.index || 0;
+      const startIndex = lastCompleteArtifactEnd + matchIndex;
+      const endIndex = content.length;
+      
+      const typeMatch = attributeString.match(/type=["']([^"']+)["']/);
+      const titleMatch = attributeString.match(/title=["']([^"']+)["']/);
+      const languageMatch = attributeString.match(/language=["']([^"']+)["']/);
+      const identifierMatch = attributeString.match(/identifier=["']([^"']+)["']/);
+      
+      if (typeMatch && titleMatch) {
+        // Use identifier if provided, otherwise generate one
+        const artifactId = identifierMatch 
+          ? `${messageId}-${identifierMatch[1]}-streaming`
+          : `${messageId}-artifact-${artifactIndex}-streaming`;
+
+        const streamingArtifact: Artifact = {
+          id: artifactId,
+          type: typeMatch[1] as ArtifactType,
+          title: titleMatch[1],
+          content: artifactContent,
+          language: languageMatch?.[1],
+          timestamp: Date.now(),
+          messageId,
+          isStreaming: true,
+        };
+        
+        tagMatches.push({
+          type: 'artifact',
+          startIndex,
+          endIndex,
+          fullMatch: streamingArtifactMatch[0],
+          data: streamingArtifact,
+        });
+        
+        console.log('[ContentParser] ⚡ Found streaming artifact at index', startIndex, ':', streamingArtifact.title);
+        artifactIndex++;
+      }
     }
   }
 
@@ -233,6 +297,47 @@ export const stripAllTags = (content: string): string => {
   cleaned = cleaned.replace(/<\|thinking\|>[\s\S]*?<\|thinking\|>/g, '');
 
   return cleaned.trim();
+};
+
+/**
+ * Strip streaming artifact tags from content during active streaming
+ * This removes both complete artifacts AND partial/streaming artifacts
+ * to prevent raw tag display during streaming
+ * 
+ * Use this for real-time content display to ensure smooth UX without tag flash
+ * 
+ * @param content - The streaming content to clean
+ * @returns Content with artifact tags removed (both complete and partial)
+ * 
+ * @example
+ * const clean = stripStreamingArtifactTags('Hello <jmeArtifact type="code">...');
+ * // Returns: "Hello "
+ */
+export const stripStreamingArtifactTags = (content: string): string => {
+  if (!content) return '';
+
+  let cleaned = content;
+
+  // Remove complete artifact tags
+  cleaned = cleaned.replace(/<jmeArtifact\s+[^>]+>[\s\S]*?<\/jmeArtifact>/g, '');
+
+  // Remove streaming (incomplete) artifact tags - opening tag to end of string
+  // This handles the case where the artifact is still being streamed
+  // Pattern: <jmeArtifact ...> followed by any content until end
+  cleaned = cleaned.replace(/<jmeArtifact\s+[^>]+>[\s\S]*$/g, '');
+
+  return cleaned.trim();
+};
+
+/**
+ * Check if content has any artifact tags (complete or streaming)
+ * 
+ * @param content - The content to check
+ * @returns True if artifact tags are present
+ */
+export const hasArtifactTags = (content: string): boolean => {
+  if (!content) return false;
+  return /<jmeArtifact\s+/.test(content);
 };
 
 /**
