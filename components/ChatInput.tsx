@@ -34,6 +34,7 @@ export type Props = {
   files?: SelectedFile[];
   setFiles?: (files: SelectedFile[]) => void;
   isLoading?: boolean
+  onStopStreaming?: () => Promise<void>;
   onRecordingStateChange?: (isRecording: boolean, onCancel: () => void) => void;
   isLocal?: boolean; // To show/hide generation options
   messages?: any[]; // For export functionality
@@ -41,7 +42,7 @@ export type Props = {
   currentModelId?: string; // Current selected model ID to check generation capabilities
 };
 
-const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoading, onRecordingStateChange, isLocal = false, messages = [], conversationTitle, currentModelId }: Props) => {
+const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoading, onStopStreaming, onRecordingStateChange, isLocal = false, messages = [], conversationTitle, currentModelId }: Props) => {
   const [message, setMessage] = useState('');
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -579,8 +580,8 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
             >
               <Ionicons 
                 name="add" 
-                size={24} 
-                color={isLoading ? theme.colors.mutedForeground : theme.colors.grey} 
+                size={30} 
+                color={isLoading ? theme.colors.mutedForeground : theme.colors.chatIcons} 
                 style={{ opacity: isLoading ? 0.5 : 1 }}
               />
             </TouchableOpacity>
@@ -611,31 +612,49 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
             // editable={!isLoading}
             inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_VIEW_ID : undefined}
           />
-          {message.length > 0 ? (
+          {isLoading ? (
+            // Show stop button during streaming (replaces send/mic button)
             <TouchableOpacity 
-              disabled={isLoading} 
+              onPress={async () => {
+                if (onStopStreaming) {
+                  await onStopStreaming();
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }
+              }}
+              accessibilityLabel="Stop generation"
+              accessibilityRole="button"
+              accessibilityHint="Stops the AI from generating more content"
+            >
+              <Ionicons 
+                name="stop-circle" 
+                size={30} 
+                color={theme.colors.red} 
+              />
+            </TouchableOpacity>
+          ) : message.length > 0 ? (
+            // Show send button when not loading and message exists
+            <TouchableOpacity 
               onPress={onSend}
               accessibilityLabel="Send message"
               accessibilityRole="button"
               accessibilityHint="Sends your message"
-              accessibilityState={{ disabled: isLoading }}
             >
               <Ionicons 
                 name="arrow-up-circle" 
                 size={30} 
-                color={isLoading ? theme.colors.mutedForeground : theme.colors.primary} 
+                color={theme.colors.chatIcons} 
               />
             </TouchableOpacity>
           ) : (
+            // Show microphone button when not loading and no message
             <TouchableOpacity 
-              disabled={isLoading} 
               onPress={isRecording ? stopRecording : startRecording}
               accessibilityLabel={isRecording ? "Stop recording" : "Start voice recording"}
               accessibilityRole="button"
               accessibilityHint={isRecording ? "Stops and sends voice message" : "Starts voice recording"}
-              accessibilityState={{ disabled: isLoading, selected: isRecording }}
+              accessibilityState={{ selected: isRecording }}
             >
-              <Ionicons name="mic-outline" size={30} color={isRecording ? theme.colors.red : (isLoading ? theme.colors.chatIcons : theme.colors.chatIcons)} />
+              <Ionicons name="mic-outline" size={30} color={isRecording ? theme.colors.red : theme.colors.chatIcons} />
             </TouchableOpacity>
           )}
         </View>

@@ -270,7 +270,13 @@ export const processStream = async (
             break;
           }
         }
-      } catch (readError) {
+      } catch (readError: any) {
+        // Handle AbortError silently - this is expected when user stops streaming
+        if (readError?.name === 'AbortError') {
+          console.log('[ChatStream] 🛑 Stream aborted by user');
+          break;
+        }
+        
         console.error('[ChatStream] Error reading stream:', readError);
         // Critical errors should stop streaming immediately
         if (readError instanceof TypeError || readError instanceof ReferenceError) {
@@ -305,19 +311,26 @@ export const processStream = async (
         console.error('[ChatStream] Error processing final buffer:', e);
       }
     }
-  } catch (error) {
-    console.error('[ChatStream] Stream processing error:', error);
-    handleError(error instanceof Error ? error.message : String(error));
-    
-    // CRITICAL: Clear all streaming states immediately on error to prevent UI from being stuck
-    setStreamWorking(false);
-    setStream('');
-    setIntermediate('');
-    if (setAdditionalData) {
-      setAdditionalData([]);
-    }
-    if (setReasoningText) {
-      setReasoningText('');
+  } catch (error: any) {
+    // Handle AbortError silently - this is expected when user stops streaming
+    if (error?.name === 'AbortError') {
+      console.log('[ChatStream] 🛑 Stream aborted by user (outer catch)');
+      // Don't clear stream content - preserve partial response
+      // Don't call handleError - this is not an error condition
+    } else {
+      console.error('[ChatStream] Stream processing error:', error);
+      handleError(error instanceof Error ? error.message : String(error));
+      
+      // CRITICAL: Clear all streaming states immediately on error to prevent UI from being stuck
+      setStreamWorking(false);
+      setStream('');
+      setIntermediate('');
+      if (setAdditionalData) {
+        setAdditionalData([]);
+      }
+      if (setReasoningText) {
+        setReasoningText('');
+      }
     }
   } finally {
     setStreamWorking(false);

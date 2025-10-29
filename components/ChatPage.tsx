@@ -82,6 +82,7 @@ const ChatPage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [cancelRecording, setCancelRecording] = useState<() => void>(() => () => {});
+  const [flashListReady, setFlashListReady] = useState(false);
   // Track if user has manually scrolled up - used for free scrolling during streaming
   // When true, the app won't auto-scroll to bottom, allowing users to read older messages
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
@@ -115,6 +116,7 @@ const ChatPage = () => {
   // Refs
   const messageListRef = useRef<FlashList<Message>>(null);
   const scrollOffsetRef = useRef(0);
+  const hasScrolledForConversationRef = useRef<string | null>(null); // Track which conversation we've scrolled for
 
   // Hooks
   const chat = useChat();
@@ -143,6 +145,7 @@ const ChatPage = () => {
     currentStreamingArtifact,
     getArtifactsForMessage,
     updateMessageReaction,
+    stopStreaming,
   } = chat;
 
   // Calculate dynamic buffer height based on last user message type
@@ -254,33 +257,22 @@ const ChatPage = () => {
     const loadConversation = async () => {
       if (id) {
         setIsLoadingMessages(true);
+        
+        // Reset all scroll-related state and refs when opening a new chat
+        console.log('[ChatPage] 🔄 Resetting scroll state for new conversation:', id);
+        setUserHasScrolledUp(false);
+        setFlashListReady(false); // Reset FlashList ready state
+        scrollOffsetRef.current = 0;
+        isAutoScrollingRef.current = false;
+        userIsScrollingRef.current = false;
+        prevMessagesRef.current = []; // Reset to allow fresh detection
+        hasScrolledForConversationRef.current = null; // Clear scroll tracking for new conversation
+        
         try {
           setCurrentRoom(id);
           await fetchMessages(id);
-          setUserHasScrolledUp(false);
           
-          // Auto-scroll to bottom ONE time when conversation is loaded from history
-          // Use timeout to ensure messages are rendered before scrolling
-          setTimeout(() => {
-            if (messageListRef.current && messages.length > 0) {
-              try {
-                // Use scrollToIndex for more reliable initial scroll
-                const lastIndex = messages.length - 1;
-                messageListRef.current.scrollToIndex({ 
-                  index: lastIndex, 
-                  animated: false,
-                  viewPosition: 1,
-                });
-              } catch (error) {
-                // Fallback to scrollToEnd
-                try {
-                  messageListRef.current.scrollToEnd({ animated: false });
-                } catch (fallbackError) {
-                  // Silently fail if scroll doesn't work
-                }
-              }
-            }
-          }, 300); // Wait for messages to render
+          // Note: Scroll will happen in separate effect below after messages update
         } catch (error) {
           console.error('Error loading conversation:', error);
           setErrorState({
@@ -296,6 +288,10 @@ const ChatPage = () => {
         // This prevents old conversation from being refetched
         resetChat();
         setIsLoadingMessages(false);
+        
+        // Reset scroll refs for new empty chat
+        prevMessagesRef.current = [];
+        setUserHasScrolledUp(false);
       }
     };
 
@@ -309,6 +305,41 @@ const ChatPage = () => {
       easing: Easing.out(Easing.quad),
     }).start();
   }, [id, resetChat, setCurrentRoom, fetchMessages]);
+  
+  // Separate effect to scroll to bottom after messages are loaded from API
+  // This runs AFTER messages state updates, ensuring we have the correct count
+  useEffect(() => {
+    // Only scroll if:
+    // 1. We just finished loading
+    // 2. We have messages
+    // 3. We have a conversation ID
+    // 4. FlashList is ready (has been laid out)
+    // 5. We haven't already scrolled for this conversation
+    if (!isLoadingMessages && messages.length > 0 && id && flashListReady && hasScrolledForConversationRef.current !== id) {
+      // Check if this is an initial load (prevMessagesRef was reset to empty)
+      if (prevMessagesRef.current.length === 0) {
+        console.log('[ChatPage] 📜 Initial load detected for conversation:', id);
+        console.log('[ChatPage] 📊 Messages count:', messages.length);
+        console.log('[ChatPage] ✅ FlashList is ready');
+        
+        // Mark that we're handling scroll for this conversation
+        hasScrolledForConversationRef.current = id;
+        
+        // Wait a brief moment after layout for final adjustments, then scroll
+        setTimeout(() => {
+          if (messageListRef.current && messages.length > 0) {
+            try {
+              console.log('[ChatPage] 🎯 Scrolling to end of list');
+              messageListRef.current.scrollToEnd({ animated: false });
+              console.log('[ChatPage] ✅ Initial scroll completed for conversation:', id);
+            } catch (error) {
+              console.warn('[ChatPage] ❌ Scroll failed:', error);
+            }
+          }
+        }, 200); // Reduced delay since FlashList is already laid out
+      }
+    }
+  }, [isLoadingMessages, messages.length, id, flashListReady]);
   
   // Set model selection when conversation loads
   useEffect(() => {
@@ -471,9 +502,40 @@ const ChatPage = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // Mark that we want to scroll after refresh
+    const shouldScrollAfterRefresh = true;
+    
     try {
       if (id) {
         await fetchMessages(id);
+        
+        // Scroll to bottom after messages are refreshed
+        if (shouldScrollAfterRefresh) {
+          // Wait for FlashList to update with new messages
+          setTimeout(() => {
+            if (messageListRef.current && messages.length > 0) {
+              try {
+                const lastIndex = messages.length - 1;
+                console.log('[ChatPage] 🔄 Scrolling to bottom after refresh (index:', lastIndex, ')');
+                
+                messageListRef.current.scrollToIndex({ 
+                  index: lastIndex, 
+                  animated: true,
+                  viewPosition: 1, // Bottom of viewport
+                });
+              } catch (error) {
+                // Fallback to scrollToEnd
+                console.log('[ChatPage] ⚠️ Refresh scroll failed, using fallback');
+                try {
+                  messageListRef.current.scrollToEnd({ animated: true });
+                } catch (fallbackError) {
+                  // Silent fail
+                }
+              }
+            }
+          }, 400); // Increased delay for reliability
+        }
       }
     } catch (error) {
       setErrorState({
@@ -586,50 +648,84 @@ const ChatPage = () => {
     return messages; // No reversal needed
   }, [messages]);
   
-  // Track previous message count to detect new messages
-  const prevMessageCountRef = useRef(messages.length);
+  // Track previous messages to detect new user messages
+  const prevMessagesRef = useRef<Message[]>([]);
   
   // Auto-scroll to newly sent user messages
   useEffect(() => {
     const currentCount = messages.length;
-    const prevCount = prevMessageCountRef.current;
+    const prevCount = prevMessagesRef.current.length;
+    
+    console.log('[ChatPage] 🔍 Message count changed:', { currentCount, prevCount });
     
     // Only act if messages were added (not removed or initial load)
-    if (currentCount > prevCount) {
-      // Check if the last message is from the user
-      const lastMessage = messages[messages.length - 1];
+    if (currentCount > prevCount && prevCount > 0) {
+      // Find newly added messages by comparing with previous state
+      const newMessages = messages.slice(prevCount);
       
-      if (lastMessage && lastMessage.role === Role.User) {
-        // Scroll to bring the new user message to the top of the screen
-        // Use a slight delay to ensure the message has rendered
-        setTimeout(() => {
-          try {
-            if (messageListRef.current && messages.length > 0) {
-              // Scroll to the last item (newest message)
-              // viewPosition: 0 means item appears at the top of the viewport
-              messageListRef.current.scrollToIndex({
-                index: messages.length - 1,
-                animated: true,
-                viewPosition: 0, // 0 = top, 0.5 = middle, 1 = bottom
-              });
-              
-              console.log('[ChatPage] 📍 Auto-scrolled to new user message at index:', messages.length - 1);
-            }
-          } catch (error) {
-            // Fallback to scrollToEnd if scrollToIndex fails (e.g., item not measured yet)
-            console.log('[ChatPage] ⚠️ scrollToIndex failed, using scrollToEnd fallback');
-            try {
-              messageListRef.current?.scrollToEnd({ animated: true });
-            } catch (fallbackError) {
-              console.warn('[ChatPage] Auto-scroll failed:', fallbackError);
-            }
+      console.log('[ChatPage] 🆕 New messages detected:', newMessages.length);
+      
+      // Check if any of the new messages is from the user
+      const hasNewUserMessage = newMessages.some(msg => msg.role === Role.User);
+      
+      console.log('[ChatPage] 👤 Has new user message:', hasNewUserMessage);
+      
+      if (hasNewUserMessage) {
+        // Find the last user message in the entire list
+        let lastUserMessageIndex = -1;
+        for (let i = messages.length - 1; i >= 0; i--) {
+          if (messages[i].role === Role.User) {
+            lastUserMessageIndex = i;
+            break;
           }
-        }, 150); // Small delay for render
+        }
+        
+        if (lastUserMessageIndex >= 0) {
+          // Capture the index value to avoid closure issues
+          const targetIndex = lastUserMessageIndex;
+          const totalMessages = messages.length;
+          
+          console.log('[ChatPage] 🎯 Will scroll to user message at index:', targetIndex, 'of', totalMessages);
+          
+          // Scroll to bring the new user message into view
+          // Use a slight delay to ensure the message has rendered
+          setTimeout(() => {
+            try {
+              if (messageListRef.current) {
+                console.log('[ChatPage] 📜 Executing scroll to index:', targetIndex);
+                
+                // Simple approach: scroll to the user message at the top
+                // viewPosition: 0 means item appears at the top of the viewport
+                // Use small positive viewOffset to add padding from the top
+                
+                messageListRef.current.scrollToIndex({
+                  index: targetIndex,
+                  animated: true,
+                  viewPosition: 0, // Align to top of viewport
+                  viewOffset: 20, // Small positive offset for padding from top
+                });
+                
+                console.log('[ChatPage] ✅ Scroll command executed successfully');
+              } else {
+                console.log('[ChatPage] ⚠️ messageListRef.current is null');
+              }
+            } catch (error) {
+              // Fallback to scrollToEnd if scrollToIndex fails (e.g., item not measured yet)
+              console.log('[ChatPage] ⚠️ scrollToIndex failed:', error);
+              try {
+                messageListRef.current?.scrollToEnd({ animated: true });
+                console.log('[ChatPage] ✅ Fallback scrollToEnd executed');
+              } catch (fallbackError) {
+                console.warn('[ChatPage] ❌ Auto-scroll completely failed:', fallbackError);
+              }
+            }
+          }, 200); // Delay for rendering
+        }
       }
     }
     
     // Update the ref for next comparison
-    prevMessageCountRef.current = currentCount;
+    prevMessagesRef.current = messages;
   }, [messages]);
 
   // New feature handlers
@@ -936,13 +1032,40 @@ const ChatPage = () => {
             }
           } : {
             text: 'Retry',
-            onPress: () => {
+            onPress: async () => {
               if (chatError) {
                 clearChatError();
               } else {
                 setErrorState(null);
               }
-              if (id) fetchMessages(id);
+              if (id) {
+                await fetchMessages(id);
+                
+                // Scroll to bottom after retry fetch
+                // Wait for FlashList to render updated messages
+                setTimeout(() => {
+                  if (messageListRef.current && messages.length > 0) {
+                    try {
+                      const lastIndex = messages.length - 1;
+                      console.log('[ChatPage] 🔄 Scrolling to bottom after retry (index:', lastIndex, ')');
+                      
+                      messageListRef.current.scrollToIndex({ 
+                        index: lastIndex, 
+                        animated: true,
+                        viewPosition: 1, // Bottom of viewport
+                      });
+                    } catch (error) {
+                      // Fallback to scrollToEnd
+                      console.log('[ChatPage] ⚠️ Retry scroll failed, using fallback');
+                      try {
+                        messageListRef.current.scrollToEnd({ animated: true });
+                      } catch (fallbackError) {
+                        // Silent fail
+                      }
+                    }
+                  }
+                }, 400); // Increased delay for reliability
+              }
             }
           }}
         />
@@ -1047,6 +1170,13 @@ const ChatPage = () => {
               keyExtractor={(item, index) => item.id || `msg-${index}`}
               keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"
+              onLayout={() => {
+                // Mark FlashList as ready after initial layout
+                if (!flashListReady) {
+                  console.log('[ChatPage] 📐 FlashList layout complete, marking as ready');
+                  setFlashListReady(true);
+                }
+              }}
               onScroll={handleScroll}
               onScrollBeginDrag={() => {
                 // User started dragging - mark as actively scrolling
@@ -1069,7 +1199,7 @@ const ChatPage = () => {
                   userIsScrollingRef.current = false;
                 }, 200);
               }}
-              estimatedItemSize={150}
+              estimatedItemSize={200} // Increased for better scroll position calculation
               // PERFORMANCE OPTIMIZATION: Reduce scroll event frequency during streaming
               // During streaming: 100ms throttle (reduces scroll event overhead)
               // Normal state: 16ms for 60 FPS responsiveness
@@ -1190,13 +1320,12 @@ const ChatPage = () => {
             setFiles={setFiles}
             fetchMessages={handleFetchMessages}
             onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
-              // ALWAYS scroll to bottom when user sends a message
-              // This ensures the user sees their message and the response
-              scrollToBottom(true);
-              
+              // Note: Scrolling is handled by the useEffect that detects new user messages
+              // This ensures consistent scroll behavior (to top of viewport)
               return isLocal ? handleSendLocalMessage(message) : sendMessage(message, type, operation, additionalData, options);
             }}
             isLoading={isSending}
+            onStopStreaming={stopStreaming}
             isLocal={isLocal}
             currentModelId={isLocal ? selectedLocalModel?.id : selectedCloudModel?.id}
             onRecordingStateChange={(recording, onCancel) => {
@@ -1219,9 +1348,36 @@ const ChatPage = () => {
       <CreditPurchaseModalWithApplePay
         visible={showCreditPurchaseModal}
         onClose={() => setShowCreditPurchaseModal(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
           // Refetch messages or take appropriate action after purchase
-          if (id) fetchMessages(id);
+          if (id) {
+            await fetchMessages(id);
+            
+            // Scroll to bottom after fetching messages
+            // Wait for FlashList to render updated messages
+            setTimeout(() => {
+              if (messageListRef.current && messages.length > 0) {
+                try {
+                  const lastIndex = messages.length - 1;
+                  console.log('[ChatPage] 🔄 Scrolling to bottom after credit purchase (index:', lastIndex, ')');
+                  
+                  messageListRef.current.scrollToIndex({ 
+                    index: lastIndex, 
+                    animated: true,
+                    viewPosition: 1, // Bottom of viewport
+                  });
+                } catch (error) {
+                  // Fallback to scrollToEnd
+                  console.log('[ChatPage] ⚠️ Credit purchase scroll failed, using fallback');
+                  try {
+                    messageListRef.current.scrollToEnd({ animated: true });
+                  } catch (fallbackError) {
+                    // Silent fail
+                  }
+                }
+              }
+            }, 400); // Increased delay for reliability
+          }
         }}
         source={chatError?.type === 'credit' ? 'error_banner' : 'header_badge'}
       />

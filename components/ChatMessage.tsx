@@ -1178,8 +1178,8 @@ const ChatMessage = memo(({
                       return (
                         <LinearGradient
                           colors={theme.isDark 
-                            ? ['#1e3a8a', '#1e40af'] // Dark blue gradient for dark mode
-                            : ['#3b82f6', '#2563eb'] // Light to darker blue gradient
+                            ? ['#1e293b', '#334155'] // Subtle slate gradient for dark mode
+                            : ['#60a5fa', '#3b82f6'] // Softer blue gradient for light mode
                           }
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 1 }}
@@ -1427,8 +1427,8 @@ const ChatMessage = memo(({
                 return (
                   <LinearGradient
                     colors={theme.isDark 
-                      ? ['#1e3a8a', '#1e40af'] // Dark blue gradient for dark mode
-                      : ['#3b82f6', '#2563eb'] // Light to darker blue gradient
+                      ? ['#1e293b', '#334155'] // Subtle slate gradient for dark mode
+                      : ['#60a5fa', '#3b82f6'] // Softer blue gradient for light mode
                     }
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -2019,13 +2019,13 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   userContent: {
     backgroundColor: theme.colors.primary, // Solid background for efficient shadow calculation
     borderBottomRightRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS,
-    // Enhanced shadow for user messages with primary color tint
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-    paddingVertical: 12,
+    // Subtle shadow for blended appearance
+    shadowColor: theme.isDark ? '#000000' : theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: theme.isDark ? 0.4 : 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+    paddingVertical: 6,
   },
   text: {
     fontSize: 16,

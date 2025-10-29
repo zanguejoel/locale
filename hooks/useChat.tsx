@@ -42,6 +42,7 @@ import { DocumentBlock } from '@/utils/DocumentTypes';
 import { extractDocumentFromStream, extractDocumentsFromMessage } from '@/utils/DocumentParser';
 import { StreamBatcher } from '@/utils/StreamBatcher';
 import { getUserTimezone } from '@/utils/timezone';
+import { globalStreamManager, StreamState } from '@/utils/StreamManager';
 
 // Import API_URL_PROD from ApiClient configuration
 const BASE_URL = API_URL_PROD;
@@ -114,6 +115,7 @@ interface ChatContextType {
   clearAllConversations: () => Promise<boolean>;
   resetChat: () => void;
   createNewConversation: () => Promise<string>;
+  stopStreaming: () => Promise<void>;
   intermediate: string;
   reasoningText: string;
   setChatLoading?: (a: boolean) => void;
@@ -307,9 +309,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentConversationId: currentConversationIdRef.current,
       });
       
-      // Clean up abort controllers
+      // Cancel all active streams via StreamManager
+      // This ensures proper cleanup and prevents resource leaks
+      if (currentConversationIdRef.current) {
+        console.log('[ChatProvider] ⚠️ Cancelling active streams via StreamManager on unmount!');
+        globalStreamManager.cancelStream(currentConversationIdRef.current).catch(e => {
+          console.warn('[ChatProvider] Error cancelling stream via StreamManager:', e);
+        });
+      }
+      
+      // Clean up legacy abort controllers (for backward compatibility)
       if (streamControllerRef.current) {
-        console.log('[ChatProvider] ⚠️ Aborting active stream controller on unmount!');
+        console.log('[ChatProvider] ⚠️ Aborting legacy stream controller on unmount!');
         try {
           streamControllerRef.current.abort();
         } catch (e) {
@@ -457,18 +468,37 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [stream, extractDocumentThrottled, currentChatId]);
 
   // Helper function to abort current stream and wait for cleanup
+  // Uses StreamManager for centralized stream lifecycle management
   const abortCurrentStream = useCallback(async () => {
+    if (!currentConversationIdRef.current) {
+      console.log('[Chat] No conversation ID, skipping abort');
+      return;
+    }
+    
+    console.log('[Chat] Aborting current stream via StreamManager...');
+    
+    try {
+      // Use StreamManager to cancel the stream
+      // This ensures proper cleanup and prevents race conditions
+      await globalStreamManager.cancelStream(currentConversationIdRef.current);
+      
+      // Wait for cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (e) {
+      console.warn('[Chat] Error aborting stream:', e);
+    }
+    
+    // Clear all loading states immediately when aborting
+    console.log('[Chat] Clearing loading states after abort');
+    isSendingRef.current = false;
+    setIsSending(false);
+    setStreamWorking(false);
+    setChatLoading(false);
+    setIntermediate('');
+    
+    // Clear legacy controller ref if it exists
     if (streamControllerRef.current) {
-      console.log('[Chat] Aborting current stream...');
-      try {
-        streamControllerRef.current.abort();
-        // Wait longer to allow word queue to finish (200ms gives time for ~20 words)
-        await new Promise(resolve => setTimeout(resolve, 200));
-      } catch (e) {
-        console.warn('[Chat] Error aborting stream:', e);
-      } finally {
-        streamControllerRef.current = null;
-      }
+      streamControllerRef.current = null;
     }
   }, []);
 
@@ -701,7 +731,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsSending(true);
     
     // Reset all streaming states
-    setChatLoading(true)
+    setChatLoading(true);
     setError('');
     setChatError(null); // Clear any previous errors
     
@@ -864,6 +894,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('[sendMessage] Sending timezone:', userTimezone);
     
     const conversationId = currentConversationId || '';
+
+    formData.append('is_mobile', 'true');
     
     // Track message sent
     await mixpanelService.trackAI(AIEvent.CHAT_MESSAGE_SENT, {
@@ -938,74 +970,163 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Abort any previous stream with proper synchronization
     await abortCurrentStream();
     
-    const newController = new AbortController();
-    streamControllerRef.current = newController;
+    // Use StreamManager to handle the stream lifecycle
+    // This prevents race conditions and ensures proper cleanup
+    // Note: conversationId already declared above for form data
     
     try {
-      // Get token from secure storage
-      const token = await getToken();
-      
-      if (!token) {
-        Alert.alert('Error', 'Authentication required. Please sign in again.');
-        isSendingRef.current = false;
-        setIsSending(false);
-        setChatLoading(false);
-        return;
-      }
-      
-      const _response = await fetch(`${BASE_URL}/chat`, {
-        method: 'POST',
-        headers: {
-          Authorization: formatAuthHeader(token),
-          'Accept': 'text/event-stream, application/json',
-          // Don't set Content-Type - let fetch set it with boundary for multipart/form-data
-        },
-        body: formData,
-        // @ts-ignore - React Native specific properties
-        reactNative: { 
-          textStreaming: true 
-        },
-        signal: newController.signal,
-        // Ensure streaming is enabled
-        cache: 'no-cache',
-      });
-      
-      if (!_response.ok) {
-        const errorMessage = await _response.text();
-        console.log('[Cloud] Error response:', errorMessage, 'Status:', _response.status);
-        
-        // Parse the error and set it in state
-        const parsedError = parseErrorResponse(errorMessage, _response.status);
-        setChatError(parsedError);
-        
-        // Save error as a permanent bot message in chat history
-        const httpErrorContent = `⚠️ **Unable to Complete Request**\n\n${parsedError.message}\n\n*Please try again or contact support if the issue persists.*`;
-        
-        setMessages(prev => updateLastItem(prev, message => ({
-          ...message,
-          content: httpErrorContent,
-          timestamp: new Date().toISOString(),
-        })));
-        
-        // Track failed response
-        await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
-          model_used: modelId,
-          is_local_model: false,
-          conversation_id: conversationId,
-          error_message: parsedError.message,
-          status_code: _response.status,
-        });
-        
-        // Still show alerts for critical errors (like auth)
-        if (_response.status === 401) {
-          Alert.alert(
-            'Authentication Error',
-            'Your session has expired. Please sign in again.',
-            [{ text: 'OK' }]
+      // Start the stream with StreamManager
+      // IMPORTANT: Keep the entire stream processing inside the callback
+      // so StreamManager knows the stream is still active
+      const result = await globalStreamManager.startStream(
+        conversationId,
+        async (controller) => {
+          // Store controller ref for legacy compatibility
+          streamControllerRef.current = controller;
+          
+          // Get token from secure storage
+          const token = await getToken();
+          
+          if (!token) {
+            Alert.alert('Error', 'Authentication required. Please sign in again.');
+            isSendingRef.current = false;
+            setIsSending(false);
+            setChatLoading(false);
+            throw new Error('Authentication required');
+          }
+          
+          const _response = await fetch(`${BASE_URL}/chat`, {
+            method: 'POST',
+            headers: {
+              Authorization: formatAuthHeader(token),
+              'Accept': 'text/event-stream, application/json',
+              // Don't set Content-Type - let fetch set it with boundary for multipart/form-data
+            },
+            body: formData,
+            // @ts-ignore - React Native specific properties
+            reactNative: { 
+              textStreaming: true 
+            },
+            signal: controller.signal,
+            // Ensure streaming is enabled
+            cache: 'no-cache',
+          });
+          
+          if (!_response || !_response.ok) {
+            const errorMessage = await _response.text();
+            console.log('[Cloud] Error response:', errorMessage, 'Status:', _response.status);
+            
+            // Parse the error and set it in state
+            const parsedError = parseErrorResponse(errorMessage, _response.status);
+            setChatError(parsedError);
+            
+            // Save error as a permanent bot message in chat history
+            const httpErrorContent = `⚠️ **Unable to Complete Request**\n\n${parsedError.message}\n\n*Please try again or contact support if the issue persists.*`;
+            
+            setMessages(prev => updateLastItem(prev, message => ({
+              ...message,
+              content: httpErrorContent,
+              timestamp: new Date().toISOString(),
+            })));
+            
+            // Track failed response
+            await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
+              model_used: modelId,
+              is_local_model: false,
+              conversation_id: conversationId,
+              error_message: parsedError.message,
+              status_code: _response.status,
+            });
+            
+            // Still show alerts for critical errors (like auth)
+            if (_response.status === 401) {
+              Alert.alert(
+                'Authentication Error',
+                'Your session has expired. Please sign in again.',
+                [{ text: 'OK' }]
+              );
+            }
+            
+            // Reset all streaming states on error
+            isSendingRef.current = false;
+            setIsSending(false);
+            setChatLoading(false);
+            setStreamWorking(false);
+            setIntermediate('');
+            return null;
+          }
+          
+          // Process the stream - KEEP THIS INSIDE THE CALLBACK
+          const res = await processStream(
+            _response.body,
+            setBatchedStream, // Use batched version for smooth 60 FPS updates
+            handleError,
+            setIntermediate,
+            setStreamWorking,
+            setAdditionalData,
+            setReasoningText,
+            setCurrentChatId
           );
+          
+          // Check if the stream returned an error
+          if (res?.type === 'error') {
+            console.log('[Cloud] Stream returned error, saving as permanent message');
+            
+            // Save error as a permanent bot message in chat history
+            // This ensures the error persists and is saved in the conversation
+            const errorMessageContent = stream || `⚠️ **Unable to Complete Request**\n\n${res.error}\n\n*You can try again in a moment or adjust your request.*`;
+            
+            setMessages(prev => updateLastItem(prev, message => ({
+              ...message,
+              content: errorMessageContent,
+              timestamp: new Date().toISOString(),
+              chat_id: currentChatId || message.chat_id, // Include chat_id even on error
+            })));
+            
+            // Track as failed response
+            await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
+              model_used: modelId,
+              is_local_model: false,
+              conversation_id: conversationId,
+              error_message: res.error || 'Stream error',
+            });
+            
+            // Don't track as successful or process additional_data
+            setPastedActive(false);
+            return null;
+          }
+          
+          // Handle additional_data after streaming completes
+          if (res?.data?.additional_data) {
+            // Update last message with additional_data and chat_id
+            // DON'T create separate messages for videos - they're already in files[]
+            setMessages(prev => updateLastItem(prev, message => ({
+              ...message,
+              additional_data: res?.data?.additional_data || [],
+              chat_id: currentChatId || message.chat_id, // Ensure chat_id is included
+            })));
+          }
+          
+          // Track successful response
+          const responseDuration = Date.now() - responseStartTime;
+          await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_RECEIVED, {
+            response_time: responseDuration,
+            model_used: modelId,
+            is_local_model: false,
+            conversation_id: conversationId,
+            response_length: res?.content?.length || 0,
+          });
+          
+          setPastedActive(false);
+          
+          // Return the result to indicate success
+          return res;
         }
-        
-        // Reset all streaming states on error
+      );
+      
+      // Check if stream was cancelled (result will be null)
+      if (!result) {
+        console.log('[Cloud] Stream cancelled by StreamManager');
         isSendingRef.current = false;
         setIsSending(false);
         setChatLoading(false);
@@ -1013,68 +1134,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIntermediate('');
         return;
       }
-      
-      const res = await processStream(
-        _response.body,
-        setBatchedStream, // Use batched version for smooth 60 FPS updates
-        handleError,
-        setIntermediate,
-        setStreamWorking,
-        setAdditionalData,
-        setReasoningText,
-        setCurrentChatId
-      );
-      
-      // Check if the stream returned an error
-      if (res?.type === 'error') {
-        console.log('[Cloud] Stream returned error, saving as permanent message');
-        
-        // Save error as a permanent bot message in chat history
-        // This ensures the error persists and is saved in the conversation
-        const errorMessageContent = stream || `⚠️ **Unable to Complete Request**\n\n${res.error}\n\n*You can try again in a moment or adjust your request.*`;
-        
-        setMessages(prev => updateLastItem(prev, message => ({
-          ...message,
-          content: errorMessageContent,
-          timestamp: new Date().toISOString(),
-          chat_id: currentChatId || message.chat_id, // Include chat_id even on error
-        })));
-        
-        // Track as failed response
-        await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
-          model_used: modelId,
-          is_local_model: false,
-          conversation_id: conversationId,
-          error_message: res.error || 'Stream error',
-        });
-        
-        // Don't track as successful or process additional_data
-        setPastedActive(false);
-        return;
-      }
-      
-      // Handle additional_data after streaming completes
-      if (res?.data?.additional_data) {
-        // Update last message with additional_data and chat_id
-        // DON'T create separate messages for videos - they're already in files[]
-        setMessages(prev => updateLastItem(prev, message => ({
-          ...message,
-          additional_data: res?.data?.additional_data || [],
-          chat_id: currentChatId || message.chat_id, // Ensure chat_id is included
-        })));
-      }
-      
-      // Track successful response
-      const responseDuration = Date.now() - responseStartTime;
-      await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_RECEIVED, {
-        response_time: responseDuration,
-        model_used: modelId,
-        is_local_model: false,
-        conversation_id: conversationId,
-        response_length: res?.content?.length || 0,
-      });
-      
-      setPastedActive(false);
     } catch (e: any) {
       // Check if request was aborted (user cancelled or switched conversations)
       if (e.name === 'AbortError') {
@@ -1287,26 +1346,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fetchControllerRef.current = null;
     }
     
-    // Abort any ongoing stream when switching conversations (with proper synchronization)
-    await abortCurrentStream();
+    // ⚠️ REMOVED: No longer aborting ongoing streams when switching conversations
+    // This allows streaming to continue in the background
+    // await abortCurrentStream();
     
-    // Reset all streaming states when switching conversations
-    // Do this after abort completes to prevent race conditions
-    
-    // Flush any pending batched stream updates
-    if (streamBatcherRef.current) {
-      streamBatcherRef.current.flush();
-    }
-    accumulatedStreamRef.current = '';
-    
-    setStream('');
-    setIntermediate('');
-    setReasoningText(''); // Clear reasoning text when switching conversations
-    setStreamWorking(false);
-    isSendingRef.current = false;
-    setIsSending(false);
-    setAdditionalData([]);
-    setCurrentChatId(null); // Clear chat_id when switching conversations
+    // ⚠️ REMOVED: No longer resetting streaming states when switching conversations
+    // This allows background streams to complete and update their messages
+    // Only reset the UI states for the current conversation
     
     fetchControllerRef.current = new AbortController();
     const fetchConvId = conversationId; // Capture for closure
@@ -1372,7 +1418,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fetchControllerRef.current = null;
       setIsLoading(false);
     }
-  }, [abortCurrentStream]);
+  }, []); // No longer depends on abortCurrentStream since we don't abort on navigation
 
   const createConversation = useCallback(async (participantIds: string[]): Promise<string> => {
     try {
@@ -1600,6 +1646,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearAllConversations,
       resetChat,
       createNewConversation,
+      stopStreaming: abortCurrentStream,
       streamWorking,
       intermediate,
       reasoningText,
@@ -1645,6 +1692,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearAllConversations,
     resetChat,
     createNewConversation,
+    abortCurrentStream,
     streamWorking,
     appendToMessageHistory,
     localModel,
