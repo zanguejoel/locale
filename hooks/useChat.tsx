@@ -44,6 +44,13 @@ import { StreamBatcher } from '@/utils/StreamBatcher';
 import { getUserTimezone } from '@/utils/timezone';
 import { globalStreamManager, StreamState } from '@/utils/StreamManager';
 import { useStreamingState } from '@/contexts/StreamingStateContext';
+import { 
+  messagePersistenceManager, 
+  trackMessageSave,
+  verifyAndRetryMessageSave,
+  MessageSaveStatus as PersistenceStatus 
+} from '@/utils/MessagePersistenceManager';
+import { MessageSaveStatus } from '@/utils/Interfaces';
 
 // Import API_URL_PROD from ApiClient configuration
 const BASE_URL = API_URL_PROD;
@@ -152,6 +159,40 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   // ============ Streaming State Management ============
   const streamingState = useStreamingState();
+  
+  // ============ Message Persistence Management ============
+  // Set up callbacks for persistence manager to show notifications
+  useEffect(() => {
+    messagePersistenceManager.setCallbacks(
+      // On error callback - show notification when message save fails
+      (error: string, conversationId: string) => {
+        console.error('[Chat] Message save failed:', error, 'for conversation:', conversationId);
+        
+        // Show notification via StreamingStateContext
+        streamingState.showNotification({
+          chatTitle: 'Save Failed',
+          message: 'Message failed to save. Will retry automatically.',
+          conversationId,
+        });
+      },
+      // On success callback - called when retry succeeds
+      (messageId: string, conversationId: string) => {
+        console.log('[Chat] Message save verified:', messageId);
+        
+        // Update message save status in state
+        setMessages(prev => prev.map(msg => 
+          (msg.chat_id === messageId || msg.id === messageId) 
+            ? { ...msg, saveStatus: MessageSaveStatus.SAVED }
+            : msg
+        ));
+      }
+    );
+    
+    return () => {
+      // Clean up on unmount
+      messagePersistenceManager.destroy();
+    };
+  }, [streamingState]);
   
   // ============ Conversation State ============
   const [conversations, setConversations] = useState<Conversations[]>([]);
@@ -1438,6 +1479,74 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         console.log('[Chat] ✅ Message finalized');
+        
+        // ============ Message Persistence Verification ============
+        // Track message for backend save verification
+        // This ensures messages aren't lost due to network errors or backend issues
+        if (finalChatId) {
+          console.log('[Chat] 💾 Tracking message for persistence verification:', finalChatId);
+          
+          // Track the message (synchronous with MMKV)
+          trackMessageSave(
+            finalChatId,
+            conversationId,
+            finalContent,
+            'assistant',
+            additionalData,
+            finalChatId
+          );
+          
+          // Mark message as saving
+          if (isCurrentConversation) {
+            setMessages(prev => prev.map(msg =>
+              (msg.chat_id === finalChatId || msg.id === finalChatId)
+                ? { ...msg, saveStatus: MessageSaveStatus.SAVING }
+                : msg
+            ));
+          }
+          
+          // Verify save after a short delay (non-blocking)
+          setTimeout(async () => {
+            console.log('[Chat] 🔍 Verifying message was saved to backend');
+            
+            const result = await verifyAndRetryMessageSave(conversationId, finalChatId);
+            
+            if (result.success) {
+              console.log('[Chat] ✅ Message save verified successfully');
+              
+              // Update save status in UI
+              setMessages(prev => prev.map(msg =>
+                (msg.chat_id === finalChatId || msg.id === finalChatId)
+                  ? { ...msg, saveStatus: MessageSaveStatus.SAVED, saveError: undefined }
+                  : msg
+              ));
+            } else {
+              console.error('[Chat] ❌ Message save verification failed:', result.error);
+              
+              // Update save status with error
+              setMessages(prev => prev.map(msg =>
+                (msg.chat_id === finalChatId || msg.id === finalChatId)
+                  ? { 
+                      ...msg, 
+                      saveStatus: result.shouldRetry ? MessageSaveStatus.RETRYING : MessageSaveStatus.FAILED,
+                      saveError: result.error 
+                    }
+                  : msg
+              ));
+              
+              // Show notification if not retrying
+              if (!result.shouldRetry) {
+                streamingState.showNotification({
+                  chatTitle: 'Save Failed',
+                  message: 'Message could not be saved. Please check your connection.',
+                  conversationId,
+                });
+              }
+            }
+          }, 2000); // Wait 2 seconds before verifying
+        } else {
+          console.warn('[Chat] ⚠️ No chat_id available for persistence tracking');
+        }
       }
       
       // Clean up per-conversation refs after a delay

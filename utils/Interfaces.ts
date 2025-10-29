@@ -32,6 +32,14 @@ export interface MessageReaction {
   hasReacted: boolean; // Whether current user has reacted
 }
 
+export enum MessageSaveStatus {
+  PENDING = 'pending',
+  SAVING = 'saving',
+  SAVED = 'saved',
+  FAILED = 'failed',
+  RETRYING = 'retrying',
+}
+
 export interface Message {
   role: Role;
   content: string;
@@ -57,6 +65,9 @@ export interface Message {
   // Feedback (like/dislike)
   reaction?: 'like' | 'dislike' | null;
   feedback?: string; // Optional text feedback
+  // Backend persistence tracking
+  saveStatus?: MessageSaveStatus; // Track if message was saved to backend
+  saveError?: string; // Error message if save failed
 }
 
 export interface Chat {

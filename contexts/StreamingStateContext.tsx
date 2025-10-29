@@ -67,6 +67,9 @@ interface StreamingStateContextType {
   
   // Get streaming status summary
   hasAnyActiveStreams: () => boolean;
+  
+  // Show notification (for error messages, save failures, etc)
+  showNotification: (options: { chatTitle: string; message: string; conversationId: string }) => void;
 }
 
 const StreamingStateContext = createContext<StreamingStateContextType | undefined>(undefined);
@@ -351,6 +354,20 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
   }, []);
   
   /**
+   * Show notification (for errors, save failures, etc)
+   */
+  const showNotification = useCallback((options: { chatTitle: string; message: string; conversationId: string }) => {
+    console.log('[StreamingState] Showing notification:', options.chatTitle);
+    
+    // Show notification via notification context
+    notification.showNotification({
+      chatTitle: options.chatTitle,
+      message: options.message,
+      conversationId: options.conversationId,
+    });
+  }, [notification]);
+  
+  /**
    * Cleanup old streams periodically
    */
   useEffect(() => {
@@ -392,6 +409,7 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
     setActiveConversation,
     getActiveStreams,
     hasAnyActiveStreams,
+    showNotification,
   }), [
     getStream,
     isConversationStreaming,
@@ -405,8 +423,7 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
     setActiveConversation,
     getActiveStreams,
     hasAnyActiveStreams,
-    // Note: notification is intentionally NOT in dependencies
-    // It's only used inside completeStream which is already memoized
+    showNotification,
   ]);
   
   return (
