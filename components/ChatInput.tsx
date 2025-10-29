@@ -628,7 +628,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
               <Ionicons 
                 name="stop-circle" 
                 size={30} 
-                color={theme.colors.red} 
+                color={theme.colors.mutedForeground} 
               />
             </TouchableOpacity>
           ) : message.length > 0 ? (
@@ -721,7 +721,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     width: CHAT_INPUT.BUTTON_WIDTH,
     height: CHAT_INPUT.BUTTON_WIDTH,
     borderRadius: 20,
-    backgroundColor: theme.colors.input,
+    backgroundColor: theme.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
