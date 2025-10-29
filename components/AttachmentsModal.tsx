@@ -73,7 +73,8 @@ const AttachmentsModal: React.FC<AttachmentsModalProps> = ({
   const handleOptionPress = async (action: () => void) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     handleClose();
-    setTimeout(() => action(), 100);
+    // Wait for modal closing animation to complete (250ms) plus a small buffer
+    setTimeout(() => action(), 300);
   };
 
   // Handle swipe down gesture
