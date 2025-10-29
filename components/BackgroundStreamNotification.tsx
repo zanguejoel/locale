@@ -17,6 +17,8 @@ interface BackgroundStreamNotificationProps {
   message?: string;
   chatTitle?: string;
   onPress?: () => void;
+  isCombined?: boolean; // Is this a combined notification (multiple chats)?
+  count?: number; // Number of conversations (for combined notifications)
 }
 
 const BackgroundStreamNotification: React.FC<BackgroundStreamNotificationProps> = ({
@@ -25,6 +27,8 @@ const BackgroundStreamNotification: React.FC<BackgroundStreamNotificationProps> 
   message = 'Response ready in background chat',
   chatTitle = 'Chat',
   onPress,
+  isCombined = false,
+  count,
 }) => {
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -109,13 +113,20 @@ const BackgroundStreamNotification: React.FC<BackgroundStreamNotificationProps> 
         <BlurView intensity={80} tint="dark" style={styles.blurContainer}>
           <View style={styles.contentContainer}>
             <View style={styles.iconContainer}>
-              <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+              {isCombined ? (
+                <Ionicons name="notifications" size={24} color="#10b981" />
+              ) : (
+                <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+              )}
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.title} numberOfLines={1}>
-                {chatTitle} completed
+                {isCombined ? chatTitle : `${chatTitle} completed`}
               </Text>
               <Text style={styles.message}>{message}</Text>
+              {isCombined && count && count > 3 && (
+                <Text style={styles.count}>+{count - 3} more</Text>
+              )}
             </View>
             <TouchableOpacity onPress={dismissNotification} style={styles.closeButton}>
               <Ionicons name="close" size={20} color="#9ca3af" />
@@ -184,6 +195,12 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
     marginLeft: 8,
+  },
+  count: {
+    fontSize: 11,
+    color: '#9ca3af',
+    fontWeight: '400',
+    marginTop: 2,
   },
 });
 

@@ -22,6 +22,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useNotification } from './NotificationContext';
+import api from '@/utils/ApiClient';
 
 /**
  * State for a single conversation's stream
@@ -94,6 +95,10 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
   
   // Use custom notification system
   const notification = useNotification();
+  
+  // Conversation title cache (conversationId -> { title, timestamp })
+  const titleCacheRef = useRef<Map<string, { title: string; timestamp: number }>>(new Map());
+  const TITLE_CACHE_TTL = 60000; // 1 minute cache
   
   // Update ref when state changes
   useEffect(() => {
@@ -237,20 +242,93 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
   }, [addStream]);
   
   /**
+   * Fetch fresh conversation title from backend
+   */
+  const fetchConversationTitle = useCallback(async (conversationId: string, fallbackTitle?: string): Promise<string> => {
+    // Check cache first
+    const cached = titleCacheRef.current.get(conversationId);
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < TITLE_CACHE_TTL) {
+      console.log('[StreamingState] 📦 Using cached title:', cached.title);
+      return cached.title;
+    }
+    
+    // Fetch fresh title
+    try {
+      console.log('[StreamingState] 🔄 Fetching fresh conversation title for:', conversationId);
+      
+      const response = await api.get<any>(`/conversation/${conversationId}`);
+      
+      if (response.ok && response.data) {
+        const title = response.data.title || response.data.content_summary || fallbackTitle || 'Chat';
+        
+        // Update cache
+        titleCacheRef.current.set(conversationId, {
+          title,
+          timestamp: now,
+        });
+        
+        console.log('[StreamingState] ✅ Fetched fresh title:', title);
+        return title;
+      }
+    } catch (error) {
+      console.warn('[StreamingState] ⚠️ Failed to fetch conversation title:', error);
+    }
+    
+    // Fallback to provided title or default
+    return fallbackTitle || 'Chat';
+  }, []);
+  
+  /**
    * Complete a stream
    */
-  const completeStream = useCallback((conversationId: string, metadata?: { chatTitle?: string }) => {
+  const completeStream = useCallback(async (conversationId: string, metadata?: { chatTitle?: string }) => {
     console.log('[StreamingState] ✅ Completing stream for conversation:', conversationId);
     console.log('[StreamingState] 🔍 Active streams:', Array.from(activeStreamsRef.current.keys()));
     
+    // Handle edge case: new chats might have empty conversationId temporarily
+    // Convert to string in case it's a number
+    const idString = String(conversationId);
+    const hasValidId = conversationId && idString.trim() !== '';
+    
+    // Special handling for streams without valid ID (new chats)
+    if (!hasValidId) {
+      console.log('[StreamingState] ⚠️ Stream completing without valid conversationId (new chat)');
+      
+      // Still show notification but with special handling
+      // Use a placeholder ID so notification system doesn't crash
+      const placeholderId = `new-chat-${Date.now()}`;
+      
+      // Provide haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch((err) => {
+        console.warn('[StreamingState] Haptic feedback failed:', err);
+      });
+      
+      // Show notification with placeholder ID (won't navigate but will inform)
+      notification.showNotification({
+        message: 'Response ready in new chat',
+        chatTitle: metadata?.chatTitle || 'New Chat',
+        conversationId: placeholderId, // Use placeholder
+      });
+      
+      return; // Exit early - no stream state to update
+    }
+    
     setActiveStreams(prev => {
+      console.log('[StreamingState] 🔍 Looking for stream in activeStreams, size:', prev.size);
+      console.log('[StreamingState] 🔍 All stream IDs:', Array.from(prev.keys()));
+      
       const stream = prev.get(conversationId);
+      
+      // If no stream found, warn and exit
       if (!stream) {
         console.warn('[StreamingState] ⚠️ No stream found for conversation:', conversationId);
+        console.warn('[StreamingState] ⚠️ Available streams:', Array.from(prev.keys()));
         return prev;
       }
       
-      console.log('[StreamingState] 🔍 Stream state:', {
+      console.log('[StreamingState] 🔍 Found stream! State:', {
         conversationId,
         isActive: stream.isActive,
         isStreaming: stream.isStreaming,
@@ -267,14 +345,24 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
           console.warn('[StreamingState] Haptic feedback failed:', err);
         });
         
-        // Show custom notification with conversation details
-        console.log('[StreamingState] 🎉 Showing custom notification...');
-        notification.showNotification({
-          message: 'Tap to view response',
-          chatTitle: metadata?.chatTitle || 'Chat',
-          conversationId: conversationId,
+        // Fetch fresh conversation title (async, non-blocking)
+        fetchConversationTitle(conversationId, metadata?.chatTitle).then(freshTitle => {
+          console.log('[StreamingState] 🎉 Showing notification with fresh title:', freshTitle);
+          notification.showNotification({
+            message: 'Tap to view response',
+            chatTitle: freshTitle,
+            conversationId: conversationId,
+          });
+          console.log('[StreamingState] ✅ Notification triggered');
+        }).catch(err => {
+          console.error('[StreamingState] Error showing notification:', err);
+          // Fallback to provided title
+          notification.showNotification({
+            message: 'Tap to view response',
+            chatTitle: metadata?.chatTitle || 'Chat',
+            conversationId: conversationId,
+          });
         });
-        console.log('[StreamingState] ✅ Notification triggered');
       }
       
       const next = new Map(prev);

@@ -319,25 +319,67 @@ function RootLayoutNav() {
   );
 }
 
-// Notification layer that renders above all content
+// Notification layer that renders above all content with queue support
 const NotificationLayer: React.FC = () => {
-  const { notificationVisible, notificationData, hideNotification } = useNotification();
+  const { notificationVisible, notificationData, hideNotification, queueSize } = useNotification();
   const router = useRouter();
   
   const handleNotificationPress = () => {
-    if (notificationData?.conversationId) {
-      console.log('[NotificationLayer] 📱 Navigating to conversation:', notificationData.conversationId);
-      router.push(`/(chat)/${notificationData.conversationId}`);
+    const conversationId = notificationData?.conversationId;
+    if (conversationId) {
+      // Convert to string (handles both number and string IDs)
+      const idString = String(conversationId);
+      
+      // Check if this is a placeholder ID (new chat without ID)
+      const isPlaceholder = idString.startsWith('new-chat-');
+      
+      if (isPlaceholder) {
+        // Placeholder ID - just dismiss (can't navigate without real ID)
+        console.log('[NotificationLayer] 📱 Placeholder notification - dismissing');
+        hideNotification();
+        // User can navigate to "New Chat" manually from conversations list
+        return;
+      }
+      
+      // Check if this is a combined notification (comma-separated IDs)
+      const isCombined = idString.includes(',');
+      
+      if (isCombined) {
+        // For combined notifications, just dismiss and let user check conversations list
+        console.log('[NotificationLayer] 📱 Combined notification - multiple conversations');
+        hideNotification();
+        // Could navigate to conversations list or show a modal with all conversations
+      } else {
+        // Single conversation - navigate directly
+        console.log('[NotificationLayer] 📱 Navigating to conversation:', conversationId);
+        router.push(`/(chat)/${conversationId}`);
+      }
     }
   };
+  
+  // Check if current notification is combined (with proper null safety)
+  // Guard against undefined conversationId and convert numbers to strings
+  const conversationId = notificationData?.conversationId;
+  const idString = conversationId ? String(conversationId) : '';
+  const isCombined = idString.includes(',');
+  const count = isCombined 
+    ? idString.split(',').length 
+    : undefined;
+  
+  // Don't render if we don't have valid data
+  if (!notificationVisible || !notificationData) {
+    return null;
+  }
   
   return (
     <BackgroundStreamNotification
       visible={notificationVisible}
-      message={notificationData?.message || ''}
-      chatTitle={notificationData?.chatTitle || 'Chat'}
+      message={notificationData.message || ''}
+      chatTitle={notificationData.chatTitle || 'Chat'}
       onDismiss={hideNotification}
       onPress={handleNotificationPress}
+      isCombined={isCombined}
+      count={count}
     />
   );
 };
