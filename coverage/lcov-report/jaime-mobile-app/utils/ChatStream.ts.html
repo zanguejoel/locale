@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/245</span>
+                <span class='fraction'>0/250</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/112</span>
+                <span class='fraction'>0/116</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/235</span>
+                <span class='fraction'>0/240</span>
             </div>
         
             
@@ -566,7 +566,20 @@
 <a name='L501'></a><a href='#L501'>501</a>
 <a name='L502'></a><a href='#L502'>502</a>
 <a name='L503'></a><a href='#L503'>503</a>
-<a name='L504'></a><a href='#L504'>504</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L504'></a><a href='#L504'>504</a>
+<a name='L505'></a><a href='#L505'>505</a>
+<a name='L506'></a><a href='#L506'>506</a>
+<a name='L507'></a><a href='#L507'>507</a>
+<a name='L508'></a><a href='#L508'>508</a>
+<a name='L509'></a><a href='#L509'>509</a>
+<a name='L510'></a><a href='#L510'>510</a>
+<a name='L511'></a><a href='#L511'>511</a>
+<a name='L512'></a><a href='#L512'>512</a>
+<a name='L513'></a><a href='#L513'>513</a>
+<a name='L514'></a><a href='#L514'>514</a>
+<a name='L515'></a><a href='#L515'>515</a>
+<a name='L516'></a><a href='#L516'>516</a>
+<a name='L517'></a><a href='#L517'>517</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -839,6 +852,12 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -874,6 +893,12 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -886,6 +911,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1341,7 +1367,13 @@ export const processStream = <span class="cstat-no" title="statement not covered
 <span class="cstat-no" title="statement not covered" >            break;</span>
           }
         }
-      } catch (readError) {
+      } catch (readError: any) {
+        // Handle AbortError silently - this is expected when user stops streaming
+<span class="cstat-no" title="statement not covered" >        if (readError?.name === 'AbortError') {</span>
+<span class="cstat-no" title="statement not covered" >          console.log('[ChatStream] 🛑 Stream aborted by user');</span>
+<span class="cstat-no" title="statement not covered" >          break;</span>
+        }
+        
 <span class="cstat-no" title="statement not covered" >        console.error('[ChatStream] Error reading stream:', readError);</span>
         // Critical errors should stop streaming immediately
 <span class="cstat-no" title="statement not covered" >        if (readError instanceof TypeError || readError instanceof ReferenceError) {</span>
@@ -1376,19 +1408,26 @@ export const processStream = <span class="cstat-no" title="statement not covered
 <span class="cstat-no" title="statement not covered" >        console.error('[ChatStream] Error processing final buffer:', e);</span>
       }
     }
-  } catch (error) {
-<span class="cstat-no" title="statement not covered" >    console.error('[ChatStream] Stream processing error:', error);</span>
-<span class="cstat-no" title="statement not covered" >    handleError(error instanceof Error ? error.message : String(error));</span>
-    
-    // CRITICAL: Clear all streaming states immediately on error to prevent UI from being stuck
-<span class="cstat-no" title="statement not covered" >    setStreamWorking(false);</span>
-<span class="cstat-no" title="statement not covered" >    setStream('');</span>
-<span class="cstat-no" title="statement not covered" >    setIntermediate('');</span>
-<span class="cstat-no" title="statement not covered" >    if (setAdditionalData) {</span>
-<span class="cstat-no" title="statement not covered" >      setAdditionalData([]);</span>
-    }
-<span class="cstat-no" title="statement not covered" >    if (setReasoningText) {</span>
-<span class="cstat-no" title="statement not covered" >      setReasoningText('');</span>
+  } catch (error: any) {
+    // Handle AbortError silently - this is expected when user stops streaming
+<span class="cstat-no" title="statement not covered" >    if (error?.name === 'AbortError') {</span>
+<span class="cstat-no" title="statement not covered" >      console.log('[ChatStream] 🛑 Stream aborted by user (outer catch)');</span>
+      // Don't clear stream content - preserve partial response
+      // Don't call handleError - this is not an error condition
+    } else {
+<span class="cstat-no" title="statement not covered" >      console.error('[ChatStream] Stream processing error:', error);</span>
+<span class="cstat-no" title="statement not covered" >      handleError(error instanceof Error ? error.message : String(error));</span>
+      
+      // CRITICAL: Clear all streaming states immediately on error to prevent UI from being stuck
+<span class="cstat-no" title="statement not covered" >      setStreamWorking(false);</span>
+<span class="cstat-no" title="statement not covered" >      setStream('');</span>
+<span class="cstat-no" title="statement not covered" >      setIntermediate('');</span>
+<span class="cstat-no" title="statement not covered" >      if (setAdditionalData) {</span>
+<span class="cstat-no" title="statement not covered" >        setAdditionalData([]);</span>
+      }
+<span class="cstat-no" title="statement not covered" >      if (setReasoningText) {</span>
+<span class="cstat-no" title="statement not covered" >        setReasoningText('');</span>
+      }
     }
   } finally {
 <span class="cstat-no" title="statement not covered" >    setStreamWorking(false);</span>
@@ -1579,7 +1618,7 @@ const getHumanSize = <span class="cstat-no" title="statement not covered" ><span
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-27T18:10:55.536Z
+                at 2025-10-29T14:55:47.159Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

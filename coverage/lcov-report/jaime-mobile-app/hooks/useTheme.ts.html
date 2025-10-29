@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>19/19</span>
+                <span class='fraction'>0/19</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90.9% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>10/11</span>
+                <span class='fraction'>0/11</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>0/18</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -120,40 +120,40 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -169,40 +169,40 @@ import { useState, useEffect } from 'react';
 &nbsp;
 export type ThemeMode = 'system' | 'light' | 'dark';
 &nbsp;
-export const getThemeMode = (): ThemeMode =&gt; {
-  const stored = storage.getString('theme_mode');
-  if (stored === 'light' || stored === 'dark' || stored === 'system') {
-    return stored;
+export const getThemeMode = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >()</span>: ThemeMode =&gt; {</span>
+  const stored = <span class="cstat-no" title="statement not covered" >storage.getString('theme_mode');</span>
+<span class="cstat-no" title="statement not covered" >  if (stored === 'light' || stored === 'dark' || stored === 'system') {</span>
+<span class="cstat-no" title="statement not covered" >    return stored;</span>
   }
-  return 'system'; // Default to system
+<span class="cstat-no" title="statement not covered" >  return 'system'; </span>// Default to system
 };
 &nbsp;
-export const setThemeMode = (mode: ThemeMode) =&gt; {
-  storage.set('theme_mode', mode);
+export const setThemeMode = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(m</span>ode: ThemeMode) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  storage.set('theme_mode', mode);</span>
 };
 &nbsp;
-export const useTheme = () =&gt; {
-  const systemColorScheme = useColorScheme();
-  const [themeMode, setThemeModeState] = useState&lt;ThemeMode&gt;(getThemeMode());
+export const useTheme = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
+  const systemColorScheme = <span class="cstat-no" title="statement not covered" >useColorScheme();</span>
+  const [themeMode, setThemeModeState] = <span class="cstat-no" title="statement not covered" >useState&lt;ThemeMode&gt;(getThemeMode());</span>
   
   // Listen for storage changes
-  useEffect(() =&gt; {
-    const interval = setInterval(() =&gt; {
-      const currentMode = getThemeMode();
-      <span class="missing-if-branch" title="else path not taken" >E</span>if (currentMode !== themeMode) {
-        setThemeModeState(currentMode);
+<span class="cstat-no" title="statement not covered" >  useEffect(<span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
+    const interval = <span class="cstat-no" title="statement not covered" >setInterval(<span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
+      const currentMode = <span class="cstat-no" title="statement not covered" >getThemeMode();</span>
+<span class="cstat-no" title="statement not covered" >      if (currentMode !== themeMode) {</span>
+<span class="cstat-no" title="statement not covered" >        setThemeModeState(currentMode);</span>
       }
     }, 100);
     
-    return () =&gt; clearInterval(interval);
+<span class="cstat-no" title="statement not covered" >    return <span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >clearInterval(interval);</span></span>
   }, [themeMode]);
   
   // Determine if dark mode should be active
-  const isDark = themeMode === 'system' 
+  const isDark = <span class="cstat-no" title="statement not covered" >themeMode === 'system' </span>
     ? systemColorScheme === 'dark'
     : themeMode === 'dark';
 &nbsp;
-  return {
+<span class="cstat-no" title="statement not covered" >  return {</span>
     isDark,
     themeMode,
     colors: {
@@ -217,7 +217,7 @@ export const useTheme = () =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-27T18:10:55.536Z
+                at 2025-10-29T14:55:47.159Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

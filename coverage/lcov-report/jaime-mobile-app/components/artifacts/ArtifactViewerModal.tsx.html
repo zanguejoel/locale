@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/71</span>
+                <span class='fraction'>0/75</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/85</span>
+                <span class='fraction'>0/89</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/65</span>
+                <span class='fraction'>0/69</span>
             </div>
         
             
@@ -574,7 +574,19 @@
 <a name='L509'></a><a href='#L509'>509</a>
 <a name='L510'></a><a href='#L510'>510</a>
 <a name='L511'></a><a href='#L511'>511</a>
-<a name='L512'></a><a href='#L512'>512</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L512'></a><a href='#L512'>512</a>
+<a name='L513'></a><a href='#L513'>513</a>
+<a name='L514'></a><a href='#L514'>514</a>
+<a name='L515'></a><a href='#L515'>515</a>
+<a name='L516'></a><a href='#L516'>516</a>
+<a name='L517'></a><a href='#L517'>517</a>
+<a name='L518'></a><a href='#L518'>518</a>
+<a name='L519'></a><a href='#L519'>519</a>
+<a name='L520'></a><a href='#L520'>520</a>
+<a name='L521'></a><a href='#L521'>521</a>
+<a name='L522'></a><a href='#L522'>522</a>
+<a name='L523'></a><a href='#L523'>523</a>
+<a name='L524'></a><a href='#L524'>524</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -653,16 +665,23 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -943,6 +962,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1157,22 +1181,29 @@ const ArtifactViewerModal: React.FC&lt;ArtifactViewerModalProps&gt; = <span clas
 <span class="cstat-no" title="statement not covered" >      return [...artifacts, streamingArtifact];</span>
     }
 <span class="cstat-no" title="statement not covered" >    return artifacts;</span>
-  }, [artifacts, streamingArtifact, streamingArtifact?.content]);
+  }, [artifacts, streamingArtifact, streamingArtifact?.content, streamingArtifact?.isStreaming]);
 &nbsp;
   const currentArtifact = <span class="cstat-no" title="statement not covered" >allArtifacts[currentIndex];</span>
   const hasMultiple = <span class="cstat-no" title="statement not covered" >allArtifacts.length &gt; 1;</span>
   const canToggleView = <span class="cstat-no" title="statement not covered" >currentArtifact &amp;&amp; supportsCodeView(currentArtifact.type);</span>
 &nbsp;
   // Force component to re-render when streaming artifact content updates
+  // Use content length as key to ensure React detects changes
   const [renderKey, setRenderKey] = <span class="cstat-no" title="statement not covered" >useState(0);</span>
+  const [lastContentLength, setLastContentLength] = <span class="cstat-no" title="statement not covered" >useState(0);</span>
   
 <span class="cstat-no" title="statement not covered" >  useEffect(<span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    if (streamingArtifact &amp;&amp; streamingArtifact.isStreaming) {</span>
-      // Force re-render by incrementing key
-<span class="cstat-no" title="statement not covered" >      setRenderKey(<span class="fstat-no" title="function not covered" >pr</span>ev =&gt; <span class="cstat-no" title="statement not covered" >prev + 1)</span>;</span>
-<span class="cstat-no" title="statement not covered" >      console.log('[ArtifactViewerModal] Streaming artifact updated, content length:', streamingArtifact.content?.length);</span>
+      const newLength = <span class="cstat-no" title="statement not covered" >streamingArtifact.content?.length || 0;</span>
+      
+      // Only update if content actually changed
+<span class="cstat-no" title="statement not covered" >      if (newLength !== lastContentLength) {</span>
+<span class="cstat-no" title="statement not covered" >        setRenderKey(<span class="fstat-no" title="function not covered" >pr</span>ev =&gt; <span class="cstat-no" title="statement not covered" >prev + 1)</span>;</span>
+<span class="cstat-no" title="statement not covered" >        setLastContentLength(newLength);</span>
+<span class="cstat-no" title="statement not covered" >        console.log('[ArtifactViewerModal] 🔄 Streaming artifact updated, content length:', newLength);</span>
+      }
     }
-  }, [streamingArtifact?.content]);
+  }, [streamingArtifact?.content, streamingArtifact?.isStreaming, lastContentLength]);
 &nbsp;
   const handleCopy = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    if (!currentArtifact) <span class="cstat-no" title="statement not covered" >return;</span></span>
@@ -1474,6 +1505,7 @@ const getStyles = <span class="cstat-no" title="statement not covered" ><span cl
       flex: 2,
       alignItems: 'center',
       paddingHorizontal: 8,
+      minWidth: 0, // Allow flex shrinking
     },
     headerRight: {
       flex: 1,
@@ -1511,13 +1543,15 @@ const getStyles = <span class="cstat-no" title="statement not covered" ><span cl
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
+      width: '100%', // Take full width of parent
     },
     headerTitle: {
       fontSize: 18,
       fontWeight: '600',
       color: theme.colors.text,
       textAlign: 'center',
-      flex: 0,
+      flexShrink: 1, // Allow text to shrink
+      maxWidth: '60%', // Prevent taking full width, leave room for streaming indicator
     },
     headerSubtitle: {
       fontSize: 12,
@@ -1580,17 +1614,19 @@ const getStyles = <span class="cstat-no" title="statement not covered" ><span cl
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      paddingHorizontal: 10,
+      paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 8,
       backgroundColor: theme.isDark
         ? 'rgba(59, 130, 246, 0.2)'
         : 'rgba(59, 130, 246, 0.15)',
+      flexShrink: 0, // Don't shrink the streaming indicator
     },
     streamingText: {
       fontSize: 12,
       fontWeight: '600',
       color: theme.colors.primary,
+      whiteSpace: 'nowrap', // Prevent text wrapping in indicator
     },
   });
 &nbsp;
@@ -1603,7 +1639,7 @@ export default ArtifactViewerModal;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-27T18:10:55.536Z
+                at 2025-10-29T14:55:47.159Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

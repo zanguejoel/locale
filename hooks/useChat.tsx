@@ -43,6 +43,7 @@ import { extractDocumentFromStream, extractDocumentsFromMessage } from '@/utils/
 import { StreamBatcher } from '@/utils/StreamBatcher';
 import { getUserTimezone } from '@/utils/timezone';
 import { globalStreamManager, StreamState } from '@/utils/StreamManager';
+import { useStreamingState } from '@/contexts/StreamingStateContext';
 
 // Import API_URL_PROD from ApiClient configuration
 const BASE_URL = API_URL_PROD;
@@ -137,6 +138,7 @@ interface ChatContextType {
   currentStreamingDocument: DocumentBlock | null;
   getDocumentsForMessage: (messageId: string) => DocumentBlock[];
   updateMessageReaction: (messageId: string, reaction: 'like' | 'dislike' | null) => void;
+  streamingForConversationId: string | null; // Track which conversation the stream belongs to
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -147,6 +149,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   
   const { user } = useAuth();
+  
+  // ============ Streaming State Management ============
+  const streamingState = useStreamingState();
   
   // ============ Conversation State ============
   const [conversations, setConversations] = useState<Conversations[]>([]);
@@ -174,6 +179,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const reasoningTextRef = useRef(reasoningText);
   const streamRef = useRef(stream);
   
+  // Track which conversation the current stream belongs to
+  // This prevents background streams from appearing in the wrong conversation
+  const [streamingForConversationId, setStreamingForConversationId] = useState<string | null>(null);
+  const streamingForConversationIdRef = useRef<string | null>(null);
+  
+  // Per-conversation stream content storage
+  // This allows each stream to accumulate its content independently
+  const conversationStreamRefs = useRef<Map<string, {
+    stream: string;
+    reasoning: string;
+    intermediate: string;
+  }>>(new Map());
+  
+  // Sync streaming conversation ID ref
+  useEffect(() => {
+    streamingForConversationIdRef.current = streamingForConversationId;
+  }, [streamingForConversationId]);
+  
   // ============ Stream Batching for Performance ============
   // RAF-based batching to prevent excessive re-renders during streaming
   // Limits updates to maximum 60 per second (1 per frame) for smoother UX
@@ -189,9 +212,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const accumulatedStreamRef = useRef('');
   
   const setBatchedStream = useCallback((value: string | ((prev: string) => string)) => {
-    // Handle function updates (e.g., prev => prev + newChunk)
+    const currentConvId = currentConversationIdRef.current;
+    const streamingConvId = streamingForConversationIdRef.current;
+    
+    if (!streamingConvId) return; // No stream active
+    
+    // Get or create per-conversation storage
+    let conversationData = conversationStreamRefs.current.get(streamingConvId);
+    if (!conversationData) {
+      conversationData = { stream: '', reasoning: '', intermediate: '' };
+      conversationStreamRefs.current.set(streamingConvId, conversationData);
+    }
+    
+    // Calculate new value
+    let newValue: string;
     if (typeof value === 'function') {
-      const newValue = value(accumulatedStreamRef.current);
+      newValue = value(conversationData.stream);
+    } else {
+      newValue = value;
+    }
+    
+    // Always update per-conversation ref (for backend saving)
+    conversationData.stream = newValue;
+    
+    // Only update global ref and UI if this is the active conversation
+    if (currentConvId === streamingConvId) {
       accumulatedStreamRef.current = newValue;
       
       // Schedule batched UI update
@@ -199,13 +244,61 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         streamBatcherRef.current.schedule(newValue, setStream);
       }
     } else {
-      // Direct value updates
-      accumulatedStreamRef.current = value;
-      
-      // Schedule batched UI update
-      if (streamBatcherRef.current) {
-        streamBatcherRef.current.schedule(value, setStream);
-      }
+      console.log('[Chat] 📦 Background stream - accumulating in per-conversation ref (no UI update)');
+    }
+  }, []);
+  
+  // Protected setters that check conversation ownership before updating
+  // This prevents background streams from polluting the UI
+  const setIntermediateProtected = useCallback((value: string) => {
+    const currentConvId = currentConversationIdRef.current;
+    const streamingConvId = streamingForConversationIdRef.current;
+    
+    if (!streamingConvId) return;
+    
+    // Get or create per-conversation storage
+    let conversationData = conversationStreamRefs.current.get(streamingConvId);
+    if (!conversationData) {
+      conversationData = { stream: '', reasoning: '', intermediate: '' };
+      conversationStreamRefs.current.set(streamingConvId, conversationData);
+    }
+    
+    // Always update per-conversation ref
+    conversationData.intermediate = value;
+    
+    // Only update UI if this is the active conversation
+    if (currentConvId === streamingConvId) {
+      setIntermediate(value);
+    }
+  }, []);
+  
+  const setReasoningTextProtected = useCallback((value: string | ((prev: string) => string)) => {
+    const currentConvId = currentConversationIdRef.current;
+    const streamingConvId = streamingForConversationIdRef.current;
+    
+    if (!streamingConvId) return;
+    
+    // Get or create per-conversation storage
+    let conversationData = conversationStreamRefs.current.get(streamingConvId);
+    if (!conversationData) {
+      conversationData = { stream: '', reasoning: '', intermediate: '' };
+      conversationStreamRefs.current.set(streamingConvId, conversationData);
+    }
+    
+    // Calculate new value
+    let newValue: string;
+    if (typeof value === 'function') {
+      newValue = value(conversationData.reasoning);
+    } else {
+      newValue = value;
+    }
+    
+    // Always update per-conversation ref
+    conversationData.reasoning = newValue;
+    
+    // Only update UI if this is the active conversation
+    if (currentConvId === streamingConvId) {
+      setReasoningText(value);
     }
   }, []);
   
@@ -357,13 +450,33 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ============ Message Update Handler ============
   useEffect(() => {
-    // Update the last bot message with streaming content
-    // Word-by-word streaming - each word triggers an update for smooth display
-    // This runs on every word addition to ensure smooth word-by-word streaming
-    if (!stream && additionalData?.length === 0 && !currentChatId) {
-      // Skip update if no content to show
+    // CRITICAL: Only run this effect if we're actively sending/streaming
+    // This prevents stray updates after streaming completes
+    if (!isSending && !streamWorking) {
       return;
     }
+    
+    // CRITICAL: Don't update if there's no content to show
+    // This prevents clearing actions from emptying the last message
+    if (!stream && (!additionalData || additionalData.length === 0) && !currentChatId) {
+      console.log('[Chat] 🚫 Skipping update - no content to display');
+      return;
+    }
+    
+    // CRITICAL: Only update messages if this stream belongs to the current conversation
+    // This prevents background streams from emptying the visible conversation's messages
+    if (streamingForConversationId && currentConversationId !== streamingForConversationId) {
+      console.log('[Chat] 🚫 Background stream detected in message update effect - skipping update');
+      return;
+    }
+    
+    console.log('[Chat] 📝 Updating last message with stream content:', {
+      streamLength: stream.length,
+      additionalDataCount: additionalData?.length || 0,
+      hasChatId: !!currentChatId,
+      isSending,
+      streamWorking
+    });
     
     setMessages(prev => updateLastItem(prev, message => {
       const updatedMessage = {
@@ -386,7 +499,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return updatedMessage;
     }));
-  }, [stream, additionalData, currentChatId]);
+  }, [stream, additionalData, currentChatId, streamingForConversationId, currentConversationId, isSending, streamWorking]);
 
   // ============ Artifact Stream Processing ============
   // Throttle utility to reduce expensive artifact extraction calls
@@ -700,6 +813,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // ---------------- Chat Operations ----------------
+  
+  // Extract streaming state functions to avoid dependency issues
+  const { startStream: startStreamFn, completeStream: completeStreamFn, setActiveConversation: setActiveConversationFn } = streamingState;
 
   const sendMessage = useCallback(async (
     message: string, 
@@ -893,7 +1009,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     formData.append('params', JSON.stringify(params));
     console.log('[sendMessage] Sending timezone:', userTimezone);
     
-    const conversationId = currentConversationId || '';
+    // Use let so we can update it if a new conversation is created
+    let conversationId = currentConversationId || '';
 
     formData.append('is_mobile', 'true');
     
@@ -924,6 +1041,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         formData.append('conversation_id', conv);
         setConversations(prev => [...prev, res.data as Conversations]);
         setCurrentConversationId(conv);
+        // Update conversationId for use in stream registration
+        conversationId = conv;
       } else {
         isSendingRef.current = false;
         setIsSending(false);
@@ -984,6 +1103,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Store controller ref for legacy compatibility
           streamControllerRef.current = controller;
           
+          // IMPORTANT: Mark conversation as active BEFORE registering stream
+          // This prevents the stream from being incorrectly marked as "background"
+          setActiveConversationFn(conversationId);
+          
+          // Track which conversation this stream belongs to
+          // This prevents background streams from appearing in the wrong conversation UI
+          setStreamingForConversationId(conversationId);
+          streamingForConversationIdRef.current = conversationId;
+          
+          // Register stream with StreamingStateContext for background notifications
+          startStreamFn(conversationId, controller);
+          
           // Get token from secure storage
           const token = await getToken();
           
@@ -1020,14 +1151,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const parsedError = parseErrorResponse(errorMessage, _response.status);
             setChatError(parsedError);
             
-            // Save error as a permanent bot message in chat history
-            const httpErrorContent = `⚠️ **Unable to Complete Request**\n\n${parsedError.message}\n\n*Please try again or contact support if the issue persists.*`;
-            
-            setMessages(prev => updateLastItem(prev, message => ({
-              ...message,
-              content: httpErrorContent,
-              timestamp: new Date().toISOString(),
-            })));
+            // CRITICAL: Only update messages if this is the current conversation
+            const isCurrentConv = currentConversationIdRef.current === conversationId;
+            if (isCurrentConv) {
+              // Save error as a permanent bot message in chat history
+              const httpErrorContent = `⚠️ **Unable to Complete Request**\n\n${parsedError.message}\n\n*Please try again or contact support if the issue persists.*`;
+              
+              setMessages(prev => updateLastItem(prev, message => ({
+                ...message,
+                content: httpErrorContent,
+                timestamp: new Date().toISOString(),
+              })));
+            } else {
+              console.log('[Chat] 🚫 Background stream error - skipping message update');
+            }
             
             // Track failed response
             await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
@@ -1061,10 +1198,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             _response.body,
             setBatchedStream, // Use batched version for smooth 60 FPS updates
             handleError,
-            setIntermediate,
+            setIntermediateProtected, // Use protected version
             setStreamWorking,
             setAdditionalData,
-            setReasoningText,
+            setReasoningTextProtected, // Use protected version
             setCurrentChatId
           );
           
@@ -1072,16 +1209,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (res?.type === 'error') {
             console.log('[Cloud] Stream returned error, saving as permanent message');
             
-            // Save error as a permanent bot message in chat history
-            // This ensures the error persists and is saved in the conversation
-            const errorMessageContent = stream || `⚠️ **Unable to Complete Request**\n\n${res.error}\n\n*You can try again in a moment or adjust your request.*`;
-            
-            setMessages(prev => updateLastItem(prev, message => ({
-              ...message,
-              content: errorMessageContent,
-              timestamp: new Date().toISOString(),
-              chat_id: currentChatId || message.chat_id, // Include chat_id even on error
-            })));
+            // CRITICAL: Only update messages if this is the current conversation
+            const isCurrentConv = currentConversationIdRef.current === conversationId;
+            if (isCurrentConv) {
+              // Save error as a permanent bot message in chat history
+              // This ensures the error persists and is saved in the conversation
+              const errorMessageContent = stream || `⚠️ **Unable to Complete Request**\n\n${res.error}\n\n*You can try again in a moment or adjust your request.*`;
+              
+              setMessages(prev => updateLastItem(prev, message => ({
+                ...message,
+                content: errorMessageContent,
+                timestamp: new Date().toISOString(),
+                chat_id: currentChatId || message.chat_id, // Include chat_id even on error
+              })));
+            } else {
+              console.log('[Chat] 🚫 Background stream error - skipping message update');
+            }
             
             // Track as failed response
             await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
@@ -1098,13 +1241,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Handle additional_data after streaming completes
           if (res?.data?.additional_data) {
-            // Update last message with additional_data and chat_id
-            // DON'T create separate messages for videos - they're already in files[]
-            setMessages(prev => updateLastItem(prev, message => ({
-              ...message,
-              additional_data: res?.data?.additional_data || [],
-              chat_id: currentChatId || message.chat_id, // Ensure chat_id is included
-            })));
+            // CRITICAL: Only update if this stream belongs to current conversation
+            const isCurrentConv = currentConversationIdRef.current === conversationId;
+            if (isCurrentConv) {
+              console.log('[Chat] 📎 Updating additional_data for current conversation');
+              // Update last message with additional_data and chat_id
+              // DON'T create separate messages for videos - they're already in files[]
+              setMessages(prev => updateLastItem(prev, message => ({
+                ...message,
+                additional_data: res?.data?.additional_data || [],
+                chat_id: currentChatId || message.chat_id, // Ensure chat_id is included
+              })));
+            } else {
+              console.log('[Chat] 🚫 Background stream - skipping additional_data UI update');
+            }
           }
           
           // Track successful response
@@ -1171,15 +1321,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         errorMessage = e.message;
       }
       
-      // Save error as a permanent bot message in chat history
-      const errorMessageContent = `⚠️ **Unable to Complete Request**\n\n${errorMessage}\n\n*Please try again or contact support if the issue persists.*`;
-      
-      setMessages(prev => updateLastItem(prev, message => ({
-        ...message,
-        content: errorMessageContent,
-        timestamp: new Date().toISOString(),
-        chat_id: currentChatId || message.chat_id, // Include chat_id even on error
-      })));
+      // CRITICAL: Only update messages if this is the current conversation
+      const isCurrentConv = currentConversationIdRef.current === conversationId;
+      if (isCurrentConv) {
+        // Save error as a permanent bot message in chat history
+        const errorMessageContent = `⚠️ **Unable to Complete Request**\n\n${errorMessage}\n\n*Please try again or contact support if the issue persists.*`;
+        
+        setMessages(prev => updateLastItem(prev, message => ({
+          ...message,
+          content: errorMessageContent,
+          timestamp: new Date().toISOString(),
+          chat_id: currentChatId || message.chat_id, // Include chat_id even on error
+        })));
+      } else {
+        console.log('[Chat] 🚫 Background stream error - skipping message update');
+      }
       
       // Set chat error for banner display
       setChatError({
@@ -1190,55 +1346,110 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Track failed response
       const modelId = getDefaultModelId();
-      const conversationId = currentConversationId || '';
+      const convId = conversationId || currentConversationId || ''; // Use existing conversationId from outer scope
       await mixpanelService.trackAI(AIEvent.CHAT_RESPONSE_FAILED, {
         model_used: modelId,
         is_local_model: false,
-        conversation_id: conversationId,
+        conversation_id: convId,
         error_message: errorMessage,
       });
     } finally {
+      // IMPORTANT: Capture stream content from per-conversation refs
+      // This prevents race conditions where another stream might overwrite the refs
+      const conversationData = conversationStreamRefs.current.get(conversationId);
+      const finalStreamContent = conversationData?.stream || '';
+      const finalReasoningContent = conversationData?.reasoning || '';
+      const finalChatId = currentChatId;
+      
+      console.log('[Chat] 📸 Captured stream content from per-conversation ref:', {
+        conversationId,
+        streamLength: finalStreamContent.length,
+        reasoningLength: finalReasoningContent.length,
+        hasChatId: !!finalChatId,
+        source: conversationData ? 'per-conversation-ref' : 'none'
+      });
+      
       // Always clean up streaming state
       streamControllerRef.current = null;
       isSendingRef.current = false;
       setIsSending(false);
       setChatLoading(false);
       setStreamWorking(false); // Reset stream working state
-      setIntermediate(''); // Clear intermediate state to stop loading indicator
       
-      // Combine reasoning back into message content after streaming completes
-      // Use refs to get the final values after streaming
-      const finalStreamContent = streamRef.current;
-      const finalReasoningContent = reasoningTextRef.current;
-      
-      if (finalReasoningContent && finalReasoningContent.trim()) {
-        const finalContent = finalStreamContent + (finalStreamContent ? '\n\n' : '') + `<jmeReasoning>${finalReasoningContent}</jmeReasoning>`;
-        console.log('[Chat] 🧠 Combining reasoning into final message content');
-        console.log('[Chat] 🧠 Stream length:', finalStreamContent.length, 'Reasoning length:', finalReasoningContent.length);
-        console.log('[Chat] 🧠 Final content preview:', finalContent.substring(0, 100) + '...');
-        
-        setMessages(prev => updateLastItem(prev, message => ({
-          ...message,
-          content: finalContent,
-          chat_id: currentChatId || message.chat_id, // Include chat_id from meta chunk
-        })));
-        
-        // Clear reasoning text after adding to content
-        setReasoningText('');
+      // Only clear UI states if this stream belongs to the currently active conversation
+      // This prevents background stream cleanup from affecting the visible conversation
+      const isCurrentConversation = currentConversationIdRef.current === conversationId;
+      if (isCurrentConversation) {
+        console.log('[Chat] 🧹 Clearing UI states for active conversation:', conversationId);
+        setIntermediate(''); // Clear intermediate state to stop loading indicator
+      } else {
+        console.log('[Chat] 🔕 Background stream completed, not clearing UI:', {
+          backgroundStream: conversationId,
+          activeConversation: currentConversationIdRef.current
+        });
       }
       
-      // Update message with chat_id even if there's no reasoning
-      // This ensures the chat_id from meta chunk is always saved
-      if (currentChatId) {
-        console.log('[Chat] 🆔 Updating message with chat_id from meta:', currentChatId);
-        setMessages(prev => updateLastItem(prev, message => ({
-          ...message,
-          chat_id: currentChatId,
-        })));
+      // Clear streaming conversation tracking BEFORE calling completeStream
+      // This ensures the stream is marked as complete before notification check
+      const wasBackgroundStream = !isCurrentConversation;
+      setStreamingForConversationId(null);
+      streamingForConversationIdRef.current = null;
+      
+      // Notify StreamingStateContext that the stream is complete
+      // This will show a toast if the stream completed in the background
+      console.log('[Chat] 🔔 Calling completeStream for:', conversationId, 'Background?', wasBackgroundStream);
+      
+      // Get conversation title for notification
+      const conversation = conversations.find(c => c.id === conversationId);
+      const chatTitle = conversation?.title || conversation?.content_summary || 'Chat';
+      
+      completeStreamFn(conversationId, { chatTitle });
+      
+      // Update messages for ALL streams (both foreground and background)
+      // But only update the UI for foreground streams
+      if (finalStreamContent) {
+        console.log('[Chat] 💾 Finalizing message content:', {
+          conversationId,
+          isCurrentConversation,
+          contentLength: finalStreamContent.length
+        });
+        
+        // Combine reasoning if present
+        let finalContent = finalStreamContent;
+        if (finalReasoningContent && finalReasoningContent.trim()) {
+          finalContent = finalStreamContent + (finalStreamContent ? '\n\n' : '') + `<jmeReasoning>${finalReasoningContent}</jmeReasoning>`;
+          console.log('[Chat] 🧠 Combined reasoning into final content');
+        }
+        
+        // For foreground streams: Update the UI immediately
+        // For background streams: The message is already in the messages array (added at sendMessage start)
+        //                         We just need to update its content when user is viewing it
+        if (isCurrentConversation) {
+          console.log('[Chat] 💾 Updating UI for foreground stream');
+          setMessages(prev => updateLastItem(prev, message => ({
+            ...message,
+            content: finalContent,
+            chat_id: finalChatId || message.chat_id,
+          })));
+        } else {
+          console.log('[Chat] 🔕 Background stream - content saved in per-conversation ref');
+          console.log('[Chat] ↩️  Will update UI when user returns to conversation:', conversationId);
+          // Content is captured, will be used when fetchMessages loads this conversation
+        }
+        
+        console.log('[Chat] ✅ Message finalized');
       }
+      
+      // Clean up per-conversation refs after a delay
+      setTimeout(() => {
+        conversationStreamRefs.current.delete(conversationId);
+        console.log('[Chat] 🧹 Cleaned up per-conversation ref for:', conversationId);
+      }, 5000); // 5 second grace period for UI transitions
       
       // Finalize artifacts after streaming completes (with error recovery)
-      if (stream && currentConversationId) {
+      // Only finalize artifacts for the currently active conversation
+      if (isCurrentConversation && stream && currentConversationId) {
+        console.log('[Chat] 🎨 Finalizing artifacts for active conversation');
         const messageId = `${currentConversationId}-${Date.now()}`;
         
         try {
@@ -1295,7 +1506,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Don't reset stream here - it's used for display and doesn't affect input state
     }
     
-  }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream, stream, reasoningText, finalizeArtifacts, finalizeDocuments]);
+  }, [files, currentConversationId, user, checkFileExists, saveBase64ToFile, optimizeImage, getFileType, handleError, abortCurrentStream, stream, reasoningText, finalizeArtifacts, finalizeDocuments, startStreamFn, completeStreamFn, setActiveConversationFn]);
 
   const fetchConversation = useCallback(async (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => {
     const effectiveLimit = limitValue || 20;
@@ -1339,6 +1550,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchMessages = useCallback(async (conversationId?: string) => {
     if (!conversationId) return;
+    
+    // Update active conversation in StreamingStateContext
+    // This ensures we track which conversation is currently focused
+    setActiveConversationFn(conversationId);
+    
+    // Clear streaming UI states if they belong to a different conversation
+    // This prevents background streams from appearing in the wrong conversation
+    if (streamingForConversationIdRef.current && streamingForConversationIdRef.current !== conversationId) {
+      console.log('[Chat] Clearing streaming UI for different conversation:', {
+        streamingFor: streamingForConversationIdRef.current,
+        switchingTo: conversationId
+      });
+      setStream('');
+      setIntermediate('');
+      setReasoningText('');
+      // Don't clear streamingForConversationId - background stream still running
+    }
     
     // Abort any previous fetch
     if (fetchControllerRef.current) {
@@ -1418,7 +1646,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fetchControllerRef.current = null;
       setIsLoading(false);
     }
-  }, []); // No longer depends on abortCurrentStream since we don't abort on navigation
+  }, [setActiveConversationFn]); // Depends only on the specific function we need
 
   const createConversation = useCallback(async (participantIds: string[]): Promise<string> => {
     try {
@@ -1667,6 +1895,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       currentStreamingDocument,
       getDocumentsForMessage,
       updateMessageReaction,
+      streamingForConversationId,
     };
   }, [
     isChatLoading,
@@ -1705,6 +1934,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     currentStreamingDocument,
     getDocumentsForMessage,
     updateMessageReaction,
+    streamingForConversationId,
   ]);
 
   return (

@@ -6,6 +6,8 @@ PODS:
     - DGSwiftUtilities (~> 0.29)
   - DGSwiftUtilities (0.47.0)
   - DoubleConversion (1.1.6)
+  - EXApplication (6.0.2):
+    - ExpoModulesCore
   - EXAV (15.0.2):
     - ExpoModulesCore
     - ReactCommon/turbomodule/core
@@ -14,6 +16,8 @@ PODS:
   - EXImageLoader (5.0.0):
     - ExpoModulesCore
     - React-Core
+  - EXNotifications (0.29.14):
+    - ExpoModulesCore
   - Expo (52.0.47):
     - ExpoModulesCore
   - ExpoAsset (11.0.5):
@@ -2129,50 +2133,52 @@ PODS:
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
   - SocketRocket (0.7.1)
-  - Stripe (23.27.6):
-    - StripeApplePay (= 23.27.6)
-    - StripeCore (= 23.27.6)
-    - StripePayments (= 23.27.6)
-    - StripePaymentsUI (= 23.27.6)
-    - StripeUICore (= 23.27.6)
-  - stripe-react-native (0.37.3):
+  - Stripe (23.28.3):
+    - StripeApplePay (= 23.28.3)
+    - StripeCore (= 23.28.3)
+    - StripePayments (= 23.28.3)
+    - StripePaymentsUI (= 23.28.3)
+    - StripeUICore (= 23.28.3)
+  - stripe-react-native (0.38.6):
     - React-Core
-    - Stripe (~> 23.27.0)
-    - StripeApplePay (~> 23.27.0)
-    - StripeFinancialConnections (~> 23.27.0)
-    - StripePayments (~> 23.27.0)
-    - StripePaymentSheet (~> 23.27.0)
-    - StripePaymentsUI (~> 23.27.0)
-  - StripeApplePay (23.27.6):
-    - StripeCore (= 23.27.6)
-  - StripeCore (23.27.6)
-  - StripeFinancialConnections (23.27.6):
-    - StripeCore (= 23.27.6)
-    - StripeUICore (= 23.27.6)
-  - StripePayments (23.27.6):
-    - StripeCore (= 23.27.6)
-    - StripePayments/Stripe3DS2 (= 23.27.6)
-  - StripePayments/Stripe3DS2 (23.27.6):
-    - StripeCore (= 23.27.6)
-  - StripePaymentSheet (23.27.6):
-    - StripeApplePay (= 23.27.6)
-    - StripeCore (= 23.27.6)
-    - StripePayments (= 23.27.6)
-    - StripePaymentsUI (= 23.27.6)
-  - StripePaymentsUI (23.27.6):
-    - StripeCore (= 23.27.6)
-    - StripePayments (= 23.27.6)
-    - StripeUICore (= 23.27.6)
-  - StripeUICore (23.27.6):
-    - StripeCore (= 23.27.6)
+    - Stripe (~> 23.28.0)
+    - StripeApplePay (~> 23.28.0)
+    - StripeFinancialConnections (~> 23.28.0)
+    - StripePayments (~> 23.28.0)
+    - StripePaymentSheet (~> 23.28.0)
+    - StripePaymentsUI (~> 23.28.0)
+  - StripeApplePay (23.28.3):
+    - StripeCore (= 23.28.3)
+  - StripeCore (23.28.3)
+  - StripeFinancialConnections (23.28.3):
+    - StripeCore (= 23.28.3)
+    - StripeUICore (= 23.28.3)
+  - StripePayments (23.28.3):
+    - StripeCore (= 23.28.3)
+    - StripePayments/Stripe3DS2 (= 23.28.3)
+  - StripePayments/Stripe3DS2 (23.28.3):
+    - StripeCore (= 23.28.3)
+  - StripePaymentSheet (23.28.3):
+    - StripeApplePay (= 23.28.3)
+    - StripeCore (= 23.28.3)
+    - StripePayments (= 23.28.3)
+    - StripePaymentsUI (= 23.28.3)
+  - StripePaymentsUI (23.28.3):
+    - StripeCore (= 23.28.3)
+    - StripePayments (= 23.28.3)
+    - StripeUICore (= 23.28.3)
+  - StripeUICore (23.28.3):
+    - StripeCore (= 23.28.3)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
   - "boost (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_9355009ca0ae0c045e30935ea3eee0f6/node_modules/react-native/third-party-podspecs/boost.podspec`)"
   - "DoubleConversion (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_9355009ca0ae0c045e30935ea3eee0f6/node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)"
+  - "EXApplication (from `../node_modules/.pnpm/expo-application@6.0.2_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+_4e18cd264e8cb4002eb12bc7b719c960/node_modules/expo-application/ios`)"
   - "EXAV (from `../node_modules/.pnpm/expo-av@15.0.2_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.2_8dc22d92c4b799ed39f0a0507b8ec06a/node_modules/expo-av/ios`)"
   - "EXConstants (from `../node_modules/.pnpm/expo-constants@17.0.8_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+c_2467f7ad0572d2fec888040460f2a9d9/node_modules/expo-constants/ios`)"
   - "EXImageLoader (from `../node_modules/.pnpm/expo-image-loader@5.0.0_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel_067aade0dc34e2fca8acc3e239e9d737/node_modules/expo-image-loader/ios`)"
+  - "EXNotifications (from `../node_modules/.pnpm/expo-notifications@0.29.14_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@ba_c265df49bc3b38066ca52cd7309b170c/node_modules/expo-notifications/ios`)"
   - "Expo (from `../node_modules/.pnpm/expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@expo+metr_9008ed0115e785201d4a9bbff912d898/node_modules/expo`)"
   - "ExpoAsset (from `../node_modules/.pnpm/expo-asset@11.0.5_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@_523aedb0d7985bed1f0d18626c3d551c/node_modules/expo-asset/ios`)"
   - "ExpoBlur (from `../node_modules/.pnpm/expo-blur@14.0.3_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7_eb54ef25d609c2594b8e90f91abac2a4/node_modules/expo-blur/ios`)"
@@ -2321,12 +2327,16 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_9355009ca0ae0c045e30935ea3eee0f6/node_modules/react-native/third-party-podspecs/boost.podspec"
   DoubleConversion:
     :podspec: "../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_9355009ca0ae0c045e30935ea3eee0f6/node_modules/react-native/third-party-podspecs/DoubleConversion.podspec"
+  EXApplication:
+    :path: "../node_modules/.pnpm/expo-application@6.0.2_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+_4e18cd264e8cb4002eb12bc7b719c960/node_modules/expo-application/ios"
   EXAV:
     :path: "../node_modules/.pnpm/expo-av@15.0.2_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.2_8dc22d92c4b799ed39f0a0507b8ec06a/node_modules/expo-av/ios"
   EXConstants:
     :path: "../node_modules/.pnpm/expo-constants@17.0.8_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+c_2467f7ad0572d2fec888040460f2a9d9/node_modules/expo-constants/ios"
   EXImageLoader:
     :path: "../node_modules/.pnpm/expo-image-loader@5.0.0_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel_067aade0dc34e2fca8acc3e239e9d737/node_modules/expo-image-loader/ios"
+  EXNotifications:
+    :path: "../node_modules/.pnpm/expo-notifications@0.29.14_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@ba_c265df49bc3b38066ca52cd7309b170c/node_modules/expo-notifications/ios"
   Expo:
     :path: "../node_modules/.pnpm/expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@expo+metr_9008ed0115e785201d4a9bbff912d898/node_modules/expo"
   ExpoAsset:
@@ -2559,9 +2569,11 @@ SPEC CHECKSUMS:
   ContextMenuAuxiliaryPreview: 20be0be795b783b68f8792732eed4bed9f202c1c
   DGSwiftUtilities: 567f8d5ee618f0b7afb185b17aa45ff356315a0f
   DoubleConversion: f16ae600a246532c4020132d54af21d0ddb2a385
+  EXApplication: 4c72f6017a14a65e338c5e74fca418f35141e819
   EXAV: 4c41f0a6ae54a0b96597abc90e37962ab2ee0d85
   EXConstants: fcfc75800824ac2d5c592b5bc74130bad17b146b
   EXImageLoader: e5da974e25b13585c196b658a440720c075482d5
+  EXNotifications: 9d3d17e52c95f377750d4a2ae553a716313dd4aa
   Expo: 1687edb10c76b0c0f135306d6ae245379f50ed54
   ExpoAsset: 48386d40d53a8c1738929b3ed509bcad595b5516
   ExpoBlur: 392c1207f71d0ecf22371621c1fbd44ba84d9742
@@ -2686,15 +2698,15 @@ SPEC CHECKSUMS:
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  Stripe: 9fec845645e39f371e6898926d096fd9c2feb5a5
-  stripe-react-native: 4d22dfe6c98fbafb77b875c7a9bbf47ca227680f
-  StripeApplePay: 5f017e8dfe259fafbab70137776189deef754bb2
-  StripeCore: 01ec57f0dddfe742054dc6a322f811426c25313d
-  StripeFinancialConnections: 56698cb6274bf89fb8c76b934f6156f368e97765
-  StripePayments: 6adf11faf1b7038e77aa97019410305c6adca79d
-  StripePaymentSheet: 3eaf870c4388e44b0cc37e4c69d00b6957fd8bd7
-  StripePaymentsUI: 59ccddeacad592b09fa67e8d641340820ddb4751
-  StripeUICore: 879bbf5889265db13f52fac8aad7a176ba62481f
+  Stripe: cdf416cf2efe286f532a6306de0fcaa0ecc8c71a
+  stripe-react-native: cfd043258216a17eaf49b3cdd67954f90438b7e9
+  StripeApplePay: efb62ffc08e6cd4f161d77ddb45de2451075c54e
+  StripeCore: 9731f05e327c3dcaf7d7abd116840ceaa9482bbe
+  StripeFinancialConnections: 46c0049aaab3a179193502bce4a8096eb7b73f55
+  StripePayments: dd1867a620b0b8b5e294e9ff2f1f7b7770765f47
+  StripePaymentSheet: d155dfde74e90784d054deffb4f561a1f6dd638f
+  StripePaymentsUI: c24f990b03a68a7f6fe704b15dd487e7bb6b603e
+  StripeUICore: f2d514e900c37436dc5427fdf2c29d68ab1c2935
   Yoga: feb4910aba9742cfedc059e2b2902e22ffe9954a
 
 PODFILE CHECKSUM: 999e1a674c5fdd98fbc7c4d470a962cb52390ca9

@@ -25,6 +25,9 @@ import LocalModelErrorBoundary from "@/components/LocalModelErrorBoundary";
 import { IntegrationsProvider } from "@/contexts/IntegrationsContext";
 import { StripeProvider } from "@/providers/StripeProvider";
 import { StreamingStateProvider } from "@/contexts/StreamingStateContext";
+import { RootSiblingParent } from 'react-native-root-siblings';
+import { NotificationProvider, useNotification } from "@/contexts/NotificationContext";
+import BackgroundStreamNotification from "@/components/BackgroundStreamNotification";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -285,28 +288,56 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
-    <SafeAreaProvider >
-    <AuthProvider>
-      <StripeProvider>
-        <LocalModelErrorBoundary>
-          <ChatProvider>
-            <StreamingStateProvider>
-              <IntegrationsProvider>
-                <MixpanelProvider>
-                  <ThemeProvider
-                    value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-                  >
-                    <GestureHandlerRootView style={{ flex: 1 }}>
-                      <Layout />
-                    </GestureHandlerRootView>
-                  </ThemeProvider>
-                </MixpanelProvider>
-              </IntegrationsProvider>
-            </StreamingStateProvider>
-          </ChatProvider>
-        </LocalModelErrorBoundary>
-      </StripeProvider>
-    </AuthProvider>
-    </SafeAreaProvider>
+    <RootSiblingParent>
+      <SafeAreaProvider >
+      <AuthProvider>
+        <StripeProvider>
+          <LocalModelErrorBoundary>
+            <NotificationProvider>
+              <StreamingStateProvider>
+                <ChatProvider>
+                  <IntegrationsProvider>
+                    <MixpanelProvider>
+                      <ThemeProvider
+                        value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+                      >
+                        <GestureHandlerRootView style={{ flex: 1 }}>
+                          <Layout />
+                          <NotificationLayer />
+                        </GestureHandlerRootView>
+                      </ThemeProvider>
+                    </MixpanelProvider>
+                  </IntegrationsProvider>
+                </ChatProvider>
+              </StreamingStateProvider>
+            </NotificationProvider>
+          </LocalModelErrorBoundary>
+        </StripeProvider>
+      </AuthProvider>
+      </SafeAreaProvider>
+    </RootSiblingParent>
   );
 }
+
+// Notification layer that renders above all content
+const NotificationLayer: React.FC = () => {
+  const { notificationVisible, notificationData, hideNotification } = useNotification();
+  const router = useRouter();
+  
+  const handleNotificationPress = () => {
+    if (notificationData?.conversationId) {
+      console.log('[NotificationLayer] 📱 Navigating to conversation:', notificationData.conversationId);
+      router.push(`/(chat)/${notificationData.conversationId}`);
+    }
+  };
+  
+  return (
+    <BackgroundStreamNotification
+      visible={notificationVisible}
+      message={notificationData?.message || ''}
+      chatTitle={notificationData?.chatTitle || 'Chat'}
+      onDismiss={hideNotification}
+      onPress={handleNotificationPress}
+    />
+  );
+};

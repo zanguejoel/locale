@@ -146,6 +146,7 @@ const ChatPage = () => {
     getArtifactsForMessage,
     updateMessageReaction,
     stopStreaming,
+    streamingForConversationId,
   } = chat;
 
   // Calculate dynamic buffer height based on last user message type
@@ -177,6 +178,14 @@ const ChatPage = () => {
   const id = (params as { id?: string })?.id
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   
+  // Only show streaming content if it belongs to the current conversation
+  // This prevents background streams from appearing in the wrong conversation
+  const isStreamingForThisConversation = !streamingForConversationId || streamingForConversationId === id;
+  const displayStream = isStreamingForThisConversation ? stream : '';
+  const displayIntermediate = isStreamingForThisConversation ? intermediate : '';
+  const displayReasoningText = isStreamingForThisConversation ? reasoningText : '';
+  const displayStreamingArtifact = isStreamingForThisConversation ? currentStreamingArtifact : null;
+  
   // Debug: Log reasoning text changes
   useEffect(() => {
     if (reasoningText) {
@@ -193,10 +202,10 @@ const ChatPage = () => {
       console.log('[ChatPage] 🔍 Intermediate state changed in ChatPage:', {
         intermediate,
         isSending,
-        hasIntermediate: !!intermediate
+        hasIntermediate: !!displayIntermediate
       });
     }
-  }, [intermediate, isSending]);
+  }, [displayIntermediate, isSending]);
   
   // File attachments state
   const [files, setFiles] = useState<SelectedFile[]>([]);
@@ -967,10 +976,10 @@ const ChatPage = () => {
               isLastInGroup={isLastInGroup}
               isOnlyInGroup={isOnlyInGroup}
               artifacts={getArtifactsForMessage(item.id || '')}
-              streamingArtifact={currentStreamingArtifact}
+              streamingArtifact={displayStreamingArtifact}
               streamingReasoning={(() => {
                 const isLastMessage = index === displayMessages.length - 1;
-                const reasoning = isLastMessage ? reasoningText : undefined;
+                const reasoning = isLastMessage ? displayReasoningText : undefined;
                 if (reasoning && reasoning.length > 0) {
                   console.log('[ChatPage] 🧠 Passing reasoning to last message:', {
                     messageIndex: index,
@@ -1002,7 +1011,7 @@ const ChatPage = () => {
         </SwipeableMessage>
       </>
     );
-  }, [displayMessages, isSending, pinnedMessages, handleCopyMessage, handleDeleteMessage, handleRetryMessage, handleEditMessage, handleMessagePin, handleReplyToMessage, handleScrollToPinnedMessage, handleAddReaction, handleRemoveReaction, getArtifactsForMessage, currentStreamingArtifact, reasoningText, id, fetchMessages, handleLikeMessage, handleDislikeMessage]);
+  }, [displayMessages, isSending, pinnedMessages, handleCopyMessage, handleDeleteMessage, handleRetryMessage, handleEditMessage, handleMessagePin, handleReplyToMessage, handleScrollToPinnedMessage, handleAddReaction, handleRemoveReaction, getArtifactsForMessage, displayStreamingArtifact, displayReasoningText, id, fetchMessages, handleLikeMessage, handleDislikeMessage]);
 
   const CustomView = Platform.OS === 'ios' ? PanGestureHandler : View
 

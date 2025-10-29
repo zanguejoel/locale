@@ -50,6 +50,78 @@ jest.mock('expo-file-system', () => ({
   readDirectoryAsync: jest.fn(() => Promise.resolve([])),
 }));
 
+// Mock React Native FS
+jest.mock('react-native-fs', () => ({
+  mkdir: jest.fn(() => Promise.resolve()),
+  moveFile: jest.fn(() => Promise.resolve()),
+  copyFile: jest.fn(() => Promise.resolve()),
+  pathForBundle: jest.fn(() => Promise.resolve('')),
+  pathForGroup: jest.fn(() => Promise.resolve('')),
+  getFSInfo: jest.fn(() => Promise.resolve({ totalSpace: 0, freeSpace: 0 })),
+  getAllExternalFilesDirs: jest.fn(() => Promise.resolve([])),
+  unlink: jest.fn(() => Promise.resolve()),
+  exists: jest.fn(() => Promise.resolve(false)),
+  stopDownload: jest.fn(),
+  resumeDownload: jest.fn(() => Promise.resolve()),
+  isResumable: jest.fn(() => Promise.resolve(false)),
+  stopUpload: jest.fn(),
+  completeHandlerIOS: jest.fn(),
+  readDir: jest.fn(() => Promise.resolve([])),
+  readDirAssets: jest.fn(() => Promise.resolve([])),
+  existsAssets: jest.fn(() => Promise.resolve(false)),
+  readdir: jest.fn(() => Promise.resolve([])),
+  setReadable: jest.fn(() => Promise.resolve(true)),
+  stat: jest.fn(() => Promise.resolve({ size: 0, isFile: () => true, isDirectory: () => false })),
+  readFile: jest.fn(() => Promise.resolve('')),
+  read: jest.fn(() => Promise.resolve('')),
+  readFileAssets: jest.fn(() => Promise.resolve('')),
+  hash: jest.fn(() => Promise.resolve('')),
+  copyFileAssets: jest.fn(() => Promise.resolve()),
+  copyFileAssetsIOS: jest.fn(() => Promise.resolve()),
+  copyAssetsVideoIOS: jest.fn(() => Promise.resolve()),
+  writeFile: jest.fn(() => Promise.resolve()),
+  appendFile: jest.fn(() => Promise.resolve()),
+  write: jest.fn(() => Promise.resolve()),
+  downloadFile: jest.fn(() => ({
+    jobId: 1,
+    promise: Promise.resolve({ statusCode: 200, bytesWritten: 0 }),
+  })),
+  uploadFiles: jest.fn(() => ({
+    jobId: 1,
+    promise: Promise.resolve({ statusCode: 200, body: '' }),
+  })),
+  touch: jest.fn(() => Promise.resolve()),
+  MainBundlePath: '',
+  CachesDirectoryPath: '/mock/caches',
+  DocumentDirectoryPath: '/mock/documents',
+  ExternalDirectoryPath: '/mock/external',
+  ExternalStorageDirectoryPath: '/mock/external-storage',
+  TemporaryDirectoryPath: '/mock/temp',
+  LibraryDirectoryPath: '/mock/library',
+  PicturesDirectoryPath: '/mock/pictures',
+}));
+
+// Mock Expo Image Manipulator
+jest.mock('expo-image-manipulator', () => ({
+  manipulateAsync: jest.fn((uri, actions, options) => 
+    Promise.resolve({
+      uri: uri,
+      width: 800,
+      height: 600,
+      base64: null,
+    })
+  ),
+  FlipType: {
+    Horizontal: 'horizontal',
+    Vertical: 'vertical',
+  },
+  SaveFormat: {
+    JPEG: 'jpeg',
+    PNG: 'png',
+    WEBP: 'webp',
+  },
+}));
+
 // Mock NetInfo
 jest.mock('@react-native-community/netinfo', () => ({
   fetch: jest.fn(() => Promise.resolve({ isConnected: true })),
@@ -107,6 +179,99 @@ jest.mock('react-native-reanimated', () => {
   Reanimated.default.call = () => {};
   return Reanimated;
 });
+
+// Mock Expo Clipboard
+jest.mock('expo-clipboard', () => ({
+  getStringAsync: jest.fn(() => Promise.resolve('')),
+  setStringAsync: jest.fn(() => Promise.resolve()),
+  hasStringAsync: jest.fn(() => Promise.resolve(false)),
+}));
+
+// Mock Expo Image Picker
+jest.mock('expo-image-picker', () => ({
+  requestMediaLibraryPermissionsAsync: jest.fn(() => 
+    Promise.resolve({ status: 'granted', canAskAgain: true, granted: true, expires: 'never' })
+  ),
+  requestCameraPermissionsAsync: jest.fn(() => 
+    Promise.resolve({ status: 'granted', canAskAgain: true, granted: true, expires: 'never' })
+  ),
+  launchImageLibraryAsync: jest.fn(() => 
+    Promise.resolve({ 
+      canceled: false, 
+      assets: [{ uri: 'file:///mock/image.jpg', width: 800, height: 600 }] 
+    })
+  ),
+  launchCameraAsync: jest.fn(() => 
+    Promise.resolve({ 
+      canceled: false, 
+      assets: [{ uri: 'file:///mock/photo.jpg', width: 800, height: 600 }] 
+    })
+  ),
+  MediaTypeOptions: {
+    All: 'All',
+    Videos: 'Videos',
+    Images: 'Images',
+  },
+}));
+
+// Mock uuid
+jest.mock('uuid', () => ({
+  v4: jest.fn(() => 'mock-uuid-v4'),
+  v1: jest.fn(() => 'mock-uuid-v1'),
+  v3: jest.fn(() => 'mock-uuid-v3'),
+  v5: jest.fn(() => 'mock-uuid-v5'),
+}));
+
+// Mock Mixpanel
+jest.mock('mixpanel-react-native', () => ({
+  Mixpanel: jest.fn().mockImplementation(() => ({
+    init: jest.fn(() => Promise.resolve()),
+    identify: jest.fn(),
+    track: jest.fn(),
+    reset: jest.fn(),
+    getPeople: jest.fn(() => ({
+      set: jest.fn(),
+      setOnce: jest.fn(),
+      increment: jest.fn(),
+      append: jest.fn(),
+      union: jest.fn(),
+      remove: jest.fn(),
+      unset: jest.fn(),
+      deleteUser: jest.fn(),
+    })),
+    setLoggingEnabled: jest.fn(),
+    hasOptedOutTracking: jest.fn(() => Promise.resolve(false)),
+    optInTracking: jest.fn(),
+    optOutTracking: jest.fn(),
+    flush: jest.fn(),
+  })),
+}));
+
+// Mock Expo Constants
+jest.mock('expo-constants', () => ({
+  default: {
+    expoConfig: {
+      extra: {
+        mixpanelToken: 'mock-token',
+      },
+    },
+    manifest: {},
+    platform: {},
+  },
+}));
+
+// Mock React Native ExecuTorch
+jest.mock('react-native-executorch', () => ({
+  install: jest.fn(),
+  LLAMA3_2_1B: 'llama3_2_1b',
+  LLAMA3_2_3B: 'llama3_2_3b',
+  QWEN2_5_0_5B: 'qwen2_5_0_5b',
+  loadModule: jest.fn(() => Promise.resolve({ moduleId: 'mock-module-id' })),
+  forward: jest.fn(() => Promise.resolve({ output: 'mock output' })),
+  unloadModule: jest.fn(() => Promise.resolve()),
+  interrupt: jest.fn(() => Promise.resolve()),
+  clearCache: jest.fn(() => Promise.resolve()),
+}));
 
 // Mock console methods to reduce noise in tests
 global.console = {

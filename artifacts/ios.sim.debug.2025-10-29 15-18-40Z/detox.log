@@ -1,0 +1,477 @@
+11:18:40.959 detox[99866] [90mB[39m node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/local-cli/cli.js test --configuration ios.sim.debug --record-logs all --take-screenshots all
+  data: {
+    "id": "34b8fe8d-5365-c114-d1e4-ac14468f1783",
+    "detoxConfig": {
+      "configurationName": "ios.sim.debug",
+      "apps": {
+        "default": {
+          "type": "ios.app",
+          "binaryPath": "ios/build/Build/Products/Debug-iphonesimulator/Odyssey.app",
+          "build": "xcodebuild -workspace ios/Odyssey.xcworkspace -scheme Odyssey -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -quiet"
+        }
+      },
+      "artifacts": {
+        "rootDir": "artifacts/ios.sim.debug.2025-10-29 15-18-40Z",
+        "plugins": {
+          "log": {
+            "enabled": true,
+            "keepOnlyFailedTestsArtifacts": false
+          },
+          "screenshot": {
+            "enabled": true,
+            "shouldTakeAutomaticSnapshots": true,
+            "keepOnlyFailedTestsArtifacts": false
+          },
+          "video": {
+            "enabled": false,
+            "keepOnlyFailedTestsArtifacts": false
+          },
+          "instruments": {
+            "enabled": false,
+            "keepOnlyFailedTestsArtifacts": false
+          },
+          "uiHierarchy": {
+            "enabled": false,
+            "keepOnlyFailedTestsArtifacts": false
+          }
+        }
+      },
+      "behavior": {
+        "init": {
+          "keepLockFile": false,
+          "reinstallApp": true,
+          "exposeGlobals": true
+        },
+        "cleanup": {
+          "shutdownDevice": false
+        },
+        "launchApp": "auto"
+      },
+      "cli": {
+        "recordLogs": "all",
+        "takeScreenshots": "all",
+        "configuration": "ios.sim.debug",
+        "start": true
+      },
+      "commands": [
+        {
+          "appName": "default",
+          "build": "xcodebuild -workspace ios/Odyssey.xcworkspace -scheme Odyssey -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -quiet"
+        }
+      ],
+      "device": {
+        "type": "ios.simulator",
+        "device": {
+          "type": "iPhone 15 Pro"
+        }
+      },
+      "logger": {
+        "level": "info",
+        "overrideConsole": true,
+        "options": {
+          "showLoggerName": true,
+          "showPid": true,
+          "showLevel": false,
+          "showMetadata": false,
+          "basepath": "/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src",
+          "prefixers": {},
+          "stringifiers": {}
+        }
+      },
+      "testRunner": {
+        "retries": 0,
+        "forwardEnv": false,
+        "detached": false,
+        "bail": false,
+        "noRetryArgs": [
+          "shard"
+        ],
+        "jest": {
+          "setupTimeout": 120000,
+          "teardownTimeout": 30000,
+          "retryAfterCircusRetries": false,
+          "reportWorkerAssign": true
+        },
+        "args": {
+          "$0": "jest",
+          "_": [],
+          "config": "e2e/jest.config.js",
+          "--": []
+        }
+      },
+      "session": {
+        "autoStart": true,
+        "debugSynchronization": 10000
+      }
+    },
+    "detoxIPCServer": "primary-99866",
+    "testResults": [],
+    "testSessionIndex": 0,
+    "workersCount": 0
+  }
+11:18:40.965 detox[99866] [90mi[39m Server path not specified, so defaulting to ipc.config.socketRoot + ipc.config.appspace + ipc.config.id /tmp/detox.primary-99866
+11:18:40.966 detox[99866] [90mi[39m starting server on  /tmp/detox.primary-99866 
+11:18:40.966 detox[99866] [90mi[39m starting TLS server false
+11:18:40.966 detox[99866] [90mi[39m starting server as Unix || Windows Socket
+11:18:40.968 detox[99866] [90mi[39m Detox server listening on localhost:57465...
+11:18:40.971 detox[99866] [90mi[39m Serialized the session state at: /private/var/folders/8z/dz9xwfpj6nx__f92zz7_9wn40000gn/T/34b8fe8d-5365-c114-d1e4-ac14468f1783.detox.json
+11:18:40.972 detox[99866] [90mB[39m jest --config e2e/jest.config.js
+11:18:41.781 detox[99879] [90mi[39m Service path not specified, so defaulting to ipc.config.socketRoot + ipc.config.appspace + id 
+11:18:41.782 detox[99879] [90mi[39m requested connection to  primary-99866 /tmp/detox.primary-99866
+11:18:41.782 detox[99879] [90mi[39m Connecting client on Unix Socket : /tmp/detox.primary-99866
+11:18:41.783 detox[99866] [90mi[39m ## socket connection to server detected ##
+11:18:41.784 detox[99879] [90mi[39m retrying reset
+11:18:41.784 detox[99879] [90mi[39m dispatching event to  primary-99866 /tmp/detox.primary-99866  :  registerContext , { id: 'secondary-99879' }
+11:18:41.786 detox[99866] [90mi[39m received event of :  registerContext { id: 'secondary-99879' }
+11:18:41.786 detox[99866] [90mi[39m dispatching event to socket  :  registerContextDone {
+  testResults: [],
+  testSessionIndex: 0,
+  unsafe_earlyTeardown: undefined
+}
+11:18:41.786 detox[99879] [90mi[39m ## received events ##
+11:18:41.786 detox[99879] [90mi[39m detected event registerContextDone { testResults: [], testSessionIndex: 0 }
+11:18:41.834 detox[99879] [90mB[39m e2e/chat.e2e.ts
+11:18:41.841 detox[99879] [90mB[39m set up environment
+11:18:41.842 detox[99866] [90mi[39m received event of :  registerWorker { workerId: 'w1' }
+11:18:41.842 detox[99879] [90mi[39m dispatching event to  primary-99866 /tmp/detox.primary-99866  :  registerWorker , { workerId: 'w1' }
+11:18:41.843 detox[99866] [90mi[39m dispatching event to socket  :  registerWorkerDone { workersCount: 1 }
+11:18:41.843 detox[99866] [90mi[39m broadcasting event to all known sockets listening to  /tmp/detox.primary-99866  :   sessionStateUpdate { workersCount: 1 }
+11:18:41.843 detox[99879] [90mi[39m ## received events ##
+11:18:41.843 detox[99879] [90mi[39m detected event registerWorkerDone { workersCount: 1 }
+11:18:41.843 detox[99879] [90mi[39m detected event sessionStateUpdate { workersCount: 1 }
+11:18:41.974 detox[99866] [90mB[39m connection :57465<->:57466
+11:18:41.975 detox[99879] [90mi[39m opened web socket to: ws://localhost:57465
+11:18:41.976 detox[99879] [90mi[39m send message
+  data: {"type":"login","params":{"sessionId":"a7dfa1f1-ae74-9912-6acd-21971037b61a","role":"tester"},"messageId":0}
+11:18:41.977 detox[99866] [90mi[39m get
+  data: {"type":"login","params":{"sessionId":"a7dfa1f1-ae74-9912-6acd-21971037b61a","role":"tester"},"messageId":0}
+11:18:41.977 detox[99866] [90mi[39m created session a7dfa1f1-ae74-9912-6acd-21971037b61a
+11:18:41.977 detox[99866] [90mi[39m send
+  data: {
+    "type": "loginSuccess",
+    "params": {
+      "testerConnected": true,
+      "appConnected": false
+    },
+    "messageId": 0
+  }
+11:18:41.978 detox[99866] [90mi[39m tester joined session a7dfa1f1-ae74-9912-6acd-21971037b61a
+11:18:41.978 detox[99879] [90mi[39m get message
+  data: {"type":"loginSuccess","params":{"testerConnected":true,"appConnected":false},"messageId":0}
+   
+11:18:42.124 detox[99879] [90mE[39m set up environment
+  error: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.
+          To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'
+11:18:42.124 detox[99879] [90mB[39m tear down environment
+11:18:42.126 detox[99866] [90mi[39m tester exited session a7dfa1f1-ae74-9912-6acd-21971037b61a
+11:18:42.126 detox[99866] [90mE[39m connection :57465<->:57466
+11:18:42.126 detox[99879] [90mE[39m tear down environment
+11:18:42.126 detox[99879] [90mE[39m e2e/chat.e2e.ts
+11:18:42.134 detox[99879] [90mB[39m e2e/performance.e2e.ts
+11:18:42.136 detox[99866] [90mi[39m received event of :  registerWorker { workerId: 'w1' }
+11:18:42.136 detox[99866] [90mi[39m dispatching event to socket  :  registerWorkerDone { workersCount: 1 }
+11:18:42.136 detox[99879] [90mB[39m set up environment
+11:18:42.136 detox[99879] [90mi[39m dispatching event to  primary-99866 /tmp/detox.primary-99866  :  registerWorker , { workerId: 'w1' }
+11:18:42.136 detox[99879] [90mi[39m ## received events ##
+11:18:42.137 detox[99879] [90mi[39m detected event registerWorkerDone { workersCount: 1 }
+11:18:42.138 detox[99866] [90mB[39m connection :57465<->:57468
+11:18:42.138 detox[99866] [90mi[39m get
+  data: {"type":"login","params":{"sessionId":"a7dfa1f1-ae74-9912-6acd-21971037b61a","role":"tester"},"messageId":0}
+11:18:42.138 detox[99866] [90mi[39m created session a7dfa1f1-ae74-9912-6acd-21971037b61a
+11:18:42.138 detox[99866] [90mi[39m send
+  data: {
+    "type": "loginSuccess",
+    "params": {
+      "testerConnected": true,
+      "appConnected": false
+    },
+    "messageId": 0
+  }
+11:18:42.138 detox[99866] [90mi[39m tester joined session a7dfa1f1-ae74-9912-6acd-21971037b61a
+11:18:42.138 detox[99879] [90mi[39m opened web socket to: ws://localhost:57465
+11:18:42.138 detox[99879] [90mi[39m send message
+  data: {"type":"login","params":{"sessionId":"a7dfa1f1-ae74-9912-6acd-21971037b61a","role":"tester"},"messageId":0}
+11:18:42.139 detox[99866] [90mi[39m tester exited session a7dfa1f1-ae74-9912-6acd-21971037b61a
+11:18:42.139 detox[99866] [90mE[39m connection :57465<->:57468
+11:18:42.139 detox[99879] [90mi[39m get message
+  data: {"type":"loginSuccess","params":{"testerConnected":true,"appConnected":false},"messageId":0}
+   
+11:18:42.139 detox[99879] [90mE[39m set up environment
+  error: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.
+          To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'
+11:18:42.139 detox[99879] [90mB[39m tear down environment
+11:18:42.139 detox[99879] [90mE[39m tear down environment
+11:18:42.139 detox[99879] [90mE[39m e2e/performance.e2e.ts
+11:18:42.141 detox[99879] [90mB[39m e2e/auth.e2e.ts
+11:18:42.142 detox[99866] [90mi[39m received event of :  registerWorker { workerId: 'w1' }
+11:18:42.142 detox[99866] [90mi[39m dispatching event to socket  :  registerWorkerDone { workersCount: 1 }
+11:18:42.142 detox[99879] [90mB[39m set up environment
+11:18:42.142 detox[99879] [90mi[39m dispatching event to  primary-99866 /tmp/detox.primary-99866  :  registerWorker , { workerId: 'w1' }
+11:18:42.142 detox[99879] [90mi[39m ## received events ##
+11:18:42.143 detox[99879] [90mi[39m detected event registerWorkerDone { workersCount: 1 }
+11:18:42.144 detox[99866] [90mB[39m connection :57465<->:57469
+11:18:42.144 detox[99866] [90mi[39m get
+  data: {"type":"login","params":{"sessionId":"a7dfa1f1-ae74-9912-6acd-21971037b61a","role":"tester"},"messageId":0}
+11:18:42.144 detox[99866] [90mi[39m created session a7dfa1f1-ae74-9912-6acd-21971037b61a
+11:18:42.144 detox[99866] [90mi[39m send
+  data: {
+    "type": "loginSuccess",
+    "params": {
+      "testerConnected": true,
+      "appConnected": false
+    },
+    "messageId": 0
+  }
+11:18:42.144 detox[99866] [90mi[39m tester joined session a7dfa1f1-ae74-9912-6acd-21971037b61a
+11:18:42.144 detox[99879] [90mi[39m opened web socket to: ws://localhost:57465
+11:18:42.144 detox[99879] [90mi[39m send message
+  data: {"type":"login","params":{"sessionId":"a7dfa1f1-ae74-9912-6acd-21971037b61a","role":"tester"},"messageId":0}
+11:18:42.144 detox[99879] [90mi[39m get message
+  data: {"type":"loginSuccess","params":{"testerConnected":true,"appConnected":false},"messageId":0}
+   
+11:18:42.145 detox[99866] [90mi[39m tester exited session a7dfa1f1-ae74-9912-6acd-21971037b61a
+11:18:42.145 detox[99866] [90mE[39m connection :57465<->:57469
+11:18:42.145 detox[99879] [90mE[39m set up environment
+  error: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.
+          To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'
+11:18:42.145 detox[99879] [90mB[39m tear down environment
+11:18:42.145 detox[99879] [90mE[39m tear down environment
+11:18:42.145 detox[99879] [90mE[39m e2e/auth.e2e.ts
+11:18:42.148 detox[99866] [90mi[39m received event of :  reportTestResults {
+  testResults: [
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/chat.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    },
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/performance.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    },
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/auth.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    }
+  ]
+}
+11:18:42.148 detox[99866] [90mi[39m dispatching event to socket  :  reportTestResultsDone {
+  testResults: [
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/chat.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    },
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/performance.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    },
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/auth.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    }
+  ]
+}
+11:18:42.148 detox[99879] [90mi[39m dispatching event to  primary-99866 /tmp/detox.primary-99866  :  reportTestResults , {
+  testResults: [
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/chat.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    },
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/performance.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    },
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/auth.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    }
+  ]
+}
+11:18:42.148 detox[99879] [90mi[39m ## received events ##
+11:18:42.149 detox[99866] [90mi[39m broadcasting event to all known sockets listening to  /tmp/detox.primary-99866  :   sessionStateUpdate {
+  testResults: [
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/chat.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    },
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/performance.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    },
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/auth.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    }
+  ]
+}
+11:18:42.149 detox[99879] [90mi[39m detected event reportTestResultsDone {
+  testResults: [
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/chat.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    },
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/performance.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    },
+    {
+      success: false,
+      testFilePath: '/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/e2e/auth.e2e.ts',
+      testExecError: {
+        name: 'DetoxRuntimeError',
+        message: '/Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'",
+        stack: 'DetoxRuntimeError: /Users/zanguejoel/Library/Detox/ios/framework/2d4089ee81d7e8764070fa7cd918b8e7e36f863c/Detox.framework could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.\n' +
+          "        To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'\n" +
+          '    at IosSimulatorEnvValidator.validate (/Users/zanguejoel/Desktop/Neptune/odyssey/jaime-mobile-app/node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/src/devices/validation/ios/IosSimulatorEnvValidator.js:12:13)\n' +
+          '    at processTicksAndRejections (node:internal/process/task_queues:95:5)'
+      },
+      isPermanentFailure: false
+    }
+  ]
+}
+11:18:42.150 detox[99866] [90mi[39m socket disconnected secondary-99879
+11:18:42.150 detox[99879] [90mi[39m connection closed primary-99866 /tmp/detox.primary-99866 0 tries remaining of 0
+11:18:42.150 detox[99879] [90mi[39m secondary-99879 exceeded connection rety amount of  or stopRetrying flag set.
+11:18:42.238 detox[99866] [90mE[39m Command failed with exit code = 1:
+jest --config e2e/jest.config.js
+11:18:42.238 detox[99866] [90mi[39m Detox server has been closed gracefully
+11:18:42.239 detox[99866] [90mE[39m node_modules/.pnpm/detox@20.45.0_@jest+environment@29.7.0_@jest+types@29.6.3_expect@29.7.0_jest-environmen_d9f3b5e1ed606e14453d41cc8dadb325/node_modules/detox/local-cli/cli.js test --configuration ios.sim.debug --record-logs all --take-screenshots all

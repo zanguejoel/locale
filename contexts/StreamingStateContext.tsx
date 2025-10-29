@@ -19,7 +19,9 @@
  * - Enables free navigation without interrupting streams
  */
 
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import * as Haptics from 'expo-haptics';
+import { useNotification } from './NotificationContext';
 
 /**
  * State for a single conversation's stream
@@ -54,7 +56,7 @@ interface StreamingStateContextType {
   
   // Stream lifecycle
   startStream: (conversationId: string, controller: AbortController) => void;
-  completeStream: (conversationId: string) => void;
+  completeStream: (conversationId: string, metadata?: { chatTitle?: string }) => void;
   abortStream: (conversationId: string) => void;
   
   // Set which conversation is active (visible)
@@ -86,6 +88,9 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
   
   // Track which conversation is currently visible/active
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  
+  // Use custom notification system
+  const notification = useNotification();
   
   // Update ref when state changes
   useEffect(() => {
@@ -231,12 +236,43 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
   /**
    * Complete a stream
    */
-  const completeStream = useCallback((conversationId: string) => {
+  const completeStream = useCallback((conversationId: string, metadata?: { chatTitle?: string }) => {
     console.log('[StreamingState] ✅ Completing stream for conversation:', conversationId);
+    console.log('[StreamingState] 🔍 Active streams:', Array.from(activeStreamsRef.current.keys()));
     
     setActiveStreams(prev => {
       const stream = prev.get(conversationId);
-      if (!stream) return prev;
+      if (!stream) {
+        console.warn('[StreamingState] ⚠️ No stream found for conversation:', conversationId);
+        return prev;
+      }
+      
+      console.log('[StreamingState] 🔍 Stream state:', {
+        conversationId,
+        isActive: stream.isActive,
+        isStreaming: stream.isStreaming,
+        shouldShowNotification: !stream.isActive && stream.isStreaming,
+        chatTitle: metadata?.chatTitle
+      });
+      
+      // Show notification if this stream completed in the background (unfocused)
+      if (!stream.isActive && stream.isStreaming) {
+        console.log('[StreamingState] 📬 Stream completed in background, showing notification');
+        
+        // Provide haptic feedback
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch((err) => {
+          console.warn('[StreamingState] Haptic feedback failed:', err);
+        });
+        
+        // Show custom notification with conversation details
+        console.log('[StreamingState] 🎉 Showing custom notification...');
+        notification.showNotification({
+          message: 'Tap to view response',
+          chatTitle: metadata?.chatTitle || 'Chat',
+          conversationId: conversationId,
+        });
+        console.log('[StreamingState] ✅ Notification triggered');
+      }
       
       const next = new Map(prev);
       next.set(conversationId, {
@@ -341,7 +377,9 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
     return () => clearInterval(cleanupInterval);
   }, []);
   
-  const value: StreamingStateContextType = {
+  // Memoize the context value to prevent infinite re-renders
+  // This is critical when the context is used in dependency arrays
+  const value: StreamingStateContextType = useMemo(() => ({
     getStream,
     isConversationStreaming,
     addStream,
@@ -354,7 +392,22 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
     setActiveConversation,
     getActiveStreams,
     hasAnyActiveStreams,
-  };
+  }), [
+    getStream,
+    isConversationStreaming,
+    addStream,
+    updateStreamContent,
+    updateStreamIntermediate,
+    updateStreamReasoning,
+    startStream,
+    completeStream,
+    abortStream,
+    setActiveConversation,
+    getActiveStreams,
+    hasAnyActiveStreams,
+    // Note: notification is intentionally NOT in dependencies
+    // It's only used inside completeStream which is already memoized
+  ]);
   
   return (
     <StreamingStateContext.Provider value={value}>

@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/202</span>
+                <span class='fraction'>0/205</span>
             </div>
         
             
@@ -39,14 +39,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/26</span>
+                <span class='fraction'>0/27</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/189</span>
+                <span class='fraction'>0/192</span>
             </div>
         
             
@@ -821,7 +821,26 @@
 <a name='L756'></a><a href='#L756'>756</a>
 <a name='L757'></a><a href='#L757'>757</a>
 <a name='L758'></a><a href='#L758'>758</a>
-<a name='L759'></a><a href='#L759'>759</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L759'></a><a href='#L759'>759</a>
+<a name='L760'></a><a href='#L760'>760</a>
+<a name='L761'></a><a href='#L761'>761</a>
+<a name='L762'></a><a href='#L762'>762</a>
+<a name='L763'></a><a href='#L763'>763</a>
+<a name='L764'></a><a href='#L764'>764</a>
+<a name='L765'></a><a href='#L765'>765</a>
+<a name='L766'></a><a href='#L766'>766</a>
+<a name='L767'></a><a href='#L767'>767</a>
+<a name='L768'></a><a href='#L768'>768</a>
+<a name='L769'></a><a href='#L769'>769</a>
+<a name='L770'></a><a href='#L770'>770</a>
+<a name='L771'></a><a href='#L771'>771</a>
+<a name='L772'></a><a href='#L772'>772</a>
+<a name='L773'></a><a href='#L773'>773</a>
+<a name='L774'></a><a href='#L774'>774</a>
+<a name='L775'></a><a href='#L775'>775</a>
+<a name='L776'></a><a href='#L776'>776</a>
+<a name='L777'></a><a href='#L777'>777</a>
+<a name='L778'></a><a href='#L778'>778</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -864,6 +883,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1393,6 +1413,14 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1423,6 +1451,16 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1615,6 +1653,7 @@ export type Props = {
   files?: SelectedFile[];
   setFiles?: (files: SelectedFile[]) =&gt; void;
   isLoading?: boolean
+  onStopStreaming?: () =&gt; Promise&lt;void&gt;;
   onRecordingStateChange?: (isRecording: boolean, onCancel: () =&gt; void) =&gt; void;
   isLocal?: boolean; // To show/hide generation options
   messages?: any[]; // For export functionality
@@ -1622,7 +1661,7 @@ export type Props = {
   currentModelId?: string; // Current selected model ID to check generation capabilities
 };
 &nbsp;
-const ChatInput = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >({</span> onShouldSend, fetchMessages, files = <span class="branch-0 cbranch-no" title="branch not covered" >[],</span> setFiles, isLoading, onRecordingStateChange, isLocal = <span class="branch-0 cbranch-no" title="branch not covered" >false,</span> messages = <span class="branch-0 cbranch-no" title="branch not covered" >[],</span> conversationTitle, currentModelId }: Props) =&gt; {</span>
+const ChatInput = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >({</span> onShouldSend, fetchMessages, files = <span class="branch-0 cbranch-no" title="branch not covered" >[],</span> setFiles, isLoading, onStopStreaming, onRecordingStateChange, isLocal = <span class="branch-0 cbranch-no" title="branch not covered" >false,</span> messages = <span class="branch-0 cbranch-no" title="branch not covered" >[],</span> conversationTitle, currentModelId }: Props) =&gt; {</span>
   const [message, setMessage] = <span class="cstat-no" title="statement not covered" >useState('');</span>
   const theme = <span class="cstat-no" title="statement not covered" >useTheme();</span>
   const styles = <span class="cstat-no" title="statement not covered" >getStyles(theme);</span>
@@ -2160,8 +2199,8 @@ const ChatInput = <span class="cstat-no" title="statement not covered" ><span cl
             &gt;
               &lt;Ionicons 
                 name="add" 
-                size={24} 
-                color={isLoading ? theme.colors.mutedForeground : theme.colors.grey} 
+                size={30} 
+                color={isLoading ? theme.colors.mutedForeground : theme.colors.chatIcons} 
                 style={{ opacity: isLoading ? 0.5 : 1 }}
               /&gt;
             &lt;/TouchableOpacity&gt;
@@ -2192,31 +2231,49 @@ const ChatInput = <span class="cstat-no" title="statement not covered" ><span cl
             // editable={!isLoading}
             inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_VIEW_ID : undefined}
           /&gt;
-          {message.length &gt; 0 ? (
+          {isLoading ? (
+            // Show stop button during streaming (replaces send/mic button)
             &lt;TouchableOpacity 
-              disabled={isLoading} 
+              onPress={<span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {
+<span class="cstat-no" title="statement not covered" >                if (onStopStreaming) {</span>
+<span class="cstat-no" title="statement not covered" >                  await onStopStreaming();</span>
+<span class="cstat-no" title="statement not covered" >                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);</span>
+                }
+              }}
+              accessibilityLabel="Stop generation"
+              accessibilityRole="button"
+              accessibilityHint="Stops the AI from generating more content"
+            &gt;
+              &lt;Ionicons 
+                name="stop-circle" 
+                size={30} 
+                color={theme.colors.red} 
+              /&gt;
+            &lt;/TouchableOpacity&gt;
+          ) : message.length &gt; 0 ? (
+            // Show send button when not loading and message exists
+            &lt;TouchableOpacity 
               onPress={onSend}
               accessibilityLabel="Send message"
               accessibilityRole="button"
               accessibilityHint="Sends your message"
-              accessibilityState={{ disabled: isLoading }}
             &gt;
               &lt;Ionicons 
                 name="arrow-up-circle" 
                 size={30} 
-                color={isLoading ? theme.colors.mutedForeground : theme.colors.primary} 
+                color={theme.colors.chatIcons} 
               /&gt;
             &lt;/TouchableOpacity&gt;
           ) : (
+            // Show microphone button when not loading and no message
             &lt;TouchableOpacity 
-              disabled={isLoading} 
               onPress={isRecording ? stopRecording : startRecording}
               accessibilityLabel={isRecording ? "Stop recording" : "Start voice recording"}
               accessibilityRole="button"
               accessibilityHint={isRecording ? "Stops and sends voice message" : "Starts voice recording"}
-              accessibilityState={{ disabled: isLoading, selected: isRecording }}
+              accessibilityState={{ selected: isRecording }}
             &gt;
-              &lt;Ionicons name="mic-outline" size={30} color={isRecording ? theme.colors.red : (isLoading ? theme.colors.chatIcons : theme.colors.chatIcons)} /&gt;
+              &lt;Ionicons name="mic-outline" size={30} color={isRecording ? theme.colors.red : theme.colors.chatIcons} /&gt;
             &lt;/TouchableOpacity&gt;
           )}
         &lt;/View&gt;
@@ -2344,7 +2401,7 @@ export default ChatInput;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-27T18:10:55.536Z
+                at 2025-10-29T14:55:47.159Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
