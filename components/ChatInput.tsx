@@ -61,7 +61,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
 
   // Generation options state
   const [generationOptions, setGenerationOptions] = useState<GenerationOptionsState>({
-    webSearch: false,
+    webSearch: true, // Enable web search by default
     generateImage: 'none',
     imageProvider: 'gemini', // Default to Gemini for image generation
     imageModel: 'gemini-2.5-flash-image-preview', // Gemini's image model name
