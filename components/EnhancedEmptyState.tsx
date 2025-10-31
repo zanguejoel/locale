@@ -6,7 +6,7 @@ import { Theme } from '@/constants/Types';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCredits } from '@/hooks/useCredits';
-import CreditPurchaseModal from './CreditPurchaseModal';
+import CreditPurchaseModalIAP from './CreditPurchaseModalIAP';
 
 interface EnhancedEmptyStateProps {
   firstName?: string;
@@ -162,9 +162,10 @@ const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
         )}
       </Animated.View>
 
-      <CreditPurchaseModal
+      <CreditPurchaseModalIAP
         visible={showCreditPurchaseModal}
         onClose={() => setShowCreditPurchaseModal(false)}
+        source="empty_state"
       />
     </ScrollView>
   );

@@ -30,12 +30,10 @@ import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuth } from './useAuth';
 import { getDefaultModelId } from './useDefaultModel';
-import { getDefaultLocalModelId } from './useDefaultLocalModel';
 import { getToken } from '@/utils/SecureTokenManager';
 import { formatAuthHeader } from '@/utils/AuthHelpers';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { AIEvent } from '@/types/mixpanel';
-import { useLocalModel } from './useLocalModel';
 import { Artifact } from '@/utils/ArtifactTypes';
 import { extractArtifactFromStream, extractArtifactsFromMessage } from '@/utils/ArtifactParser';
 import { DocumentBlock } from '@/utils/DocumentTypes';
@@ -129,13 +127,6 @@ interface ChatContextType {
   setChatLoading?: (a: boolean) => void;
   isChatLoading?: boolean;
   appendToMessageHistory: (message: string, role: Role) => void;
-  handleSendLocalMessage: (message: string) => void;
-  isLocal: boolean;
-  setIsLocal: (a: boolean) => void;
-  isLocalLLMSupported: boolean;
-  localModelDownloadProgress: number;
-  isLocalModelReady: boolean;
-  clearLocalModel: () => void;
   chatError: ChatError | null;
   clearChatError: () => void;
   artifacts: Artifact[];
@@ -393,17 +384,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
   
-  // ============ Local Model Integration ============
-  // Note: messages is passed but useLocalModel uses a ref internally to avoid infinite loops
-  const localModel = useLocalModel({
-    currentConversationId,
-    onStreamUpdate: setStream,
-    onSendingUpdate: setIsSending,
-    onStreamWorkingUpdate: setStreamWorking,
-    onIntermediateUpdate: setIntermediate,
-    messages,
-    appendToMessageHistory,
-  });
+  // ============ Local Model Integration Removed ============
+  // Local model functionality has been removed from the app
   
   // ============ Update Refs When State Changes ============
   useEffect(() => {
@@ -1927,8 +1909,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = await getToken();
       await api.setAuthToken(token || '');
       
-      // Get default model based on current mode
-      const defaultModelId = localModel.isLocal ? getDefaultLocalModelId() : getDefaultModelId();
+      // Get default model (local models removed)
+      const defaultModelId = getDefaultModelId();
       
       const response = await api.post<Conversations>('/conversation', { 
         title: 'New Chat',
@@ -1948,7 +1930,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [user, setConversations, setCurrentRoom, resetChat, localModel.isLocal]);
+  }, [user, setConversations, setCurrentRoom, resetChat]);
 
   const contextValue = useMemo(() => {
     // Log context updates for debugging intermediate state
@@ -1988,13 +1970,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       intermediate,
       reasoningText,
       appendToMessageHistory,
-      handleSendLocalMessage: localModel.handleSendLocalMessage,
-      isLocal: localModel.isLocal,
-      setIsLocal: localModel.setIsLocal,
-      isLocalLLMSupported: localModel.isLocalLLMSupported,
-      localModelDownloadProgress: localModel.localModelDownloadProgress,
-      isLocalModelReady: localModel.isLocalModelReady,
-      clearLocalModel: localModel.clearLocalModel,
       chatError,
       clearChatError,
       artifacts,
@@ -2033,7 +2008,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     abortCurrentStream,
     streamWorking,
     appendToMessageHistory,
-    localModel,
     chatError,
     clearChatError,
     artifacts,

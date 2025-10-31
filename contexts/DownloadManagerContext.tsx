@@ -1,6 +1,4 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { GlobalDownloadManager } from '@/components/GlobalDownloadManager';
-import { useChat } from '@/hooks/useChat';
 
 interface DownloadManagerContextValue {
   // Could add methods here if needed
@@ -24,34 +22,21 @@ interface DownloadManagerProviderProps {
 /**
  * Provider that renders the global download manager overlay
  * Should be placed near the root of the app to persist across navigation
+ * 
+ * NOTE: Local model downloads have been removed from the app.
+ * This context is kept for backwards compatibility but no longer displays download UI.
  */
 export const DownloadManagerProvider: React.FC<DownloadManagerProviderProps> = ({ children }) => {
-  const chat = useChat();
-  const [showDetails, setShowDetails] = React.useState(false);
-
   const value: DownloadManagerContextValue = {
-    showDownloadDetails: () => setShowDetails(true),
+    showDownloadDetails: () => {
+      console.log('[Download] Local model downloads have been removed');
+    },
   };
 
   return (
     <DownloadManagerContext.Provider value={value}>
       {children}
-      
-      {/* Global floating download manager */}
-      <GlobalDownloadManager
-        progress={chat.localModelDownloadProgress || 0}
-        isDownloading={chat.isLocal && !chat.isLocalModelReady && chat.localModelDownloadProgress > 0}
-        isReady={chat.isLocalModelReady}
-        onViewDetails={() => {
-          // Navigate to settings/local models page
-          // You can use router.push here if needed
-          console.log('[Download] View details requested');
-        }}
-        onCancel={() => {
-          // Optionally implement cancel download
-          console.log('[Download] Cancel requested');
-        }}
-      />
+      {/* Local model download manager removed */}
     </DownloadManagerContext.Provider>
   );
 };

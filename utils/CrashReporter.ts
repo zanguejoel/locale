@@ -84,33 +84,19 @@ export class CrashReporter {
   
   /**
    * Check if local models are temporarily disabled
+   * NOTE: Local models have been removed from the app. This method is kept for backwards compatibility.
    */
   static isLocalModelsDisabled(): boolean {
-    try {
-      const disabledUntil = storage.getNumber('local_models_disabled_until');
-      if (disabledUntil && Date.now() < disabledUntil) {
-        return true;
-      }
-      
-      // Check if force cloud mode is enabled
-      if (storage.getString('force_cloud_mode') === 'true') {
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      return false;
-    }
+    return true; // Always return true since local models are removed
   }
   
   /**
    * Re-enable local models
+   * NOTE: Local models have been removed from the app. This method is a no-op.
    */
   static reenableLocalModels() {
-    storage.delete('local_models_disabled_until');
-    storage.delete('force_cloud_mode');
-    this.crashes = [];
-    console.log('[CrashReporter] Local models re-enabled');
+    // No-op: Local models have been removed
+    console.log('[CrashReporter] Local models have been removed from the app');
   }
   
   /**

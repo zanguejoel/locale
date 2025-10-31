@@ -1,69 +1,35 @@
 /**
  * Header Model Selector Component
  * Quick model switching from chat header
+ * Cloud models only (local models removed)
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { Ionicons } from '@expo/vector-icons';
 import { models, Model } from '@/constants/Models';
-import { LOCAL_MODELS, LocalModel } from '@/constants/LocalModels';
-import { DownloadedModelsTracker } from '@/utils/DownloadedModelsTracker';
 
 interface HeaderModelSelectorProps {
-  isLocal: boolean;
+  isLocal?: boolean; // Kept for backwards compatibility but ignored
   currentModelId?: string;
   onSelectModel: (modelId: string) => void;
-  isLocalSupported: boolean;
+  isLocalSupported?: boolean; // Kept for backwards compatibility but ignored
 }
 
 export const HeaderModelSelector: React.FC<HeaderModelSelectorProps> = ({
-  isLocal,
   currentModelId,
   onSelectModel,
-  isLocalSupported,
 }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
   const [modalVisible, setModalVisible] = useState(false);
-  const [downloadedModelIds, setDownloadedModelIds] = useState<Set<string>>(new Set());
-  const [loadingModels, setLoadingModels] = useState(false);
 
-  // Load downloaded models when modal opens and in local mode
-  useEffect(() => {
-    if (modalVisible && isLocal) {
-      loadDownloadedModels();
-    }
-  }, [modalVisible, isLocal]);
-
-  const loadDownloadedModels = async () => {
-    try {
-      setLoadingModels(true);
-      // Get downloaded model IDs from tracker
-      const downloadedIds = DownloadedModelsTracker.getDownloadedModelIds();
-      setDownloadedModelIds(new Set(downloadedIds));
-      // console.log('[HeaderModelSelector] Downloaded models:', downloadedIds);
-    } catch (error) {
-      // console.error('[HeaderModelSelector] Error loading downloaded models:', error);
-    } finally {
-      setLoadingModels(false);
-    }
-  };
-
-  // Get current model
-  const currentModel = isLocal
-    ? LOCAL_MODELS.find((m: LocalModel) => m.id === currentModelId)
-    : models.find((m: Model) => m.id === currentModelId);
-
-  const displayName = currentModel?.displayName || (isLocal ? 'Local Model' : 'Cloud Model');
+  // Get current model (cloud only)
+  const currentModel = models.find((m: Model) => m.id === currentModelId);
+  const displayName = currentModel?.displayName || 'Cloud Model';
   const shortName = displayName.length > 15 ? displayName.substring(0, 15) + '...' : displayName;
-
-  // Filter local models to only show downloaded ones
-  const availableLocalModels = isLocal 
-    ? LOCAL_MODELS.filter(m => downloadedModelIds.has(m.id))
-    : LOCAL_MODELS;
 
   const handleSelectModel = (modelId: string) => {
     onSelectModel(modelId);
@@ -79,7 +45,7 @@ export const HeaderModelSelector: React.FC<HeaderModelSelectorProps> = ({
         activeOpacity={0.7}
       >
         <Ionicons 
-          name={isLocal ? 'phone-portrait' : 'cloud'} 
+          name="cloud" 
           size={14} 
           color={theme.colors.primary} 
         />
@@ -104,12 +70,12 @@ export const HeaderModelSelector: React.FC<HeaderModelSelectorProps> = ({
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
                 <Ionicons 
-                  name={isLocal ? 'phone-portrait' : 'cloud'} 
+                  name="cloud" 
                   size={20} 
                   color={theme.colors.primary} 
                 />
                 <Text style={styles.modalTitle}>
-                  {isLocal ? 'Local Models' : 'Cloud Models'}
+                  Cloud Models
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
@@ -117,93 +83,28 @@ export const HeaderModelSelector: React.FC<HeaderModelSelectorProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Models Section - Shows only current mode */}
+            {/* Cloud Models Section */}
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.section}>
-              {isLocal ? (
-                <>
-                  {/* Local Models - Only Downloaded */}
-                  {!isLocalSupported && (
-                    <View style={styles.warningBanner}>
-                      <Ionicons name="information-circle" size={18} color={theme.colors.destructive} />
-                      <Text style={styles.warningText}>
-                        Local models not supported on this device
-                      </Text>
-                    </View>
+              {models.map((model: Model) => (
+                <TouchableOpacity
+                  key={model.id}
+                  style={[
+                    styles.modelItem,
+                    currentModelId === model.id && styles.modelItemActive,
+                  ]}
+                  onPress={() => handleSelectModel(model.id)}
+                >
+                  <View style={styles.modelInfo}>
+                    <Text style={styles.modelName}>{model.displayName}</Text>
+                    {model.description && (
+                      <Text style={styles.modelDescription}>{model.description}</Text>
+                    )}
+                  </View>
+                  {currentModelId === model.id && (
+                    <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
                   )}
-                  
-                  {loadingModels && (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="small" color={theme.colors.primary} />
-                      <Text style={styles.loadingText}>Loading models...</Text>
-                    </View>
-                  )}
-
-                  {!loadingModels && availableLocalModels.length === 0 && isLocalSupported && (
-                    <View style={styles.emptyState}>
-                      <Ionicons name="cloud-download-outline" size={32} color={theme.colors.textSecondary} />
-                      <Text style={styles.emptyStateText}>No models downloaded</Text>
-                      <Text style={styles.emptyStateSubtext}>
-                        Download models from Settings → Manage Downloaded Models
-                      </Text>
-                    </View>
-                  )}
-
-                  {!loadingModels && availableLocalModels.map((model: LocalModel) => (
-                    <TouchableOpacity
-                      key={model.id}
-                      style={[
-                        styles.modelItem,
-                        currentModelId === model.id && styles.modelItemActive,
-                        !isLocalSupported && styles.modelItemDisabled,
-                      ]}
-                      onPress={() => isLocalSupported && handleSelectModel(model.id)}
-                      disabled={!isLocalSupported}
-                    >
-                      <View style={styles.modelInfo}>
-                        <Text 
-                          style={[
-                            styles.modelName,
-                            !isLocalSupported && styles.modelNameDisabled,
-                          ]}
-                        >
-                          {model.displayName}
-                        </Text>
-                        {model.description && (
-                          <Text style={styles.modelDescription}>{model.description}</Text>
-                        )}
-                        <Text style={styles.modelSize}>{model.size}</Text>
-                      </View>
-                      {currentModelId === model.id && (
-                        <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </>
-              ) : (
-                <>
-                  {/* Cloud Models */}
-                  {models.map((model: Model) => (
-                    <TouchableOpacity
-                      key={model.id}
-                      style={[
-                        styles.modelItem,
-                        currentModelId === model.id && styles.modelItemActive,
-                      ]}
-                      onPress={() => handleSelectModel(model.id)}
-                    >
-                      <View style={styles.modelInfo}>
-                        <Text style={styles.modelName}>{model.displayName}</Text>
-                        {model.description && (
-                          <Text style={styles.modelDescription}>{model.description}</Text>
-                        )}
-                      </View>
-                      {currentModelId === model.id && (
-                        <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </>
-              )}
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </Pressable>
@@ -281,23 +182,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   section: {
     padding: 16,
   },
-  warningBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.isDark ? `${theme.colors.destructive}20` : `${theme.colors.destructive}15`,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: theme.isDark ? 1 : 0,
-    borderColor: theme.isDark ? `${theme.colors.destructive}40` : 'transparent',
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 13,
-    color: theme.colors.destructive,
-    fontWeight: '500',
-  },
   modelItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -319,9 +203,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     shadowRadius: 2,
     elevation: theme.isDark ? 2 : 1,
   },
-  modelItemDisabled: {
-    opacity: 0.5,
-  },
   modelInfo: {
     flex: 1,
   },
@@ -331,49 +212,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.text,
     marginBottom: 2,
   },
-  modelNameDisabled: {
-    color: theme.colors.textSecondary,
-  },
   modelDescription: {
     fontSize: 12,
     color: theme.colors.textSecondary,
     marginBottom: 2,
   },
-  modelSize: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-    gap: 10,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 16,
-  },
-  emptyStateText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  emptyStateSubtext: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
 });
 
 export default HeaderModelSelector;
-

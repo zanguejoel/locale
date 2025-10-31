@@ -20,8 +20,6 @@ interface UsePreventUnsafeNavigationOptions {
  * 1. Blocks Android back button during generation
  * 2. Shows warning dialog if user tries to navigate away
  * 3. Automatically interrupts generation if user confirms navigation
- * 
- * @see https://docs.swmansion.com/react-native-executorch/docs/hooks/natural-language-processing/useLLM#interrupting-the-model
  */
 export function usePreventUnsafeNavigationDuringGeneration(
   options: UsePreventUnsafeNavigationOptions

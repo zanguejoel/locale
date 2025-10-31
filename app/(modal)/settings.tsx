@@ -10,20 +10,12 @@ import { useTheme, ThemeMode, setThemeMode } from '@/hooks/useTheme';
 import useMMKVStorage, { storage } from '@/hooks/useMMKVStorage';
 import { DEFAULT_MODEL_ID, getModelById, isLlamaModel } from '@/constants/Models';
 import ModelSelectorModal from '@/components/modals/ModelSelectorModal/ModelSelectorModal';
-import LocalModelSelectorModal from '@/components/modals/LocalModelSelectorModal/LocalModelSelectorModal';
-import { DEFAULT_LOCAL_MODEL_ID, getLocalModelById } from '@/constants/LocalModels';
-import { isLocalLLMSupported } from '@/utils/DeviceCapabilities';
 import { GradientBackground } from '@/components/GradientBackground';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { SettingsEvent } from '@/types/mixpanel';
 import { useEffect } from 'react';
-import CreditPurchaseModal from '@/components/CreditPurchaseModal';
+import CreditPurchaseModalIAP from '@/components/CreditPurchaseModalIAP';
 import CreditBadge from '@/components/CreditBadge';
-import { 
-  isBackendDownloadsEnabled, 
-  enableBackendDownloads, 
-  disableBackendDownloads 
-} from '@/constants/LocalModelsConfig';
 import { useIntegrations } from '@/contexts/IntegrationsContext';
 import apiClient from '@/utils/ApiClient';
 
@@ -59,17 +51,6 @@ const rawPage = [{
   title: 'Theme',
   icon: 'color-palette-outline'
 }, {
-  id: 7,
-  key: 'model-manager',
-  title: 'Manage Downloaded Models',
-  icon: 'folder-open-outline'
-}, /* {
-  id: 8,
-  key: 'backend-downloads',
-  title: 'Use Backend Model Downloads',
-  icon: 'cloud-download-outline',
-  hasToggle: true
-}, */ {
   id: 9,
   key: 'clear-all-chats',
   title: 'Clear All Chats',
@@ -129,33 +110,20 @@ const Page = () => {
   }, [integrationsInitialized]);
   const { 
     createNewConversation, 
-    isLocalLLMSupported: deviceSupportsLocal,
-    clearLocalModel,
-    isLocalModelReady,
-    localModelDownloadProgress,
     messages,
-    isLocal,
     conversations,
     currentConversationId,
     resetChat,
     clearAllConversations
   } = useChat();
   const [isModelSelectorVisible, setIsModelSelectorVisible] = useState(false);
-  const [isLocalModelSelectorVisible, setIsLocalModelSelectorVisible] = useState(false);
   const [isCreditPurchaseVisible, setIsCreditPurchaseVisible] = useState(false);
-  const [backendDownloadsEnabled, setBackendDownloadsEnabled] = useState(isBackendDownloadsEnabled());
   
   // Use storage.getString/set directly for simple string values to avoid JSON parsing issues
   const [defaultModelId, setDefaultModelIdState] = useState(() => storage.getString('default_model_id') || DEFAULT_MODEL_ID);
   const setDefaultModelId = (value: string) => {
     storage.set('default_model_id', value);
     setDefaultModelIdState(value);
-  };
-  
-  const [defaultLocalModelId, setDefaultLocalModelIdState] = useState(() => storage.getString('default_local_model_id') || DEFAULT_LOCAL_MODEL_ID);
-  const setDefaultLocalModelId = (value: string) => {
-    storage.set('default_local_model_id', value);
-    setDefaultLocalModelIdState(value);
   };
 
   // Track settings opened
@@ -224,23 +192,7 @@ const Page = () => {
     }
   };
 
-  const handleLocalModelSelect = async (modelId: string) => {
-    const oldModel = getLocalModelById(defaultLocalModelId);
-    const newModel = getLocalModelById(modelId);
-    
-    // Track default local model changed
-    await mixpanelService.trackSettings(SettingsEvent.DEFAULT_MODEL_CHANGED, {
-      setting_name: 'default_local_model',
-      old_value: oldModel?.displayName || defaultLocalModelId,
-      new_value: newModel?.displayName || modelId,
-    });
-    
-    setDefaultLocalModelId(modelId);
-  };
-
   const selectedModel = getModelById(defaultModelId);
-  const selectedLocalModel = getLocalModelById(defaultLocalModelId);
-  const modelSize = selectedLocalModel?.size || '~1.2GB';
 
   const handleClearAllChats = async () => {
     Alert.alert(
@@ -320,34 +272,6 @@ const Page = () => {
     );
   };
 
-  const handleToggleBackendDownloads = () => {
-    const newValue = !backendDownloadsEnabled;
-    setBackendDownloadsEnabled(newValue);
-    
-    if (newValue) {
-      enableBackendDownloads();
-      Alert.alert(
-        'Backend Downloads Enabled',
-        'Local models will now be downloaded from our faster servers. This provides better download speeds and reliability.',
-        [{ text: 'OK' }]
-      );
-      mixpanelService.trackSettings(SettingsEvent.SETTINGS_ITEM_CLICKED, { 
-        item_name: 'Backend Downloads',
-        enabled: true 
-      });
-    } else {
-      disableBackendDownloads();
-      Alert.alert(
-        'Backend Downloads Disabled',
-        'Local models will use the default download sources.',
-        [{ text: 'OK' }]
-      );
-      mixpanelService.trackSettings(SettingsEvent.SETTINGS_ITEM_CLICKED, { 
-        item_name: 'Backend Downloads',
-        enabled: false 
-      });
-    }
-  };
 
   const handleInstruction = async (type: string) => {
     // Track settings section viewed
@@ -363,15 +287,11 @@ const Page = () => {
       case 'credits':
         return setIsCreditPurchaseVisible(true)
       case 'plans-pricing':
-        return router.push('/plans-pricing')
+        return router.push('/plans-pricing-iap')
       case 'default-model':
         return setIsModelSelectorVisible(true)
       case 'theme':
         return handleThemeSelection()
-      case 'model-manager':
-        return router.push('/model-manager')
-      case 'backend-downloads':
-        return handleToggleBackendDownloads()
       case 'clear-all-chats':
         return handleClearAllChats()
       case 'change-password':
@@ -413,19 +333,9 @@ const Page = () => {
                 {theme.themeMode.charAt(0).toUpperCase() + theme.themeMode.slice(1)}
               </Text>
             )}
-            {item.key === 'model-manager' && deviceSupportsLocal && (
-              <Text style={styles.menuItemSubtext}>
-                View and manage local models
-              </Text>
-            )}
-            {item.key === 'backend-downloads' && deviceSupportsLocal && (
-              <Text style={styles.menuItemSubtext}>
-                Download models from faster servers
-              </Text>
-            )}
             {item.key === 'plans-pricing' && (
               <Text style={styles.menuItemSubtext}>
-                Manage subscriptions on web
+                Subscribe via App Store
               </Text>
             )}
             {item.key === 'credits' && (
@@ -449,13 +359,6 @@ const Page = () => {
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.colors.greyLight} style={{ marginLeft: 8 }} />
           </View>
-        ) : item.hasToggle ? (
-          <Switch
-            value={backendDownloadsEnabled}
-            onValueChange={handleToggleBackendDownloads}
-            trackColor={{ false: theme.colors.grey, true: theme.colors.primary }}
-            thumbColor={theme.colors.background}
-          />
         ) : (
           <Ionicons name="chevron-forward" size={20} color={theme.colors.greyLight} />
         )}
@@ -463,14 +366,7 @@ const Page = () => {
     )
   }
   
-  // Filter menu items based on device support
-  const visibleMenuItems = rawPage.filter(item => {
-    // Hide local model options if device doesn't support local models
-    if ((item.key === 'model-manager' || item.key === 'backend-downloads') && !deviceSupportsLocal) {
-      return false;
-    }
-    return true;
-  });
+  const visibleMenuItems = rawPage;
 
   return (
     <GradientBackground variant="background">
@@ -494,13 +390,7 @@ const Page = () => {
         selectedModelId={defaultModelId}
         onSelectModel={handleModelSelect}
       />
-      <LocalModelSelectorModal
-        visible={isLocalModelSelectorVisible}
-        onClose={() => setIsLocalModelSelectorVisible(false)}
-        selectedModelId={defaultLocalModelId}
-        onSelectModel={handleLocalModelSelect}
-      />
-      <CreditPurchaseModal
+      <CreditPurchaseModalIAP
         visible={isCreditPurchaseVisible}
         onClose={() => setIsCreditPurchaseVisible(false)}
         source="settings"

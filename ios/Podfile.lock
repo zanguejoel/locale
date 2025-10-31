@@ -38,6 +38,9 @@ PODS:
     - ExpoModulesCore
   - ExpoHead (4.0.21):
     - ExpoModulesCore
+  - ExpoIap (3.1.24):
+    - ExpoModulesCore
+    - openiap (~> 1.2.32)
   - ExpoImage (2.0.7):
     - ExpoModulesCore
     - libavif/libdav1d
@@ -127,7 +130,7 @@ PODS:
   - MMKV (2.2.4):
     - MMKVCore (~> 2.2.4)
   - MMKVCore (2.2.4)
-  - opencv-rne (4.11.0)
+  - openiap (1.2.32)
   - PurchasesHybridCommon (14.3.0):
     - RevenueCat (= 5.32.0)
   - RCT-Folly (2024.10.14.00):
@@ -1408,28 +1411,6 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-executorch (0.5.8):
-    - DoubleConversion
-    - glog
-    - hermes-engine
-    - opencv-rne (~> 4.11.0)
-    - RCT-Folly (= 2024.10.14.00)
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - Yoga
   - react-native-get-random-values (1.11.0):
     - React-Core
   - react-native-image-picker (8.2.1):
@@ -2189,6 +2170,7 @@ DEPENDENCIES:
   - "ExpoFont (from `../node_modules/.pnpm/expo-font@13.0.4_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7_a68251ea676011c0676bcce9f316ae90/node_modules/expo-font/ios`)"
   - "ExpoHaptics (from `../node_modules/.pnpm/expo-haptics@14.0.1_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+cor_befbdcba9252b473c7138f3c7f2b59d3/node_modules/expo-haptics/ios`)"
   - "ExpoHead (from `../node_modules/.pnpm/expo-router@4.0.21_8c86b8276374af54fb331293e596e60b/node_modules/expo-router/ios`)"
+  - "ExpoIap (from `../node_modules/.pnpm/expo-iap@3.1.24_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7._2fdddf9c6a7e773c985393c48853898f/node_modules/expo-iap/ios`)"
   - "ExpoImage (from `../node_modules/.pnpm/expo-image@2.0.7_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7_4d6a4e07edc39f8d9838ebc35de1f861/node_modules/expo-image/ios`)"
   - "ExpoImageManipulator (from `../node_modules/.pnpm/expo-image-manipulator@13.0.6_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3__fb001c357b80336b31277d0b1c5b3664/node_modules/expo-image-manipulator/ios`)"
   - "ExpoImagePicker (from `../node_modules/.pnpm/expo-image-picker@16.0.6_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babe_f472fbbee82859a919b3a668f80f2670/node_modules/expo-image-picker/ios`)"
@@ -2240,7 +2222,6 @@ DEPENDENCIES:
   - "React-logger (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_9355009ca0ae0c045e30935ea3eee0f6/node_modules/react-native/ReactCommon/logger`)"
   - "React-Mapbuffer (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_9355009ca0ae0c045e30935ea3eee0f6/node_modules/react-native/ReactCommon`)"
   - "React-microtasksnativemodule (from `../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_9355009ca0ae0c045e30935ea3eee0f6/node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)"
-  - react-native-executorch (from `../node_modules/react-native-executorch`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - react-native-ios-context-menu (from `../node_modules/react-native-ios-context-menu`)
@@ -2305,7 +2286,7 @@ SPEC REPOS:
     - Mixpanel-swift
     - MMKV
     - MMKVCore
-    - opencv-rne
+    - openiap
     - PurchasesHybridCommon
     - RevenueCat
     - SDWebImage
@@ -2357,6 +2338,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/.pnpm/expo-haptics@14.0.1_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+cor_befbdcba9252b473c7138f3c7f2b59d3/node_modules/expo-haptics/ios"
   ExpoHead:
     :path: "../node_modules/.pnpm/expo-router@4.0.21_8c86b8276374af54fb331293e596e60b/node_modules/expo-router/ios"
+  ExpoIap:
+    :path: "../node_modules/.pnpm/expo-iap@3.1.24_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7._2fdddf9c6a7e773c985393c48853898f/node_modules/expo-iap/ios"
   ExpoImage:
     :path: "../node_modules/.pnpm/expo-image@2.0.7_expo@52.0.47_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7_4d6a4e07edc39f8d9838ebc35de1f861/node_modules/expo-image/ios"
   ExpoImageManipulator:
@@ -2456,8 +2439,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_9355009ca0ae0c045e30935ea3eee0f6/node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../node_modules/.pnpm/react-native@0.76.9_@babel+core@7.28.4_@babel+preset-env@7.28.3_@babel+core@7.28.4__@re_9355009ca0ae0c045e30935ea3eee0f6/node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
-  react-native-executorch:
-    :path: "../node_modules/react-native-executorch"
   react-native-get-random-values:
     :path: "../node_modules/react-native-get-random-values"
   react-native-image-picker:
@@ -2584,6 +2565,7 @@ SPEC CHECKSUMS:
   ExpoFont: f354e926f8feae5e831ec8087f36652b44a0b188
   ExpoHaptics: 8d199b2f33245ea85289ff6c954c7ee7c00a5b5d
   ExpoHead: df924203fbf8e0913fc38b0f6aec71f9a9115482
+  ExpoIap: f03d2429846f84ed717af5da41e50caa491cbd04
   ExpoImage: d840b256050f4428d2942bc2b6e9251f9e0d7021
   ExpoImageManipulator: 4aca9cc1d84e31f62a7e8075c19026d3ad62f852
   ExpoImagePicker: 24e5ba8da111f74519b1e6dc556e0b438b2b8464
@@ -2610,7 +2592,7 @@ SPEC CHECKSUMS:
   MixpanelReactNative: cdcfe933b8ce89aadd183f17aad3c8529daccb94
   MMKV: 1a8e7dbce7f9cad02c52e1b1091d07bd843aefaf
   MMKVCore: f2dd4c9befea04277a55e84e7812f930537993df
-  opencv-rne: 2305807573b6e29c8c87e3416ab096d09047a7a0
+  openiap: ff565cd77a07ba9e1438d2764a687515ceaa3b6d
   PurchasesHybridCommon: 7f0944cc5411bdcd1ea5d69affa6a6f9aaf87b13
   RCT-Folly: ea9d9256ba7f9322ef911169a9f696e5857b9e17
   RCTDeprecation: ebe712bb05077934b16c6bf25228bdec34b64f83
@@ -2641,7 +2623,6 @@ SPEC CHECKSUMS:
   React-logger: c4052eb941cca9a097ef01b59543a656dc088559
   React-Mapbuffer: 33546a3ebefbccb8770c33a1f8a5554fa96a54de
   React-microtasksnativemodule: 5c3d795318c22ab8df55100e50b151384a4a60b3
-  react-native-executorch: 23a8d30ff5e813f2b77ea67fa575e32f11bedcaa
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
   react-native-image-picker: 29261670d6bd4913d5c1c3881c728b3e01cb5789
   react-native-ios-context-menu: cae6dd5ee6c8be597ee5ede6d8b7df0b9fdc0079

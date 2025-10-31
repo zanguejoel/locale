@@ -29,13 +29,9 @@ import Animated, {
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import ModelToggle from './ModelToggle';
-import { getLocalModelById } from '@/constants/LocalModels';
-import { getDefaultLocalModelId } from '@/hooks/useDefaultLocalModel';
 import { storage } from '@/hooks/useMMKVStorage';
 import { isLlamaModel } from '@/constants/Models';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ModelFileManager } from '@/utils/ModelFileManager';
-import { CrashReporter } from '@/utils/CrashReporter';
 import { FEATURES } from '@/constants/Config';
 
 
@@ -52,18 +48,20 @@ export const CustomDrawerContent = (props: any) => {
         isLoading,
         deleteConversation,
         renameConversation,
-        setIsLocal,
-        isLocal,
         createNewConversation,
         resetChat,
-        clearAllConversations,
-        isLocalLLMSupported
+        clearAllConversations
     } = useChat();
 
     const router = useRouter();
     const { user } = useAuth();
     const [query, setQuery] = useState('');
     const [localLoading, setLocalLoading] = useState(false);
+    
+    // Local models removed - stub values for backwards compatibility
+    const isLocal = false;
+    const setIsLocal = () => {}; // No-op
+    const isLocalLLMSupported = false;
 
     const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
@@ -214,8 +212,17 @@ export const CustomDrawerContent = (props: any) => {
             return;
         }
         
-        // If switching to local mode from cloud mode, show confirmation alert first
+        // Local models removed - skip local model switching logic
         if (newIsLocal && !isLocal) {
+            // Local models are no longer supported
+            Alert.alert(
+                'Local Models Removed',
+                'Local model functionality has been removed. Please use cloud models.',
+                [{ text: 'OK' }]
+            );
+            return;
+            
+            /* OLD CODE - Local model download logic removed
             const selectedModel = getLocalModelById(getDefaultLocalModelId());
             if (selectedModel) {
                 // Check available storage first
@@ -279,9 +286,10 @@ export const CustomDrawerContent = (props: any) => {
                 );
                 return; // Don't proceed with switch yet
             }
+        } END OLD CODE */
         }
         
-        // Proceed with actual model switch
+        // Proceed with actual model switch (now cloud-only)
         await performModelSwitch(newIsLocal);
     };
 
@@ -464,10 +472,13 @@ export const CustomDrawerContent = (props: any) => {
         if (conversationModelType) {
             // Update the default cloud model to match this conversation's model
             try {
+                console.log('[ChatDrawer] 🔄 Setting model to:', conversationModelType);
                 storage.set('default_model_id', conversationModelType);
             } catch (error) {
-                // console.error('Error updating model selection:', error);
+                console.error('[ChatDrawer] Error updating model selection:', error);
             }
+        } else {
+            console.log('[ChatDrawer] ⚠️ No model_type found for conversation');
         }
         
         router.push(`/(chat)/${chatId}`);

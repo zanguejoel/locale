@@ -16,9 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
-import { LocalModelDownloadProgress } from './LocalModelDownloadProgress';
 import { useDefaultModel } from '@/hooks/useDefaultModel';
-import { useDefaultLocalModel } from '@/hooks/useDefaultLocalModel';
 import { GradientBackground } from './GradientBackground';
 import TypingIndicator from './TypingIndicator';
 import HeaderModelSelector from './HeaderModelSelector';
@@ -43,7 +41,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 import ErrorBanner from '@/components/ErrorBanner';
 import EnhancedEmptyState from '@/components/EnhancedEmptyState';
 import { SelectedFile } from '@/components/FilePreviewModal';
-import CreditPurchaseModalWithApplePay from '@/components/CreditPurchaseModalWithApplePay';
+import CreditPurchaseModalIAP from '@/components/CreditPurchaseModalIAP';
 import ArtifactViewerModal from '@/components/artifacts/ArtifactViewerModal';
 import { Artifact } from '@/utils/ArtifactTypes';
 import apiClient from '@/utils/ApiClient';
@@ -74,7 +72,6 @@ const ChatPage = () => {
   
   // Get selected models (using hooks to ensure reactivity)
   const selectedCloudModel = useDefaultModel();
-  const selectedLocalModel = useDefaultLocalModel();
 
   // States
   const [height, setHeight] = useState(0);
@@ -106,6 +103,7 @@ const ChatPage = () => {
   const [artifactModalVisible, setArtifactModalVisible] = useState(false);
   const [selectedArtifacts, setSelectedArtifacts] = useState<Artifact[]>([]);
   const [selectedArtifactIndex, setSelectedArtifactIndex] = useState(0);
+  const [currentModelType, setCurrentModelType] = useState<string | null>(null);
 
 
   // Animation values
@@ -122,19 +120,13 @@ const ChatPage = () => {
   const chat = useChat();
   const { 
     messages, 
-    isLocal, 
     sendMessage, 
-    handleSendLocalMessage, 
     setCurrentRoom, 
     isSending, 
     stream, 
     fetchMessages, 
     intermediate,
     reasoningText,
-    localModelDownloadProgress,
-    isLocalModelReady,
-    setIsLocal,
-    isLocalLLMSupported,
     resetChat,
     conversations,
     currentConversationId,
@@ -354,6 +346,7 @@ const ChatPage = () => {
   useEffect(() => {
     const currentConversation = conversations.find(c => c.id === id);
     if (currentConversation?.model_type) {
+      console.log('[ChatPage] 🎯 Loading conversation with model:', currentConversation.model_type);
       // Simply set the model - the model selector will handle if it exists or not
       storage.set('default_model_id', currentConversation.model_type);
     }
@@ -560,17 +553,13 @@ const ChatPage = () => {
   // Handle model selection from header
   const handleModelSelect = async (modelId: string) => {
     try {
-      // For local mode, just update storage (no auto-switch needed)
-      if (isLocal) {
-        storage.set('default_local_model_id', modelId);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        return;
-      }
+      // Local models removed - cloud-only mode now
 
       // For cloud mode, check if we need to auto-switch between Llama and non-Llama models
       const currentConversation = conversations.find(c => c.id === currentConversationId);
       const currentConversationModelType = currentConversation?.model_type;
-      
+      setCurrentModelType(currentConversationModelType || null);
+      console.log('[ChatPage] 🎯 Current conversation model type:', currentConversationModelType);
       // Get current model type - use conversation's model_type if available, 
       // otherwise fall back to the current default model
       const currentModelType = currentConversationModelType || selectedCloudModel?.id;
@@ -646,8 +635,8 @@ const ChatPage = () => {
   };
 
   const handleRetryMessage = (content: string) => {
-    // Resend the message
-    isLocal ? handleSendLocalMessage(content) : sendMessage(content);
+    // Resend the message (cloud-only now)
+    sendMessage(content);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -1104,10 +1093,10 @@ const ChatPage = () => {
         headerRight: () => (
           <View style={{ marginRight: 8 }}>
             <HeaderModelSelector
-              isLocal={isLocal}
-              currentModelId={isLocal ? selectedLocalModel?.id : selectedCloudModel?.id}
+              isLocal={false}
+              currentModelId={currentModelType || selectedCloudModel?.id}
               onSelectModel={handleModelSelect}
-              isLocalSupported={isLocalLLMSupported}
+              isLocalSupported={false}
             />
           </View>
         ),
@@ -1137,8 +1126,8 @@ const ChatPage = () => {
             >
               <EnhancedEmptyState
                 firstName={user?.first_name}
-                modelName={isLocal ? selectedLocalModel?.displayName : selectedCloudModel?.displayName}
-                isLocal={isLocal}
+                modelName={selectedCloudModel?.displayName}
+                isLocal={false}
               />
             </Animated.View>
           )}
@@ -1263,14 +1252,6 @@ const ChatPage = () => {
         
         {/* Bottom Section - Fixed Elements (Outside scrollable area) */}
         <View style={[styles.bottomSection, { paddingBottom: insets.bottom }]}>
-          {/* Local Model Progress */}
-          {isLocal && (
-            <LocalModelDownloadProgress 
-              progress={localModelDownloadProgress} 
-              isReady={isLocalModelReady} 
-            />
-          )}
-          
           {/* Voice Recording UI */}
           <VoiceRecordingUI 
             isRecording={isRecording}
@@ -1331,12 +1312,12 @@ const ChatPage = () => {
             onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
               // Note: Scrolling is handled by the useEffect that detects new user messages
               // This ensures consistent scroll behavior (to top of viewport)
-              return isLocal ? handleSendLocalMessage(message) : sendMessage(message, type, operation, additionalData, options);
+              return sendMessage(message, type, operation, additionalData, options);
             }}
             isLoading={isSending}
             onStopStreaming={stopStreaming}
-            isLocal={isLocal}
-            currentModelId={isLocal ? selectedLocalModel?.id : selectedCloudModel?.id}
+            isLocal={false}
+            currentModelId={selectedCloudModel?.id}
             onRecordingStateChange={(recording, onCancel) => {
               setIsRecording(recording);
               setCancelRecording(() => onCancel);
@@ -1354,7 +1335,7 @@ const ChatPage = () => {
         onClose={() => setEditingMessage(null)}
         onSave={handleSaveEdit}
       />
-      <CreditPurchaseModalWithApplePay
+      <CreditPurchaseModalIAP
         visible={showCreditPurchaseModal}
         onClose={() => setShowCreditPurchaseModal(false)}
         onSuccess={async () => {

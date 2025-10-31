@@ -21,9 +21,9 @@ import { ChatProvider } from "@/hooks/useChat";
 import { useTheme } from "@/hooks/useTheme";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { MixpanelProvider } from "@/utils/mixpanel/MixpanelProvider";
-import LocalModelErrorBoundary from "@/components/LocalModelErrorBoundary";
 import { IntegrationsProvider } from "@/contexts/IntegrationsContext";
 import { StripeProvider } from "@/providers/StripeProvider";
+import { IAPProvider } from "@/providers/IAPProvider";
 import { StreamingStateProvider } from "@/contexts/StreamingStateContext";
 import { RootSiblingParent } from 'react-native-root-siblings';
 import { NotificationProvider, useNotification } from "@/contexts/NotificationContext";
@@ -291,8 +291,8 @@ function RootLayoutNav() {
     <RootSiblingParent>
       <SafeAreaProvider >
       <AuthProvider>
+        <IAPProvider>
         <StripeProvider>
-          <LocalModelErrorBoundary>
             <NotificationProvider>
               <StreamingStateProvider>
                 <ChatProvider>
@@ -311,8 +311,8 @@ function RootLayoutNav() {
                 </ChatProvider>
               </StreamingStateProvider>
             </NotificationProvider>
-          </LocalModelErrorBoundary>
         </StripeProvider>
+      </IAPProvider>
       </AuthProvider>
       </SafeAreaProvider>
     </RootSiblingParent>

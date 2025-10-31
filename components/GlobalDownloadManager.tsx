@@ -11,7 +11,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
-import { useDefaultLocalModel } from '@/hooks/useDefaultLocalModel';
 
 interface GlobalDownloadManagerProps {
   progress: number; // 0 to 1
@@ -34,7 +33,6 @@ export const GlobalDownloadManager: React.FC<GlobalDownloadManagerProps> = ({
 }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
-  const selectedModel = useDefaultLocalModel();
   
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -78,8 +76,8 @@ export const GlobalDownloadManager: React.FC<GlobalDownloadManagerProps> = ({
 
   const safeProgress = Math.max(0, Math.min(1, progress || 0));
   const percentComplete = Math.round(safeProgress * 100);
-  const modelName = selectedModel?.displayName || 'Model';
-  const modelSize = selectedModel?.size || '';
+  const modelName = 'Model';
+  const modelSize = '';
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 1],

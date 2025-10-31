@@ -32,22 +32,6 @@ jest.mock('@/hooks/useDefaultModel', () => ({
   getDefaultModelId: jest.fn(() => 'gpt-4'),
 }));
 
-jest.mock('@/hooks/useDefaultLocalModel', () => ({
-  getDefaultLocalModelId: jest.fn(() => 'llama-3.2-1b'),
-}));
-
-jest.mock('@/hooks/useLocalModel', () => ({
-  useLocalModel: jest.fn(() => ({
-    isLocal: false,
-    setIsLocal: jest.fn(),
-    isLocalLLMSupported: false,
-    isLocalModelReady: false,
-    localModelDownloadProgress: 0,
-    handleSendLocalMessage: jest.fn(),
-    clearLocalModel: jest.fn(),
-  })),
-}));
-
 jest.mock('@/hooks/useMMKVStorage', () => ({
   __esModule: true,
   default: jest.fn(() => [null, jest.fn()]),

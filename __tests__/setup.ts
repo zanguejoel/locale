@@ -260,19 +260,6 @@ jest.mock('expo-constants', () => ({
   },
 }));
 
-// Mock React Native ExecuTorch
-jest.mock('react-native-executorch', () => ({
-  install: jest.fn(),
-  LLAMA3_2_1B: 'llama3_2_1b',
-  LLAMA3_2_3B: 'llama3_2_3b',
-  QWEN2_5_0_5B: 'qwen2_5_0_5b',
-  loadModule: jest.fn(() => Promise.resolve({ moduleId: 'mock-module-id' })),
-  forward: jest.fn(() => Promise.resolve({ output: 'mock output' })),
-  unloadModule: jest.fn(() => Promise.resolve()),
-  interrupt: jest.fn(() => Promise.resolve()),
-  clearCache: jest.fn(() => Promise.resolve()),
-}));
-
 // Mock console methods to reduce noise in tests
 global.console = {
   ...console,
