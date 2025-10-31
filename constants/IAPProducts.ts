@@ -68,7 +68,7 @@ export interface ProductMetadata {
   displayName: string;
   description: string;
   popular?: boolean;
-  tier?: 'PRO' | 'BUSINESS';
+  tier?: 'BASIC' | 'PROFESSIONAL';
 }
 
 export const CREDIT_PRODUCT_METADATA: Record<string, ProductMetadata> = {
@@ -77,7 +77,7 @@ export const CREDIT_PRODUCT_METADATA: Record<string, ProductMetadata> = {
     credits: 500,
     displayName: '500 Credits',
     description: 'Perfect for occasional use',
-    tier: 'PRO',
+    tier: 'BASIC',
   },
   'credits_1500': {
     id: 'credits_1500',
@@ -85,63 +85,63 @@ export const CREDIT_PRODUCT_METADATA: Record<string, ProductMetadata> = {
     displayName: '1,500 Credits',
     description: 'Most popular choice',
     popular: true,
-    tier: 'PRO',
+    tier: 'BASIC',
   },
   'credits_2500': {
     id: 'credits_2500',
     credits: 2500,
     displayName: '2,500 Credits',
     description: 'Great value for power users',
-    tier: 'PRO',
+    tier: 'BASIC',
   },
   'credits_5000': {
     id: 'credits_5000',
     credits: 5000,
     displayName: '5,000 Credits',
     description: 'Maximum savings',
-    tier: 'PRO',
+    tier: 'BASIC',
   },
   'credits_10000': {
     id: 'credits_10000',
     credits: 10000,
     displayName: '10,000 Credits',
-    description: 'Business scale',
-    tier: 'BUSINESS',
+    description: 'Professional scale',
+    tier: 'PROFESSIONAL',
   },
   'credits_15000': {
     id: 'credits_15000',
     credits: 15000,
     displayName: '15,000 Credits',
     description: 'Enterprise level',
-    tier: 'BUSINESS',
+    tier: 'PROFESSIONAL',
   },
 };
 
 export const SUBSCRIPTION_PRODUCT_METADATA: Record<string, ProductMetadata> = {
   'pro_monthly': {
     id: 'pro_monthly',
-    displayName: 'Pro Monthly',
+    displayName: 'Basic Monthly',
     description: '1000 credits per month + advanced features',
-    tier: 'PRO',
+    tier: 'BASIC',
   },
   'pro_yearly': {
     id: 'pro_yearly',
-    displayName: 'Pro Yearly',
+    displayName: 'Basic Yearly',
     description: 'Save 20% with annual billing',
     popular: true,
-    tier: 'PRO',
+    tier: 'BASIC',
   },
   'business_monthly': {
     id: 'business_monthly',
-    displayName: 'Business Monthly',
+    displayName: 'Professional Monthly',
     description: '1250 credits per user + team features',
-    tier: 'BUSINESS',
+    tier: 'PROFESSIONAL',
   },
   'business_yearly': {
     id: 'business_yearly',
-    displayName: 'Business Yearly',
+    displayName: 'Professional Yearly',
     description: 'Best value for teams',
-    tier: 'BUSINESS',
+    tier: 'PROFESSIONAL',
   },
 };
 

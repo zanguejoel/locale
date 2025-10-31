@@ -92,6 +92,7 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
   
   // Track which conversation is currently visible/active
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const activeConversationIdRef = useRef<string | null>(null);
   
   // Use custom notification system
   const notification = useNotification();
@@ -127,9 +128,10 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
     const streams = Array.from(activeStreamsRef.current.entries());
     
     // Separate active and background streams
-    const activeStream = streams.find(([id]) => id === activeConversationId);
+    // Use ref for synchronous access
+    const activeStream = streams.find(([id]) => id === activeConversationIdRef.current);
     const backgroundStreams = streams.filter(([id]) => 
-      id !== activeConversationId && id !== newConversationId
+      id !== activeConversationIdRef.current && id !== newConversationId
     );
     
     // If we have too many background streams, abort the oldest
@@ -152,7 +154,7 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
         return next;
       });
     }
-  }, [activeConversationId]);
+  }, []); // No dependencies needed - uses refs only
   
   /**
    * Add a new stream
@@ -168,7 +170,9 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
       content: '',
       intermediate: '',
       reasoningText: '',
-      isActive: conversationId === activeConversationId,
+      // IMPORTANT: Use ref instead of state to get synchronous value
+      // State updates are async, so we'd read stale value if we used activeConversationId
+      isActive: conversationId === activeConversationIdRef.current,
       isStreaming: true,
       controller,
       timestamp: Date.now(),
@@ -295,24 +299,14 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
     // Special handling for streams without valid ID (new chats)
     if (!hasValidId) {
       console.log('[StreamingState] ⚠️ Stream completing without valid conversationId (new chat)');
+      console.log('[StreamingState] 🔍 Skipping notification for new chat - cannot reliably determine if active or background');
       
-      // Still show notification but with special handling
-      // Use a placeholder ID so notification system doesn't crash
-      const placeholderId = `new-chat-${Date.now()}`;
+      // For new chats without a valid ID, we cannot reliably determine if they're
+      // active or in the background, so we skip showing notifications entirely.
+      // This prevents unwanted notifications on the first message of new chats
+      // when the user is actively viewing the chat.
       
-      // Provide haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch((err) => {
-        console.warn('[StreamingState] Haptic feedback failed:', err);
-      });
-      
-      // Show notification with placeholder ID (won't navigate but will inform)
-      notification.showNotification({
-        message: 'Response ready in new chat',
-        chatTitle: metadata?.chatTitle || 'New Chat',
-        conversationId: placeholderId, // Use placeholder
-      });
-      
-      return; // Exit early - no stream state to update
+      return; // Exit early - no stream state to update, no notification shown
     }
     
     setActiveStreams(prev => {
@@ -412,6 +406,13 @@ export const StreamingStateProvider: React.FC<{ children: React.ReactNode }> = (
    */
   const setActiveConversation = useCallback((conversationId: string | null) => {
     console.log('[StreamingState] 🎯 Setting active conversation:', conversationId);
+    
+    // IMPORTANT: Update ref SYNCHRONOUSLY first
+    // This ensures addStream can immediately see the correct active conversation
+    // when checking isActive = conversationId === activeConversationId
+    activeConversationIdRef.current = conversationId;
+    
+    // Then update state for UI (async)
     setActiveConversationId(conversationId);
     
     // Update isActive flag on all streams

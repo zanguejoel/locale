@@ -24,13 +24,13 @@ export const CREDITS_PER_DOLLAR = 50;
 
 // Credit packages based on account type (following web implementation)
 export const CREDIT_PACKAGES = {
-  PRO: [
+  BASIC: [
     { amount: 500, cost: 10, label: '$10 = 500 Credits' },
     { amount: 1500, cost: 25, label: '$25 = 1,500 Credits', popular: true },
     { amount: 2500, cost: 50, label: '$50 = 2,500 Credits' },
     { amount: 5000, cost: 100, label: '$100 = 5,000 Credits' },
   ],
-  BUSINESS: [
+  PROFESSIONAL: [
     { amount: 2500, cost: 50, label: '$50 = 2,500 Credits' },
     { amount: 5000, cost: 100, label: '$100 = 5,000 Credits', popular: true },
     { amount: 10000, cost: 200, label: '$200 = 10,000 Credits' },
@@ -38,7 +38,7 @@ export const CREDIT_PACKAGES = {
   ]
 } as const;
 
-export type AccountType = 'PRO' | 'BUSINESS';
+export type AccountType = 'BASIC' | 'PROFESSIONAL';
 
 export const useCredits = () => {
   const [credits, setCredits] = useState<CreditBalance | null>(null);

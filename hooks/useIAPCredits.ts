@@ -57,7 +57,7 @@ export const useIAPCredits = () => {
   /**
    * Get packages for specific tier
    */
-  const getPackagesForTier = useCallback((tier: 'PRO' | 'BUSINESS'): CreditPackage[] => {
+  const getPackagesForTier = useCallback((tier: 'BASIC' | 'PROFESSIONAL'): CreditPackage[] => {
     return creditPackages.filter((pkg) => {
       const metadata = CREDIT_PRODUCT_METADATA[pkg.productId];
       return metadata?.tier === tier;

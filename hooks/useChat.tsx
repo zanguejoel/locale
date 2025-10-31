@@ -1813,7 +1813,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Clear artifacts
     setArtifacts([]);
     setCurrentStreamingArtifact(null);
-  }, [abortCurrentStream]);
+    
+    // Clear active conversation in StreamingState
+    // This ensures no conversation is marked as active when we're on a new/empty chat
+    setActiveConversationFn(null);
+  }, [abortCurrentStream, setActiveConversationFn]);
 
   const deleteConversation = useCallback(async (conversationId: string): Promise<boolean> => {
     try {

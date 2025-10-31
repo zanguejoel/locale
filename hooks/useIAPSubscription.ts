@@ -18,7 +18,7 @@ export interface SubscriptionPackage {
   description: string;
   price: string;
   priceAmount: number;
-  tier: 'PRO' | 'BUSINESS';
+  tier: 'BASIC' | 'PROFESSIONAL';
   period: 'monthly' | 'yearly';
   popular?: boolean;
 }
@@ -43,7 +43,7 @@ export const useIAPSubscription = () => {
       const metadata = SUBSCRIPTION_PRODUCT_METADATA[product.productId];
       
       // Determine tier and period from product ID
-      const tier = product.productId.includes('business') ? 'BUSINESS' : 'PRO';
+      const tier = product.productId.includes('business') ? 'PROFESSIONAL' : 'BASIC';
       const period = product.productId.includes('yearly') ? 'yearly' : 'monthly';
 
       return {
@@ -62,7 +62,7 @@ export const useIAPSubscription = () => {
   /**
    * Get subscriptions for specific tier
    */
-  const getSubscriptionsForTier = useCallback((tier: 'PRO' | 'BUSINESS'): SubscriptionPackage[] => {
+  const getSubscriptionsForTier = useCallback((tier: 'BASIC' | 'PROFESSIONAL'): SubscriptionPackage[] => {
     return subscriptionPackages.filter((pkg) => pkg.tier === tier);
   }, [subscriptionPackages]);
 

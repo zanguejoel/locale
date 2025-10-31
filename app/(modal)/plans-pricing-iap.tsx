@@ -34,7 +34,7 @@ interface PlanFeature {
 interface DisplayPlan {
   title: string;
   identifier: string;
-  tier: 'FREE' | 'PRO' | 'BUSINESS';
+  tier: 'FREE' | 'BASIC' | 'PROFESSIONAL';
   features: PlanFeature[];
   highlighted: boolean;
 }
@@ -81,9 +81,9 @@ const Page = () => {
       highlighted: false,
     },
     {
-      title: 'Pro',
-      identifier: 'pro',
-      tier: 'PRO',
+      title: 'Basic',
+      identifier: 'basic',
+      tier: 'BASIC',
       features: [
         { text: '1000 Chat credits', included: true },
         { text: 'Document analysis', included: true },
@@ -93,11 +93,11 @@ const Page = () => {
       highlighted: true,
     },
     {
-      title: 'Business',
-      identifier: 'business',
-      tier: 'BUSINESS',
+      title: 'Professional',
+      identifier: 'professional',
+      tier: 'PROFESSIONAL',
       features: [
-        { text: 'Everything in Pro, plus:', included: true },
+        { text: 'Everything in Basic, plus:', included: true },
         { text: '1250 Chat credits per user', included: true },
         { text: 'Team collaboration features', included: true },
         { text: 'Custom data integration', included: true },
@@ -109,14 +109,14 @@ const Page = () => {
   ];
 
   // Get product for a tier and period
-  const getProductForPlan = (tier: 'PRO' | 'BUSINESS', period: 'monthly' | 'yearly') => {
+  const getProductForPlan = (tier: 'BASIC' | 'PROFESSIONAL', period: 'monthly' | 'yearly') => {
     return subscriptionPackages.find(
       (pkg) => pkg.tier === tier && pkg.period === period
     );
   };
 
   // Handle subscription purchase
-  const handleSubscribe = async (tier: 'PRO' | 'BUSINESS') => {
+  const handleSubscribe = async (tier: 'BASIC' | 'PROFESSIONAL') => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const product = getProductForPlan(tier, selectedPeriod);
@@ -163,7 +163,7 @@ const Page = () => {
   const renderPlan = (plan: DisplayPlan) => {
     const isCurrentPlan = plan.tier === currentTier;
     const isFree = plan.tier === 'FREE';
-    const product = isFree ? null : getProductForPlan(plan.tier as 'PRO' | 'BUSINESS', selectedPeriod);
+    const product = isFree ? null : getProductForPlan(plan.tier as 'BASIC' | 'PROFESSIONAL', selectedPeriod);
 
     return (
       <View
@@ -218,7 +218,7 @@ const Page = () => {
               pressed && styles.subscribeButtonPressed,
               (isPurchasing || isLoadingSubscription) && styles.subscribeButtonDisabled,
             ]}
-            onPress={() => handleSubscribe(plan.tier as 'PRO' | 'BUSINESS')}
+            onPress={() => handleSubscribe(plan.tier as 'BASIC' | 'PROFESSIONAL')}
             disabled={isPurchasing || isLoadingSubscription}
           >
             {isPurchasing ? (
