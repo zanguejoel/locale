@@ -43,7 +43,7 @@ export const useIAPSubscription = () => {
       const metadata = SUBSCRIPTION_PRODUCT_METADATA[product.productId];
       
       // Determine tier and period from product ID
-      const tier = product.productId.includes('business') ? 'PROFESSIONAL' : 'BASIC';
+      const tier = product.productId.includes('professional') ? 'PROFESSIONAL' : 'BASIC';
       const period = product.productId.includes('yearly') ? 'yearly' : 'monthly';
 
       return {

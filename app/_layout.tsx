@@ -224,7 +224,7 @@ const Layout = () => {
         }}
       />
       <Stack.Screen
-        name="(modal)/plans-pricing"
+        name="(modal)/plans-pricing-iap"
         options={{
           headerTitle: "Plans & Pricing",
           headerTitleAlign: 'center',

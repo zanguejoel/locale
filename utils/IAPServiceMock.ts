@@ -63,10 +63,10 @@ class IAPServiceMock {
       else if (productId.includes('5000')) { price = '$99.99'; priceAmount = 99.99; }
       else if (productId.includes('10000')) { price = '$199.99'; priceAmount = 199.99; }
       else if (productId.includes('15000')) { price = '$299.99'; priceAmount = 299.99; }
-      else if (productId.includes('pro_monthly')) { price = '$19.99'; priceAmount = 19.99; }
-      else if (productId.includes('business_monthly')) { price = '$39.99'; priceAmount = 39.99; }
-      else if (productId.includes('pro_yearly')) { price = '$199.99'; priceAmount = 199.99; }
-      else if (productId.includes('business_yearly')) { price = '$399.99'; priceAmount = 399.99; }
+      else if (productId.includes('basic_monthly')) { price = '$19.99'; priceAmount = 19.99; }
+      else if (productId.includes('professional_monthly')) { price = '$39.99'; priceAmount = 39.99; }
+      else if (productId.includes('basic_yearly')) { price = '$199.99'; priceAmount = 199.99; }
+      else if (productId.includes('professional_yearly')) { price = '$399.99'; priceAmount = 399.99; }
 
       return {
         productId,

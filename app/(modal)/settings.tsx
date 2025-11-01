@@ -18,6 +18,7 @@ import CreditPurchaseModalIAP from '@/components/CreditPurchaseModalIAP';
 import CreditBadge from '@/components/CreditBadge';
 import { useIntegrations } from '@/contexts/IntegrationsContext';
 import apiClient from '@/utils/ApiClient';
+import { useIAP } from '@/providers/IAPProvider';
 
 const rawPage = [{
   id: 1,
@@ -82,6 +83,7 @@ const Page = () => {
   const router = useRouter();
   const { signOut } = useAuth();
   const { nangoIntegrations, initialized: integrationsInitialized } = useIntegrations();
+  const { isInitialized: iapInitialized, isLoading: iapLoading, products: iapProducts, error: iapError } = useIAP();
   
   // Count connected integrations from context
   const [connectedCount, setConnectedCount] = useState(0);
@@ -165,6 +167,7 @@ const Page = () => {
     // 2. We have a model to compare against (conversation or default)
     // 3. We're actually switching between Llama and non-Llama
     // 4. The current conversation has at least one message
+    const isLocal = false; // Not using local models anymore
     const isSwitchingBetweenLlamaTypes = !isLocal && 
                                          currentModelType && 
                                          currentIsLlama !== newIsLlama;
@@ -376,6 +379,60 @@ const Page = () => {
           <View style={styles.menuContainer}>
             {visibleMenuItems.map((item, index) => renderRaw(item, index, visibleMenuItems))}
           </View>
+          
+          {/* IAP Debug Status - Only show in development */}
+          {__DEV__ && (
+            <View style={styles.debugContainer}>
+              <View style={styles.debugHeader}>
+                <Ionicons name="code-slash" size={16} color={theme.colors.greyLight} />
+                <Text style={styles.debugTitle}>IAP Debug Status</Text>
+              </View>
+              
+              <View style={styles.debugContent}>
+                <View style={styles.debugRow}>
+                  <Text style={styles.debugLabel}>Connection Status:</Text>
+                  <View style={styles.debugValueContainer}>
+                    {iapLoading ? (
+                      <>
+                        <View style={[styles.statusDot, { backgroundColor: '#FFA500' }]} />
+                        <Text style={styles.debugValue}>Connecting...</Text>
+                      </>
+                    ) : iapInitialized ? (
+                      <>
+                        <View style={[styles.statusDot, { backgroundColor: '#4CAF50' }]} />
+                        <Text style={[styles.debugValue, { color: '#4CAF50' }]}>Connected</Text>
+                      </>
+                    ) : (
+                      <>
+                        <View style={[styles.statusDot, { backgroundColor: '#F44336' }]} />
+                        <Text style={[styles.debugValue, { color: '#F44336' }]}>Disconnected</Text>
+                      </>
+                    )}
+                  </View>
+                </View>
+                
+                <View style={styles.debugRow}>
+                  <Text style={styles.debugLabel}>Products Loaded:</Text>
+                  <Text style={styles.debugValue}>{iapProducts?.length || 0}</Text>
+                </View>
+                
+                {iapError && (
+                  <View style={styles.debugRow}>
+                    <Text style={styles.debugLabel}>Error:</Text>
+                    <Text style={[styles.debugValue, styles.debugError]} numberOfLines={2}>
+                      {iapError}
+                    </Text>
+                  </View>
+                )}
+                
+                <View style={styles.debugRow}>
+                  <Text style={styles.debugLabel}>Platform:</Text>
+                  <Text style={styles.debugValue}>{require('react-native').Platform.OS}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+          
           <View style={styles.footer}>
             {/* Logo commented out */}
            <Image source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} style={styles.logo} />
@@ -519,6 +576,66 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
+  },
+  // Debug styles
+  debugContainer: {
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 12,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '30',
+    overflow: 'hidden',
+  },
+  debugHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.primary + '10',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.primary + '20',
+  },
+  debugTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  debugContent: {
+    padding: 14,
+    gap: 10,
+  },
+  debugRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  debugLabel: {
+    fontSize: 13,
+    color: theme.colors.greyLight,
+    flex: 1,
+  },
+  debugValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  debugValue: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.colors.text,
+  },
+  debugError: {
+    color: '#F44336',
+    fontSize: 11,
+    flex: 1,
+    textAlign: 'right',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });
 

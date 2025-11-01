@@ -1,10 +1,10 @@
 /**
- * IAP Provider (iOS Only)
+ * IAP Provider
  * 
- * Manages In-App Purchase state across the app
+ * Manages In-App Purchase state across the app using react-native-iap
+ * Automatically uses mock service on simulator
  * 
- * Note: Currently supports iOS only via App Store.
- * Android support via Google Play will be added in the future.
+ * Supports both iOS (App Store) and Android (Google Play)
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
@@ -12,6 +12,7 @@ import { Platform, Alert } from 'react-native';
 import { iapService, IAPProduct, PurchaseResult } from '@/utils/IAPService';
 import api from '@/utils/ApiClient';
 import { getToken } from '@/utils/SecureTokenManager';
+import { isSubscriptionProduct } from '@/constants/IAPProducts';
 
 export interface IAPContextValue {
   // State
@@ -79,21 +80,95 @@ export const IAPProvider: React.FC<IAPProviderProps> = ({ children }) => {
       const success = await iapService.initialize();
 
       if (success) {
-        const fetchedProducts = await iapService.fetchProducts();
+        const fetchedProducts = iapService.getProducts();
         setProducts(fetchedProducts);
         setIsInitialized(true);
         console.log('[IAPProvider] IAP initialized successfully');
+        console.log('[IAPProvider] Products available:', fetchedProducts.length);
       } else {
-        throw new Error('Failed to initialize IAP');
+        throw new Error('IAP initialization returned false');
       }
     } catch (err: any) {
       console.error('[IAPProvider] Initialization error:', err);
-      setError(err.message || 'Failed to initialize In-App Purchases');
+      
+      // Set user-friendly error message
+      let errorMessage = err.message || 'Failed to initialize In-App Purchases';
+      
+      // Add helpful context based on error
+      if (errorMessage.includes('simulator')) {
+        errorMessage = 'Simulator detected - IAP requires physical device';
+      } else if (errorMessage.includes('connect')) {
+        errorMessage = 'Cannot connect to App Store - Check network and Sandbox account';
+      } else if (errorMessage.includes('products')) {
+        errorMessage = 'Products not available - Check App Store Connect configuration';
+      } else if (errorMessage.includes('module')) {
+        errorMessage = 'IAP module not loaded - Rebuild required';
+      }
+      
+      setError(errorMessage);
       setIsInitialized(false);
     } finally {
       setIsLoading(false);
     }
   };
+
+  /**
+   * Verify purchase with backend
+   */
+  const verifyPurchaseWithBackend = useCallback(async (
+    productId: string,
+    transactionReceipt?: string,
+    purchaseToken?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+
+      await api.setAuthToken(token);
+
+      const payload = {
+        product_id: productId,
+        platform: 'ios', // iOS only for now
+        transaction_receipt: transactionReceipt,
+      };
+
+      // Determine if this is a subscription or credit purchase using proper helper
+      const isSubscription = isSubscriptionProduct(productId);
+      const endpoint = isSubscription ? '/iap/verify-subscription' : '/iap/verify-purchase';
+
+      console.log(`[IAPProvider] Verifying ${isSubscription ? 'subscription' : 'purchase'} with backend (iOS):`, payload);
+
+      const response = await api.post(endpoint, payload);
+
+      if (!response.ok || !response.data) {
+        // Extract error message from response if available
+        const errorMessage = response.data?.message || response.data?.detail || 'Backend verification failed';
+        throw new Error(errorMessage);
+      }
+
+      // Log successful verification with details
+      if (isSubscriptionProduct(productId)) {
+        const { tier, expires_at } = response.data;
+        console.log('[IAPProvider] Subscription verified:', { tier, expires_at });
+      } else {
+        const { credits_added, new_balance } = response.data;
+        console.log('[IAPProvider] Credits verified:', { credits_added, new_balance });
+      }
+
+      return { 
+        success: true,
+        data: response.data  // Return backend data for caller to use
+      };
+    } catch (err: any) {
+      console.error('[IAPProvider] Backend verification error:', err);
+      return {
+        success: false,
+        error: err.message || 'Verification failed',
+      };
+    }
+  }, []);
 
   /**
    * Refresh products from store
@@ -165,7 +240,7 @@ export const IAPProvider: React.FC<IAPProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [verifyPurchaseWithBackend]);
 
   /**
    * Restore previous purchases
@@ -202,51 +277,7 @@ export const IAPProvider: React.FC<IAPProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  /**
-   * Verify purchase with backend
-   */
-  const verifyPurchaseWithBackend = async (
-    productId: string,
-    transactionReceipt?: string,
-    purchaseToken?: string
-  ): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const token = await getToken();
-      if (!token) {
-        throw new Error('No authentication token');
-      }
-
-      await api.setAuthToken(token);
-
-      const payload = {
-        product_id: productId,
-        platform: 'ios', // iOS only for now
-        transaction_receipt: transactionReceipt,
-      };
-
-      // Determine if this is a subscription or credit purchase
-      const isSubscription = productId.includes('pro_') || productId.includes('business_');
-      const endpoint = isSubscription ? '/iap/verify-subscription' : '/iap/verify-purchase';
-
-      console.log(`[IAPProvider] Verifying ${isSubscription ? 'subscription' : 'purchase'} with backend (iOS):`, payload);
-
-      const response = await api.post(endpoint, payload);
-
-      if (!response.ok || !response.data) {
-        throw new Error('Backend verification failed');
-      }
-
-      return { success: true };
-    } catch (err: any) {
-      console.error('[IAPProvider] Backend verification error:', err);
-      return {
-        success: false,
-        error: err.message || 'Verification failed',
-      };
-    }
-  };
+  }, [verifyPurchaseWithBackend]);
 
   // Derived state
   const subscriptionProducts = products.filter((p) => p.type === 'subscription');

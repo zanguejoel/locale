@@ -11,10 +11,10 @@
 // ========================================
 
 export const SUBSCRIPTION_PRODUCTS = {
-  PRO_MONTHLY: 'pro_monthly',
-  PRO_YEARLY: 'pro_yearly',
-  BUSINESS_MONTHLY: 'business_monthly',
-  BUSINESS_YEARLY: 'business_yearly',
+  BASIC_MONTHLY: 'basic_monthly',
+  BASIC_YEARLY: 'basic_yearly',
+  PROFESSIONAL_MONTHLY: 'professional_monthly',
+  PROFESSIONAL_YEARLY: 'professional_yearly',
 } as const;
 
 // ========================================
@@ -22,13 +22,13 @@ export const SUBSCRIPTION_PRODUCTS = {
 // ========================================
 
 export const CREDIT_PRODUCTS = {
-  // Pro tier credits
+  // Basic tier credits
   CREDITS_500: 'credits_500',
   CREDITS_1500: 'credits_1500',
   CREDITS_2500: 'credits_2500',
   CREDITS_5000: 'credits_5000',
   
-  // Business tier credits
+  // Professional tier credits
   CREDITS_10000: 'credits_10000',
   CREDITS_15000: 'credits_15000',
 } as const;
@@ -55,7 +55,8 @@ export const ALL_INTEGRATION_PRODUCT_IDS = Object.values(INTEGRATION_PRODUCTS) a
 export const ALL_PRODUCT_IDS = [
   ...ALL_SUBSCRIPTION_PRODUCT_IDS,
   ...ALL_CREDIT_PRODUCT_IDS,
-  ...ALL_INTEGRATION_PRODUCT_IDS,
+  // Integration products not yet implemented on backend
+  // ...ALL_INTEGRATION_PRODUCT_IDS,
 ];
 
 // ========================================
@@ -118,27 +119,27 @@ export const CREDIT_PRODUCT_METADATA: Record<string, ProductMetadata> = {
 };
 
 export const SUBSCRIPTION_PRODUCT_METADATA: Record<string, ProductMetadata> = {
-  'pro_monthly': {
-    id: 'pro_monthly',
+  'basic_monthly': {
+    id: 'basic_monthly',
     displayName: 'Basic Monthly',
     description: '1000 credits per month + advanced features',
     tier: 'BASIC',
   },
-  'pro_yearly': {
-    id: 'pro_yearly',
+  'basic_yearly': {
+    id: 'basic_yearly',
     displayName: 'Basic Yearly',
     description: 'Save 20% with annual billing',
     popular: true,
     tier: 'BASIC',
   },
-  'business_monthly': {
-    id: 'business_monthly',
+  'professional_monthly': {
+    id: 'professional_monthly',
     displayName: 'Professional Monthly',
     description: '1250 credits per user + team features',
     tier: 'PROFESSIONAL',
   },
-  'business_yearly': {
-    id: 'business_yearly',
+  'professional_yearly': {
+    id: 'professional_yearly',
     displayName: 'Professional Yearly',
     description: 'Best value for teams',
     tier: 'PROFESSIONAL',

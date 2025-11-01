@@ -95,10 +95,11 @@ export const useIAPCredits = () => {
           console.log('[useIAPCredits] Purchase cancelled');
           
           // Track cancellation
-          mixpanelService.trackCredit(CreditEvent.CREDIT_PURCHASE_CANCELLED, {
+          mixpanelService.trackCredit(CreditEvent.CREDIT_PURCHASE_FAILED, {
             product_id: productId,
             credits: credits,
             source: source || 'unknown',
+            error: 'User cancelled',
           });
 
           return {
@@ -110,19 +111,20 @@ export const useIAPCredits = () => {
         throw new Error(result.error || 'Purchase failed');
       }
 
-      console.log('[useIAPCredits] Purchase successful');
+      console.log('[useIAPCredits] Purchase successful, refreshing credit balance...');
+
+      // Refresh credits to get updated balance FIRST
+      // This ensures we have the latest balance before showing success message
+      await fetchCredits();
 
       // Track purchase success
-      mixpanelService.trackCredit(CreditEvent.CREDIT_PURCHASE_SUCCESS, {
+      mixpanelService.trackCredit(CreditEvent.CREDIT_PURCHASE_COMPLETED, {
         product_id: productId,
         credits: credits,
         amount: product?.priceAmount,
         source: source || 'unknown',
         payment_method: 'iap',
       });
-
-      // Refresh credits to get updated balance
-      await fetchCredits();
 
       // Show success message
       Alert.alert(

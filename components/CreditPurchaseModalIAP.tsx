@@ -144,21 +144,21 @@ const CreditPurchaseModalIAP: React.FC<CreditPurchaseModalIAPProps> = ({
               <View style={styles.packagesContainer}>
                 {availablePackages.map((pkg) => (
                   <TouchableOpacity
-                    key={pkg.productId}
-                    style={[
-                      styles.packageCard,
-                      selectedPackageId === pkg.productId && styles.packageCardSelected,
-                      pkg.popular && styles.packageCardPopular,
-                    ]}
-                    onPress={() => handlePackageSelect(pkg.productId)}
-                    disabled={isPurchasing}
-                    activeOpacity={0.7}
-                  >
-                    {pkg.popular && (
-                      <View style={styles.popularBadge}>
-                        <Text style={styles.popularText}>POPULAR</Text>
-                      </View>
-                    )}
+                      key={pkg.productId}
+                      style={[
+                        styles.packageCard,
+                        selectedPackageId === pkg.productId && styles.packageCardSelected,
+                        pkg.popular && styles.packageCardPopular,
+                      ]}
+                      onPress={() => handlePackageSelect(pkg.productId)}
+                      disabled={isPurchasing}
+                      activeOpacity={0.7}
+                    >
+                      {pkg.popular && (
+                        <View style={styles.popularBadge}>
+                          <Text style={styles.popularText}>POPULAR</Text>
+                        </View>
+                      )}
 
                     {selectedPackageId === pkg.productId && (
                       <View style={styles.selectedBadge}>
@@ -220,8 +220,7 @@ const CreditPurchaseModalIAP: React.FC<CreditPurchaseModalIAPProps> = ({
             <View style={styles.secureInfo}>
               <Ionicons name="lock-closed" size={14} color={theme.colors.greyLight} />
               <Text style={styles.secureText}>
-                Secure payment via {' '}
-                {require('react-native').Platform.OS === 'ios' ? 'App Store' : 'Google Play'}
+                Secure payment via {require('react-native').Platform.OS === 'ios' ? 'App Store' : 'Google Play'}
               </Text>
             </View>
           </View>
@@ -242,11 +241,13 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.colors.background,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
-      maxHeight: '85%',
+      height: '85%',
       paddingTop: 20,
+      flexDirection: 'column',
     },
     scrollView: {
       flex: 1,
+      minHeight: 200,
     },
     scrollContent: {
       paddingHorizontal: 20,
@@ -318,6 +319,29 @@ const getStyles = (theme: Theme) =>
       fontSize: 14,
       color: theme.colors.text,
       flex: 1,
+    },
+    // Simulator Banner
+    simulatorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: '#FF9500' + '15',
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: '#FF9500' + '30',
+    },
+    simulatorBannerTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#FF9500',
+      marginBottom: 2,
+    },
+    simulatorBannerText: {
+      fontSize: 12,
+      color: theme.colors.text,
+      opacity: 0.8,
     },
     // Section
     sectionTitle: {

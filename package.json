@@ -126,6 +126,7 @@
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.20.2",
     "react-native-get-random-values": "^1.11.0",
+    "react-native-iap": "12.10.5",
     "react-native-image-picker": "^8.2.0",
     "react-native-ios-context-menu": "^3.1.0",
     "react-native-ios-utilities": "5.1.8",

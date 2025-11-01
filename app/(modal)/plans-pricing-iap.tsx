@@ -2,9 +2,10 @@
  * Plans & Pricing (IAP Version)
  * 
  * Native in-app purchase subscriptions using expo-iap
+ * With animated tab navigation and smooth transitions
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +15,8 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +28,8 @@ import { SubscriptionEvent } from '@/types/mixpanel';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useIAPSubscription } from '@/hooks/useIAPSubscription';
 import * as Haptics from 'expo-haptics';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface PlanFeature {
   text: string;
@@ -52,17 +57,73 @@ const Page = () => {
     restoreSubscriptions 
   } = useIAPSubscription();
   
-  const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  // Get current subscription tier
+  const currentTier = (subscription?.tier?.toUpperCase() || 'FREE') as 'FREE' | 'BASIC' | 'PROFESSIONAL';
+  
+  // Helper to get initial tab position
+  const getInitialTabPosition = (tier: 'FREE' | 'BASIC' | 'PROFESSIONAL') => {
+    switch (tier) {
+      case 'FREE': return 0;
+      case 'BASIC': return 1;
+      case 'PROFESSIONAL': return 2;
+      default: return 0; // Default to FREE if unknown
+    }
+  };
+  
+  const [selectedTier, setSelectedTier] = useState<'FREE' | 'BASIC' | 'PROFESSIONAL'>(currentTier);
+  
+  // Animation values - initialize based on current tier
+  const tabIndicatorPosition = useRef(new Animated.Value(getInitialTabPosition(currentTier))).current;
+  const contentOpacity = useRef(new Animated.Value(1)).current;
+  const planCardScale = useRef(new Animated.Value(0)).current;
 
-  // Track plans page opened
+  // Track plans page opened and animate on mount
   useEffect(() => {
     mixpanelService.trackSubscription(SubscriptionEvent.PLANS_PAGE_OPENED, {
       source: 'settings',
+      current_tier: currentTier,
     });
+    
+    // Animate card on mount
+    Animated.spring(planCardScale, {
+      toValue: 1,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Get current subscription tier
-  const currentTier = subscription?.tier?.toUpperCase() || 'FREE';
+  
+  // Handle tier change with animation
+  const handleTierChange = (tier: 'FREE' | 'BASIC' | 'PROFESSIONAL') => {
+    if (tier === selectedTier) return;
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    // Fade out content
+    Animated.parallel([
+      Animated.timing(contentOpacity, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.spring(tabIndicatorPosition, {
+        toValue: getInitialTabPosition(tier),
+        friction: 10,
+        tension: 50,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setSelectedTier(tier);
+      
+      // Fade in content
+      Animated.timing(contentOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
 
   // Define plan features for display
   const displayPlans: DisplayPlan[] = [
@@ -108,10 +169,10 @@ const Page = () => {
     },
   ];
 
-  // Get product for a tier and period
-  const getProductForPlan = (tier: 'BASIC' | 'PROFESSIONAL', period: 'monthly' | 'yearly') => {
+  // Get product for a tier (monthly only)
+  const getProductForPlan = (tier: 'BASIC' | 'PROFESSIONAL') => {
     return subscriptionPackages.find(
-      (pkg) => pkg.tier === tier && pkg.period === period
+      (pkg) => pkg.tier === tier && pkg.period === 'monthly'
     );
   };
 
@@ -119,7 +180,7 @@ const Page = () => {
   const handleSubscribe = async (tier: 'BASIC' | 'PROFESSIONAL') => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const product = getProductForPlan(tier, selectedPeriod);
+    const product = getProductForPlan(tier);
     
     if (!product) {
       Alert.alert('Error', 'Product not available. Please try again later.');
@@ -159,19 +220,25 @@ const Page = () => {
     </View>
   );
 
-  // Render plan card
-  const renderPlan = (plan: DisplayPlan) => {
+  // Render single plan card based on selected tier
+  const renderPlan = () => {
+    const plan = displayPlans.find(p => p.tier === selectedTier);
+    if (!plan) return null;
+    
     const isCurrentPlan = plan.tier === currentTier;
     const isFree = plan.tier === 'FREE';
-    const product = isFree ? null : getProductForPlan(plan.tier as 'BASIC' | 'PROFESSIONAL', selectedPeriod);
+    const product = isFree ? null : getProductForPlan(plan.tier as 'BASIC' | 'PROFESSIONAL');
 
     return (
-      <View
-        key={plan.identifier}
+      <Animated.View
         style={[
           styles.planCard,
           plan.highlighted && styles.planCardHighlighted,
           isCurrentPlan && styles.planCardCurrent,
+          {
+            opacity: contentOpacity,
+            transform: [{ scale: planCardScale }],
+          },
         ]}
       >
         {plan.highlighted && !isCurrentPlan && (
@@ -198,7 +265,7 @@ const Page = () => {
             ) : product ? (
               <>
                 <Text style={styles.planPrice}>{product.price}</Text>
-                <Text style={styles.planPeriod}>/{selectedPeriod === 'monthly' ? 'month' : 'year'}</Text>
+                <Text style={styles.planPeriod}>/month</Text>
               </>
             ) : (
               <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -228,66 +295,91 @@ const Page = () => {
             )}
           </Pressable>
         )}
-      </View>
+      </Animated.View>
     );
   };
+
+  // Calculate tab width
+  const tabWidth = (SCREEN_WIDTH - 48) / 3; // 48 = padding (20*2) + container padding (4*2)
 
   return (
     <GradientBackground variant="background">
       <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           <View style={styles.contentContainer}>
-            {/* Period Selector */}
-            <View style={styles.periodSelector}>
-              <Pressable
-                style={[
-                  styles.periodButton,
-                  selectedPeriod === 'monthly' && styles.periodButtonActive,
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSelectedPeriod('monthly');
-                }}
-              >
-                <Text
-                  style={[
-                    styles.periodButtonText,
-                    selectedPeriod === 'monthly' && styles.periodButtonTextActive,
-                  ]}
-                >
-                  Monthly
-                </Text>
-              </Pressable>
-              
-              <Pressable
-                style={[
-                  styles.periodButton,
-                  selectedPeriod === 'yearly' && styles.periodButtonActive,
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSelectedPeriod('yearly');
-                }}
-              >
-                <View style={styles.periodButtonContent}>
-                  <Text
-                    style={[
-                      styles.periodButtonText,
-                      selectedPeriod === 'yearly' && styles.periodButtonTextActive,
-                    ]}
-                  >
-                    Yearly
-                  </Text>
-                  <View style={styles.saveBadge}>
-                    <Text style={styles.saveText}>Save 20%</Text>
-                  </View>
-                </View>
-              </Pressable>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>Choose Your Plan</Text>
+              <Text style={styles.headerSubtitle}>Monthly subscription plans</Text>
             </View>
 
-            {/* Plans */}
-            <View style={styles.plansContainer}>
-              {displayPlans.map(plan => renderPlan(plan))}
+            {/* Animated Tab Navigation */}
+            <View style={styles.tabContainer}>
+              <View style={styles.tabBackground}>
+                <Animated.View
+                  style={[
+                    styles.tabIndicator,
+                    {
+                      width: tabWidth,
+                      transform: [
+                        {
+                          translateX: tabIndicatorPosition.interpolate({
+                            inputRange: [0, 1, 2],
+                            outputRange: [0, tabWidth, tabWidth * 2],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+                
+                <Pressable
+                  style={[styles.tab, { width: tabWidth }]}
+                  onPress={() => handleTierChange('FREE')}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      selectedTier === 'FREE' && styles.tabTextActive,
+                    ]}
+                  >
+                    Free
+                  </Text>
+                </Pressable>
+                
+                <Pressable
+                  style={[styles.tab, { width: tabWidth }]}
+                  onPress={() => handleTierChange('BASIC')}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      selectedTier === 'BASIC' && styles.tabTextActive,
+                    ]}
+                  >
+                    Basic
+                  </Text>
+                </Pressable>
+                
+                <Pressable
+                  style={[styles.tab, { width: tabWidth }]}
+                  onPress={() => handleTierChange('PROFESSIONAL')}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      selectedTier === 'PROFESSIONAL' && styles.tabTextActive,
+                    ]}
+                  >
+                    Professional
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Selected Plan Card */}
+            <View style={styles.planContainer}>
+              {renderPlan()}
             </View>
 
             {/* Info Box */}
@@ -349,51 +441,105 @@ const getStyles = (theme: Theme) =>
       padding: 20,
       paddingBottom: 40,
     },
-    // Period Selector
-    periodSelector: {
-      flexDirection: 'row',
-      backgroundColor: theme.colors.backgroundLight,
-      borderRadius: 12,
-      padding: 4,
+    // Header
+    header: {
       marginBottom: 24,
+      alignItems: 'center',
     },
-    periodButton: {
-      flex: 1,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderRadius: 8,
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    headerSubtitle: {
+      fontSize: 15,
+      color: theme.colors.greyLight,
+      textAlign: 'center',
+    },
+    // Simulator Banner
+    simulatorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: '#FF9500' + '15',
+      padding: 16,
+      borderRadius: 14,
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: '#FF9500' + '30',
+    },
+    simulatorBannerTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#FF9500',
+      marginBottom: 4,
+    },
+    simulatorBannerText: {
+      fontSize: 13,
+      color: theme.colors.text,
+      opacity: 0.9,
+      lineHeight: 18,
+    },
+    // Animated Tab Navigation
+    tabContainer: {
+      marginBottom: 28,
+    },
+    tabBackground: {
+      flexDirection: 'row',
+      backgroundColor: theme.isDark 
+        ? 'rgba(255, 255, 255, 0.08)' 
+        : 'rgba(0, 0, 0, 0.04)',
+      borderRadius: 14,
+      padding: 4,
+      position: 'relative',
+      overflow: 'hidden',
+    },
+    tabIndicator: {
+      position: 'absolute',
+      height: '100%',
+      backgroundColor: theme.colors.primary,
+      borderRadius: 12,
+      margin: 4,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    tab: {
+      paddingVertical: 14,
       alignItems: 'center',
       justifyContent: 'center',
+      zIndex: 1,
     },
-    periodButtonActive: {
-      backgroundColor: theme.colors.primary,
-    },
-    periodButtonContent: {
+    tabContent: {
+      flexDirection: 'row',
       alignItems: 'center',
+      gap: 6,
     },
-    periodButtonText: {
-      fontSize: 15,
+    tabText: {
+      fontSize: 16,
       fontWeight: '600',
       color: theme.colors.greyLight,
     },
-    periodButtonTextActive: {
+    tabTextActive: {
       color: '#fff',
     },
-    saveBadge: {
-      backgroundColor: '#10B981',
+    tabBadge: {
+      backgroundColor: 'rgba(16, 185, 129, 0.9)',
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 4,
-      marginTop: 4,
+      borderRadius: 6,
     },
-    saveText: {
+    tabBadgeText: {
       color: '#fff',
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: 'bold',
     },
-    // Plans
-    plansContainer: {
-      gap: 20,
+    // Plan Container
+    planContainer: {
       marginBottom: 32,
     },
     planCard: {
