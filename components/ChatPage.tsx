@@ -45,6 +45,8 @@ import CreditPurchaseModalIAP from '@/components/CreditPurchaseModalIAP';
 import ArtifactViewerModal from '@/components/artifacts/ArtifactViewerModal';
 import { Artifact } from '@/utils/ArtifactTypes';
 import apiClient from '@/utils/ApiClient';
+import { useCredits } from '@/hooks/useCredits';
+import { useLocalModel } from '@/hooks/useLocalModel';
 
 // Helper function to get time-based greeting
 const getGreeting = (firstName: string = 'there') => {
@@ -139,7 +141,55 @@ const ChatPage = () => {
     updateMessageReaction,
     stopStreaming,
     streamingForConversationId,
+    // Local model global state
+    isLocal,
+    isLocalModelReady,
+    isLocalModelGenerating,
+    llm: globalLLM, // Get global LLM instance
+    updateLocalModelReady,
+    updateLocalModelGenerating,
   } = chat;
+
+  // ============ Local Model Integration ============
+  
+  // Local messages state (separate from cloud messages)
+  const [localConversationMessages, setLocalConversationMessages] = useState<Message[]>([]);
+  const localAssistantMessageIdRef = useRef<string | null>(null);
+  const [localStreamContent, setLocalStreamContent] = useState('');
+  
+  // Monitor global LLM response for streaming
+  useEffect(() => {
+    if (isLocal && globalLLM?.response) {
+      const response = globalLLM.response;
+      console.log('[ChatPage] Global LLM stream update:', response.length, 'chars');
+      setLocalStreamContent(response);
+    }
+  }, [globalLLM?.response, isLocal]);
+  
+  // Update assistant message when stream content changes
+  useEffect(() => {
+    if (localStreamContent && localAssistantMessageIdRef.current) {
+      setLocalConversationMessages(prev => {
+        const updated = [...prev];
+        const lastIndex = updated.length - 1;
+        if (lastIndex >= 0 && updated[lastIndex].role === Role.Bot) {
+          updated[lastIndex] = {
+            ...updated[lastIndex],
+            content: localStreamContent,
+          };
+        }
+        return updated;
+      });
+    }
+  }, [localStreamContent]);
+  
+  // Monitor global LLM generating state
+  useEffect(() => {
+    if (globalLLM?.isGenerating !== undefined) {
+      console.log('[ChatPage] Global LLM generating state:', globalLLM.isGenerating);
+      updateLocalModelGenerating(globalLLM.isGenerating);
+    }
+  }, [globalLLM?.isGenerating, updateLocalModelGenerating]);
 
   // Calculate dynamic buffer height based on last user message type
   // Audio messages need more buffer than text messages to prevent clipping
@@ -643,8 +693,26 @@ const ChatPage = () => {
   // Messages in chronological order (oldest first, newest last)
   // Newest messages appear at top of screen with bottom spacing
   const displayMessages = useMemo(() => {
-    return messages; // No reversal needed
-  }, [messages]);
+    // Separation of concerns: Local mode shows local messages, Cloud shows cloud messages
+    if (isLocal) {
+      // Local mode: Show ONLY local messages (even if empty to show empty state)
+      console.log('[ChatPage] 📊 displayMessages (LOCAL MODE):', {
+        localCount: localConversationMessages.length,
+        messages: localConversationMessages.map(m => ({
+          role: m.role,
+          contentLength: m.content?.length || 0,
+          id: m.id
+        })),
+      });
+      return localConversationMessages;
+    }
+    
+    // Cloud mode: Show cloud messages
+    console.log('[ChatPage] 📊 displayMessages (CLOUD MODE):', {
+      count: messages.length,
+    });
+    return messages;
+  }, [messages, isLocal, localConversationMessages]);
   
   // Track previous messages to detect new user messages
   const prevMessagesRef = useRef<Message[]>([]);
@@ -1118,7 +1186,7 @@ const ChatPage = () => {
         {/* Main Message List Container - Takes all available space */}
         <View style={styles.page} onLayout={onLayout}>
           {/* Enhanced Empty State */}
-          {messages.length === 0 && !isLoadingMessages && (
+          {displayMessages.length === 0 && !isLoadingMessages && (
             <Animated.View
               style={[
                 { flex: 1, opacity: fadeAnim }
@@ -1126,21 +1194,21 @@ const ChatPage = () => {
             >
               <EnhancedEmptyState
                 firstName={user?.first_name}
-                modelName={selectedCloudModel?.displayName}
-                isLocal={false}
+                modelName={isLocal ? 'Local AI' : selectedCloudModel?.displayName}
+                isLocal={isLocal}
               />
             </Animated.View>
           )}
 
           {/* Skeleton Loaders when loading messages */}
-          {isLoadingMessages && messages.length === 0 && (
+          {isLoadingMessages && displayMessages.length === 0 && (
             <View style={{ flex: 1, paddingTop: 20 }}>
               <SkeletonLoader variant="message" count={5} />
             </View>
           )}
 
           {/* Loading indicator when switching conversations */}
-          {isLoadingMessages && messages.length > 0 && (
+          {isLoadingMessages && displayMessages.length > 0 && (
             <View style={styles.loadingOverlay} pointerEvents="box-none">
               <View style={styles.loadingContainer} pointerEvents="auto">
                 <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -1149,7 +1217,7 @@ const ChatPage = () => {
             </View>
           )}
 
-          {messages.length > 0 && (
+          {displayMessages.length > 0 && (
           <CustomView style={{ flex: 1 }}>
             {/* 
               FlashList configured for top-aligned messages with bottom spacing:
@@ -1158,6 +1226,7 @@ const ChatPage = () => {
               - Bottom spacing component provides padding for comfortable reading
               - No auto-scroll during streaming: User control
               - Smooth content updates without scroll jumping
+              - Works for both cloud and local messages
             */}
             <FlashList
               contentContainerStyle={{ paddingBottom: 20 }}
@@ -1166,6 +1235,12 @@ const ChatPage = () => {
               data={displayMessages}
               renderItem={renderItem}
               keyExtractor={(item, index) => item.id || `msg-${index}`}
+              // Debug: Log when list updates
+              extraData={displayMessages.length} // Force re-render when length changes
+              ListEmptyComponent={() => {
+                console.log('[ChatPage] 🔍 FlashList is empty, displayMessages:', displayMessages.length);
+                return null;
+              }}
               keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"
               onLayout={() => {
@@ -1309,14 +1384,72 @@ const ChatPage = () => {
             files={files}
             setFiles={setFiles}
             fetchMessages={handleFetchMessages}
-            onShouldSend={(message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
-              // Note: Scrolling is handled by the useEffect that detects new user messages
-              // This ensures consistent scroll behavior (to top of viewport)
-              return sendMessage(message, type, operation, additionalData, options);
+            onShouldSend={async (message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
+              // Separation of concerns: Route based on global isLocal state
+              if (isLocal) {
+                // ===== LOCAL MODEL PATH =====
+                console.log('[ChatPage] 🏠 Sending to local model:', message);
+                
+                if (!globalLLM) {
+                  console.error('[ChatPage] Global LLM not initialized!');
+                  Alert.alert('Error', 'Local model not ready yet');
+                  return;
+                }
+                
+                // Create user message
+                const userMessage: Message = {
+                  id: Date.now().toString() + '_user',
+                  chat_id: Date.now().toString() + '_user',
+                  role: Role.User,
+                  content: message,
+                  timestamp: new Date(),
+                };
+                
+                // Create empty assistant message for streaming
+                const assistantId = Date.now().toString() + '_assistant';
+                localAssistantMessageIdRef.current = assistantId;
+                
+                const assistantMessage: Message = {
+                  id: assistantId,
+                  chat_id: assistantId,
+                  role: Role.Bot,
+                  content: '',
+                  timestamp: new Date(),
+                };
+                
+                // Add both to local conversation
+                setLocalConversationMessages(prev => {
+                  const updated = [...prev, userMessage, assistantMessage];
+                  console.log('[ChatPage] 💬 Local messages updated, total:', updated.length);
+                  return updated;
+                });
+                
+                // Build context messages
+                const contextMessages = [
+                  { role: 'system', content: `You are a helpful AI assistant. Current time: ${new Date().toLocaleString()}` },
+                  { role: 'user', content: message },
+                ];
+                
+                // Generate using global LLM
+                console.log('[ChatPage] 🚀 Starting generation with global LLM');
+                await globalLLM.generate(contextMessages);
+                console.log('[ChatPage] ✅ Generation complete');
+              } else {
+                // ===== CLOUD MODEL PATH =====
+                console.log('[ChatPage] ☁️ Sending to cloud model');
+                return sendMessage(message, type, operation, additionalData, options);
+              }
             }}
-            isLoading={isSending}
-            onStopStreaming={stopStreaming}
-            isLocal={false}
+            isLoading={isSending || (isLocal && isLocalModelGenerating)}
+            onStopStreaming={async () => {
+              if (isLocal && globalLLM?.interrupt) {
+                console.log('[ChatPage] Interrupting local generation');
+                globalLLM.interrupt();
+              } else {
+                await stopStreaming();
+              }
+            }}
+            isLocal={isLocal}
             currentModelId={selectedCloudModel?.id}
             onRecordingStateChange={(recording, onCancel) => {
               setIsRecording(recording);

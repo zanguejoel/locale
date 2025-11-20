@@ -49,6 +49,9 @@ import {
   MessageSaveStatus as PersistenceStatus 
 } from '@/utils/MessagePersistenceManager';
 import { MessageSaveStatus } from '@/utils/Interfaces';
+import { useCreditsContext } from '@/contexts/CreditsContext';
+import { useLocalModel } from './useLocalModel';
+import { useLocalModelGlobal } from './useLocalModelGlobal';
 
 // Import API_URL_PROD from ApiClient configuration
 const BASE_URL = API_URL_PROD;
@@ -137,6 +140,20 @@ interface ChatContextType {
   getDocumentsForMessage: (messageId: string) => DocumentBlock[];
   updateMessageReaction: (messageId: string, reaction: 'like' | 'dislike' | null) => void;
   streamingForConversationId: string | null; // Track which conversation the stream belongs to
+  
+  // ===== Local Model Properties =====
+  isLocal: boolean;
+  setIsLocal: (value: boolean) => void;
+  isLocalModelReady: boolean;
+  isLocalModelGenerating: boolean;
+  canSafelyUnmount: boolean;
+  handleSendLocalMessage: (text: string) => Promise<void>;
+  interruptLocalGeneration: () => void;
+  clearLocalModel: () => void;
+  currentLocalModel: any;
+  updateLocalModelReady: (ready: boolean) => void;
+  updateLocalModelGenerating: (generating: boolean) => void;
+  llm: any; // Global LLM instance
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -229,6 +246,122 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     streamingForConversationIdRef.current = streamingForConversationId;
   }, [streamingForConversationId]);
   
+  // ============ Local Model State (Global) ============
+  // Initialize at provider level so ready state is available immediately
+  const globalLocalModel = useLocalModelGlobal();
+
+  const [isLocal, setIsLocal] = useState(false);
+  const [isLocalModelGenerating, setIsLocalModelGenerating] = useState(false);
+
+  // Use the global ready state
+  const isLocalModelReady = globalLocalModel.isReady;
+
+  const updateLocalModelReady = useCallback((ready: boolean) => {
+    console.log('[Chat] updateLocalModelReady called:', ready, '(using global state)');
+  }, []);
+
+  const updateLocalModelGenerating = useCallback((generating: boolean) => {
+    console.log('[Chat] updateLocalModelGenerating called:', generating);
+    setIsLocalModelGenerating(generating);
+  }, []);
+
+  const localModel = useMemo(() => ({
+    isLocal,
+    setIsLocal,
+    isLocalModelReady,
+    isLocalModelGenerating,
+    canSafelyUnmount: !isLocalModelGenerating,
+    llm: globalLocalModel.llm,
+    handleSendLocalMessage: async (text: string) => {
+      console.log('[Chat] handleSendLocalMessage called - should be handled in ChatPage');
+    },
+    interruptLocalGeneration: () => {
+      console.log('[Chat] interruptLocalGeneration called - should be handled in ChatPage');
+      if (globalLocalModel.llm?.interrupt) {
+        globalLocalModel.llm.interrupt();
+      }
+    },
+    clearLocalModel: () => {},
+    currentLocalModel: null,
+    updateLocalModelReady,
+    updateLocalModelGenerating,
+  }), [isLocal, isLocalModelReady, isLocalModelGenerating, updateLocalModelReady, updateLocalModelGenerating, globalLocalModel.llm]);
+
+  // OPTIMIZED: LRU-based cleanup for conversation stream refs
+  // Prevents memory leaks from accumulating too many conversation refs
+  const MAX_CONVERSATION_REFS = 5; // Keep only last 5 conversations in memory
+  const CLEANUP_THRESHOLD_MS = 30000; // 30 seconds
+  
+  const cleanupOldStreamRefs = useCallback(() => {
+    const now = Date.now();
+    const entries = Array.from(conversationStreamRefs.current.entries());
+    
+    // Remove stale entries (> 30s old and not currently streaming)
+    entries.forEach(([id, data]) => {
+      if (now - data.lastUpdate > CLEANUP_THRESHOLD_MS && id !== streamingForConversationIdRef.current) {
+        // Cancel any pending RAF
+        if (data.rafId) {
+          cancelAnimationFrame(data.rafId);
+        }
+        conversationStreamRefs.current.delete(id);
+        console.log('[Chat] 🧹 Cleaned up stale stream ref (LRU):', id);
+      }
+    });
+    
+    // If still too many, remove oldest (LRU)
+    if (conversationStreamRefs.current.size > MAX_CONVERSATION_REFS) {
+      const sorted = entries
+        .filter(([id]) => id !== streamingForConversationIdRef.current) // Never remove active stream
+        .sort((a, b) => a[1].lastUpdate - b[1].lastUpdate)
+        .slice(0, conversationStreamRefs.current.size - MAX_CONVERSATION_REFS);
+      
+      sorted.forEach(([id, data]) => {
+        if (data.rafId) {
+          cancelAnimationFrame(data.rafId);
+        }
+        conversationStreamRefs.current.delete(id);
+        console.log('[Chat] 🧹 Cleaned up excess stream ref (LRU):', id);
+      });
+    }
+  }, []);
+  
+  // Run cleanup periodically during streaming (every 10 seconds)
+  useEffect(() => {
+    if (isSending) {
+      const interval = setInterval(cleanupOldStreamRefs, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [isSending, cleanupOldStreamRefs]);
+  
+  // ============ Computed Streaming State ============
+  // isStreaming: True when content is actively being streamed (stream has content)
+  // This is more specific than isSending, which can be true during initial setup
+  const isStreaming = useMemo(() => {
+    return isSending && (stream.length > 0 || intermediate.length > 0);
+  }, [isSending, stream, intermediate]);
+  
+  // OPTIMIZED: Display-only stream with artifact tags stripped
+  // Keep raw stream for detection, but display cleaned version
+  // This prevents users from seeing raw <jmeArtifact> tags during streaming
+  const displayStream = useMemo(() => {
+    if (!stream) return stream;
+    
+    // Strip artifact tags for display only
+    // Detection still works on the raw stream content stored in conversationStreamRefs
+    const stripped = stripStreamingArtifactTags(stream);
+    
+    // Log when tags are stripped (dev only)
+    if (__DEV__ && stripped !== stream) {
+      console.log('[useChat] 🎨 Stripped artifact tags from display stream:', {
+        originalLength: stream.length,
+        strippedLength: stripped.length,
+        difference: stream.length - stripped.length
+      });
+    }
+    
+    return stripped;
+  }, [stream]);
+
   // ============ Stream Batching for Performance ============
   // RAF-based batching to prevent excessive re-renders during streaming
   // Limits updates to maximum 60 per second (1 per frame) for smoother UX
@@ -1984,6 +2117,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getDocumentsForMessage,
       updateMessageReaction,
       streamingForConversationId,
+      isStreaming,
+
+      // ===== Local Model Functionality =====
+      isLocal: localModel.isLocal,
+      setIsLocal: localModel.setIsLocal,
+      isLocalModelReady: localModel.isLocalModelReady,
+      isLocalModelGenerating: localModel.isLocalModelGenerating,
+      canSafelyUnmount: localModel.canSafelyUnmount,
+      handleSendLocalMessage: localModel.handleSendLocalMessage,
+      interruptLocalGeneration: localModel.interruptLocalGeneration,
+      clearLocalModel: localModel.clearLocalModel,
+      currentLocalModel: localModel.currentLocalModel,
+      llm: localModel.llm,
+      updateLocalModelReady: localModel.updateLocalModelReady,
+      updateLocalModelGenerating: localModel.updateLocalModelGenerating,
     };
   }, [
     isChatLoading,
@@ -2022,6 +2170,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getDocumentsForMessage,
     updateMessageReaction,
     streamingForConversationId,
+    isStreaming,
+    localModel.isLocal,
+    localModel.isLocalModelReady,
+    localModel.isLocalModelGenerating,
+    localModel.llm,
+    localModel.updateLocalModelReady,
+    localModel.updateLocalModelGenerating,
   ]);
 
   return (

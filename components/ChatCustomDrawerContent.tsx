@@ -50,18 +50,18 @@ export const CustomDrawerContent = (props: any) => {
         renameConversation,
         createNewConversation,
         resetChat,
-        clearAllConversations
+        clearAllConversations,
+        // Local model properties
+        isLocal,
+        setIsLocal,
+        isLocalModelReady,
+        isLocalModelGenerating,
     } = useChat();
 
     const router = useRouter();
     const { user } = useAuth();
     const [query, setQuery] = useState('');
     const [localLoading, setLocalLoading] = useState(false);
-    
-    // Local models removed - stub values for backwards compatibility
-    const isLocal = false;
-    const setIsLocal = () => {}; // No-op
-    const isLocalLLMSupported = false;
 
     const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
@@ -706,12 +706,72 @@ export const CustomDrawerContent = (props: any) => {
                 style={styles.headerContainer}
                 entering={FadeIn.duration(400)}
             >
-                {/* Only show ModelToggle if local LLM feature is enabled */}
-                {FEATURES.LOCAL_LLM_ENABLED && (
-                    <View style={styles.modelToggleContainer}>
-                        <ModelToggle onSelectModel={handleModelSwitch} initialState={isLocal} disableLocal={!isLocalLLMSupported} />
+                {/* Local Model Toggle - Always visible */}
+                <View style={styles.modelToggleContainer}>
+                    <View style={styles.localModelSection}>
+                        <View style={styles.localModelHeader}>
+                            <Text style={styles.localModelTitle}>AI Mode</Text>
+                            {!isLocalModelReady && (
+                                <ActivityIndicator size="small" color={theme.colors.mutedForeground} />
+                            )}
+                        </View>
+                        
+                        <View style={styles.localModelOptions}>
+                            {/* Cloud Option */}
+                            <TouchableOpacity
+                                style={[
+                                    styles.modelOption,
+                                    !isLocal && styles.modelOptionActive
+                                ]}
+                                onPress={() => setIsLocal(false)}
+                            >
+                                <Text style={[
+                                    styles.modelOptionText,
+                                    !isLocal && styles.modelOptionTextActive
+                                ]}>
+                                    ☁️ Cloud
+                                </Text>
+                            </TouchableOpacity>
+                            
+                            {/* Local Option */}
+                            <TouchableOpacity
+                                style={[
+                                    styles.modelOption,
+                                    isLocal && styles.modelOptionActive,
+                                    !isLocalModelReady && styles.modelOptionDisabled
+                                ]}
+                                onPress={() => setIsLocal(true)}
+                                disabled={!isLocalModelReady}
+                            >
+                                <Text style={[
+                                    styles.modelOptionText,
+                                    isLocal && styles.modelOptionTextActive,
+                                    !isLocalModelReady && styles.modelOptionTextDisabled
+                                ]}>
+                                    📱 Local
+                                </Text>
+                                {!isLocalModelReady && (
+                                    <Text style={styles.modelOptionSubtext}>Loading...</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                        
+                        {/* Privacy indicator */}
+                        {isLocal && (
+                            <Text style={styles.privacyText}>
+                                🔒 Private & Offline
+                            </Text>
+                        )}
+                        
+                        {/* Generating indicator */}
+                        {isLocal && isLocalModelGenerating && (
+                            <View style={styles.generatingBadge}>
+                                <ActivityIndicator size="small" color="#fff" />
+                                <Text style={styles.generatingText}>Generating...</Text>
+                            </View>
+                        )}
                     </View>
-                )}
+                </View>
         
                 {/* Show search and history title for cloud mode (or always if local models disabled) */}
                 {(!isLocal || !FEATURES.LOCAL_LLM_ENABLED) && (
@@ -1422,5 +1482,84 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         fontSize: 15,
         fontWeight: '600',
         color: theme.colors.text,
+    },
+    
+    // ===== Local Model Styles =====
+    localModelSection: {
+        backgroundColor: theme.isDark ? '#1e1e1e' : '#f8f8f8',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 16,
+    },
+    localModelHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    localModelTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: theme.colors.text,
+    },
+    localModelOptions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    modelOption: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: theme.isDark ? '#3a3a3a' : '#ddd',
+        backgroundColor: theme.isDark ? '#2a2a2a' : '#fff',
+        alignItems: 'center',
+    },
+    modelOptionActive: {
+        borderColor: '#007AFF',
+        backgroundColor: theme.isDark ? '#1a3a5a' : '#E3F2FD',
+    },
+    modelOptionDisabled: {
+        opacity: 0.5,
+    },
+    modelOptionText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: theme.colors.mutedForeground,
+    },
+    modelOptionTextActive: {
+        color: '#007AFF',
+    },
+    modelOptionTextDisabled: {
+        color: theme.colors.mutedForeground,
+        opacity: 0.6,
+    },
+    modelOptionSubtext: {
+        fontSize: 10,
+        color: theme.colors.mutedForeground,
+        marginTop: 2,
+    },
+    privacyText: {
+        fontSize: 11,
+        color: theme.colors.mutedForeground,
+        marginTop: 8,
+        textAlign: 'center',
+    },
+    generatingBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        marginTop: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        backgroundColor: '#007AFF',
+        borderRadius: 12,
+    },
+    generatingText: {
+        fontSize: 12,
+        color: '#fff',
+        fontWeight: '600',
     },
 });
