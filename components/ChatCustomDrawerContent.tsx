@@ -33,6 +33,8 @@ import { storage } from '@/hooks/useMMKVStorage';
 import { isLlamaModel } from '@/constants/Models';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FEATURES } from '@/constants/Config';
+import { formatMessageTimestamp } from '@/utils/dateHelpers';
+import { checkLocalAISupport } from '@/utils/DeviceCapabilities';
 
 
 export const CustomDrawerContent = (props: any) => {
@@ -62,6 +64,21 @@ export const CustomDrawerContent = (props: any) => {
     const { user } = useAuth();
     const [query, setQuery] = useState('');
     const [localLoading, setLocalLoading] = useState(false);
+    
+    // Check device capability for local AI
+    const deviceCapability = checkLocalAISupport();
+    const showLocalAIOption = deviceCapability.isSupported; // Show if iOS 17+ or Android 8+
+    
+    // Log device capability (once)
+    useEffect(() => {
+        console.log('[Drawer] Device capability check:', {
+            supported: deviceCapability.isSupported,
+            model: deviceCapability.deviceModel,
+            ram: deviceCapability.estimatedRAM,
+            showAIMode: showLocalAIOption,
+            reason: deviceCapability.reason,
+        });
+    }, []);
 
     const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
@@ -706,7 +723,8 @@ export const CustomDrawerContent = (props: any) => {
                 style={styles.headerContainer}
                 entering={FadeIn.duration(400)}
             >
-                {/* Local Model Toggle - Always visible */}
+                {/* Local Model Toggle - Only show on capable devices */}
+                {showLocalAIOption && (
                 <View style={styles.modelToggleContainer}>
                     <View style={styles.localModelSection}>
                         <View style={styles.localModelHeader}>
@@ -772,9 +790,10 @@ export const CustomDrawerContent = (props: any) => {
                         )}
                     </View>
                 </View>
+                )}
         
-                {/* Show search and history title for cloud mode (or always if local models disabled) */}
-                {(!isLocal || !FEATURES.LOCAL_LLM_ENABLED) && (
+                {/* Show search and history title for cloud mode (or always if local AI not available) */}
+                {(!isLocal || !showLocalAIOption) && (
                     <>
                         <View style={styles.searchContainer}>
                             <View style={styles.searchSection}>

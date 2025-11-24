@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Text, Animated, Easing, ScrollView, FlatList, Keyboard, Clipboard, Alert, ActivityIndicator, Dimensions } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useChat } from '@/hooks/useChat';
 import ChatMessage from '@/components/ChatMessage';
 import MessageIdeas from '@/components/MessageIdeas';
@@ -47,6 +47,8 @@ import { Artifact } from '@/utils/ArtifactTypes';
 import apiClient from '@/utils/ApiClient';
 import { useCredits } from '@/hooks/useCredits';
 import { useLocalModel } from '@/hooks/useLocalModel';
+import { useModelDownload } from '@/hooks/useModelDownload';
+import { ModelDownloadScreen } from '@/components/ModelDownloadScreen';
 
 // Helper function to get time-based greeting
 const getGreeting = (firstName: string = 'there') => {
@@ -151,6 +153,9 @@ const ChatPage = () => {
   } = chat;
 
   // ============ Local Model Integration ============
+  
+  // Model download management
+  const modelDownload = useModelDownload();
   
   // Local messages state (separate from cloud messages)
   const [localConversationMessages, setLocalConversationMessages] = useState<Message[]>([]);
@@ -1032,9 +1037,9 @@ const ChatPage = () => {
               isFirstInGroup={isFirstInGroup}
               isLastInGroup={isLastInGroup}
               isOnlyInGroup={isOnlyInGroup}
-              artifacts={getArtifactsForMessage(item.id || '')}
-              streamingArtifact={displayStreamingArtifact}
-              streamingReasoning={(() => {
+              artifacts={!isLocal ? getArtifactsForMessage(item.id || '') : []} // No artifacts in local mode
+              streamingArtifact={!isLocal ? displayStreamingArtifact : null} // No artifacts in local mode
+              streamingReasoning={!isLocal ? (() => {
                 const isLastMessage = index === displayMessages.length - 1;
                 const reasoning = isLastMessage ? displayReasoningText : undefined;
                 if (reasoning && reasoning.length > 0) {
@@ -1046,15 +1051,15 @@ const ChatPage = () => {
                   });
                 }
                 return reasoning;
-              })()}
-              onArtifactPress={handleArtifactPress}
-              onCopy={() => handleCopyMessage(item.content)}
-              onPin={() => handleMessagePin(item.id || `${index}`)}
-              onRetry={() => handleRetryMessage(item.content)}
-              isPinned={isPinned}
-              canRetry={canRetry}
-              onLike={() => handleLikeMessage(item.chat_id || item.id || `${index}`, item.reaction)}
-              onDislike={() => handleDislikeMessage(item.chat_id || item.id || `${index}`, item.reaction)}
+              })() : undefined} // No reasoning in local mode
+              onArtifactPress={!isLocal ? handleArtifactPress : undefined}
+              onCopy={() => handleCopyMessage(item.content)} // Copy still works
+              onPin={!isLocal ? () => handleMessagePin(item.id || `${index}`) : undefined} // No pinning in local mode
+              onRetry={!isLocal ? () => handleRetryMessage(item.content) : undefined} // No retry in local mode
+              isPinned={!isLocal && isPinned}
+              canRetry={!isLocal && canRetry}
+              onLike={!isLocal ? () => handleLikeMessage(item.chat_id || item.id || `${index}`, item.reaction) : undefined}
+              onDislike={!isLocal ? () => handleDislikeMessage(item.chat_id || item.id || `${index}`, item.reaction) : undefined}
             />
             {item.reactions && item.reactions.length > 0 && (
               <MessageReactions
@@ -1379,10 +1384,10 @@ const ChatPage = () => {
             </View>
           )}
           
-          {/* Chat Input - Always at Bottom */}
+          {/* Chat Input - Shows in chat mode, hidden in download mode */}
           <ChatInput
-            files={files}
-            setFiles={setFiles}
+            files={isLocal ? [] : files} // No file attachments in local mode
+            setFiles={isLocal ? () => {} : setFiles} // Disable file setting in local mode
             fetchMessages={handleFetchMessages}
             onShouldSend={async (message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
               // Separation of concerns: Route based on global isLocal state
