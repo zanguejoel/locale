@@ -21,7 +21,6 @@ import {
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
-// import OAuthButtons from "@/components/OAuthButtons"; // Commented out for now
 import PasswordStrengthMeter from "@/components/PasswordStrengthMeter";
 import WebView from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
@@ -300,7 +299,7 @@ const Registration = () => {
         >
           <View style={styles.headerContainer}>
             <Image
-              source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
+              source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')}
               style={styles.logo}
             />
             <Text style={[styles.subtitle, { color: theme.colors.text }]}>Sign up to get started</Text>

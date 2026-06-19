@@ -21,9 +21,6 @@ import { ChatProvider } from "@/hooks/useChat";
 import { useTheme } from "@/hooks/useTheme";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { MixpanelProvider } from "@/utils/mixpanel/MixpanelProvider";
-import { IntegrationsProvider } from "@/contexts/IntegrationsContext";
-import { StripeProvider } from "@/providers/StripeProvider";
-import { IAPProvider } from "@/providers/IAPProvider";
 import { StreamingStateProvider } from "@/contexts/StreamingStateContext";
 import { RootSiblingParent } from 'react-native-root-siblings';
 import { NotificationProvider, useNotification } from "@/contexts/NotificationContext";
@@ -223,43 +220,7 @@ const Layout = () => {
           ),
         }}
       />
-      <Stack.Screen
-        name="(modal)/plans-pricing-iap"
-        options={{
-          headerTitle: "Plans & Pricing",
-          headerTitleAlign: 'center',
-          headerTintColor: theme.colors.text,
-          headerTitleStyle: { color: theme.colors.text },
-          headerStyle: { backgroundColor: theme.colors.background },
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons
-                name="chevron-back"
-                size={24}
-                color={theme.colors.text} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <Stack.Screen
-        name="(modal)/integrations"
-        options={{
-          headerTitle: "Integrations",
-          headerTitleAlign: 'center',
-          headerTintColor: theme.colors.text,
-          headerTitleStyle: { color: theme.colors.text },
-          headerStyle: { backgroundColor: theme.colors.background },
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons
-                name="chevron-back"
-                size={24}
-                color={theme.colors.text} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <Stack.Screen
+<Stack.Screen
         name="(modal)/image/[url]"
         options={{
           headerTitle: "",
@@ -291,12 +252,9 @@ function RootLayoutNav() {
     <RootSiblingParent>
       <SafeAreaProvider >
       <AuthProvider>
-        <IAPProvider>
-        <StripeProvider>
             <NotificationProvider>
               <StreamingStateProvider>
                 <ChatProvider>
-                  <IntegrationsProvider>
                     <MixpanelProvider>
                       <ThemeProvider
                         value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
@@ -307,12 +265,9 @@ function RootLayoutNav() {
                         </GestureHandlerRootView>
                       </ThemeProvider>
                     </MixpanelProvider>
-                  </IntegrationsProvider>
                 </ChatProvider>
               </StreamingStateProvider>
             </NotificationProvider>
-        </StripeProvider>
-      </IAPProvider>
       </AuthProvider>
       </SafeAreaProvider>
     </RootSiblingParent>

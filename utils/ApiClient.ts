@@ -124,7 +124,7 @@ class ApiClient {
   private cache: LRUCache<string, CachedData<unknown>>;
   private retryCount: Map<string, number>;
   private api: ApisauceInstance;
-  private cleanupInterval: NodeJS.Timeout | null = null;
+  private cleanupInterval: ReturnType<typeof setTimeout> | null = null;
   private isRefreshing: boolean = false;
   private refreshPromise: Promise<string> | null = null;
 

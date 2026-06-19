@@ -29,7 +29,7 @@ jest.mock('@/hooks/useAuth', () => ({
 }));
 
 jest.mock('@/hooks/useDefaultModel', () => ({
-  getDefaultModelId: jest.fn(() => 'gpt-4'),
+  getDefaultModelId: jest.fn(() => 'llama-3.2-1b-qlora'),
 }));
 
 jest.mock('@/hooks/useMMKVStorage', () => ({
@@ -40,6 +40,18 @@ jest.mock('@/hooks/useMMKVStorage', () => ({
     set: jest.fn(),
     delete: jest.fn(),
   },
+}));
+
+// Mock the streaming-state context so ChatProvider can mount without the full
+// app provider chain (Notification/Stripe/IAP). useChat only consumes these.
+jest.mock('@/contexts/StreamingStateContext', () => ({
+  StreamingStateProvider: ({ children }: any) => children,
+  useStreamingState: () => ({
+    showNotification: jest.fn(),
+    startStream: jest.fn(),
+    completeStream: jest.fn(),
+    setActiveConversation: jest.fn(),
+  }),
 }));
 
 // Import after mocks
@@ -129,7 +141,7 @@ describe('useChat Hook', () => {
       const { result } = renderHook(() => useChat(), { wrapper });
       
       expect(typeof result.current.isLocal).toBe('boolean');
-      expect(typeof result.current.isLocalLLMSupported).toBe('boolean');
+      expect(typeof result.current.isLocalModelSupported).toBe('boolean');
       expect(typeof result.current.setIsLocal).toBe('function');
     });
   });

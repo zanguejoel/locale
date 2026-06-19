@@ -14,7 +14,7 @@ const CodeBlockWithCopy: React.FC<CodeBlockWithCopyProps> = ({ content, language
   const theme = useTheme();
   const styles = getStyles(theme);
   const [copied, setCopied] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup timeout on unmount
   useEffect(() => {

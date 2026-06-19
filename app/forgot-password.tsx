@@ -21,7 +21,6 @@ import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from '@/hooks/useTheme';
-import { createSecureSession, clearSecureSession } from "@/utils/SecureSession";
 
 interface ErrorType {
   email?: string;
@@ -159,16 +158,11 @@ const ForgotPassword = () => {
 
     try {
       const result = await resetPassword(email, code);
-      
+
       if (result?.data) {
-        // Code validated successfully, create secure session and navigate
-        const sessionId = await createSecureSession({
-          email,
-          token: result?.data?.detail?.token,
-          codeVerified: true
-        });
-        
-        router.replace(`/forgot-password-change?session=${sessionId}`);
+        // Recovery OTP verified — a recovery session is now active. Carry the
+        // email forward so the change screen can confirm which account.
+        router.replace(`/forgot-password-change?email=${encodeURIComponent(email)}`);
       } else {
         Alert.alert(
           "Verification Failed",
@@ -216,7 +210,7 @@ const ForgotPassword = () => {
             >
               <View style={[styles.successContainer, keyboardVisible && styles.successContainerCompact]}>
                 <Image
-                  source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
+                  source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')}
                   style={[styles.logo, keyboardVisible && styles.logoCompact]}
                 />
                 <Text style={[styles.title, { color: theme.colors.text }]}>Check Your Email</Text>
@@ -314,7 +308,7 @@ const ForgotPassword = () => {
 
             <View style={[styles.headerContainer, keyboardVisible && styles.headerContainerCompact]}>
               <Image
-                source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
+                source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')}
                 style={[styles.logo, keyboardVisible && styles.logoCompact]}
               />
               <Text style={[styles.title, { color: theme.colors.text }]}>Forgot Password?</Text>

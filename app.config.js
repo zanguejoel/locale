@@ -1,12 +1,12 @@
 export default {
-    name: 'Odyssey',
-    slug: 'Odyssey',
+    name: 'Locale',
+    slug: 'locale',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
-    scheme: 'odyssey',
+    scheme: 'locale',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: true,
+    newArchEnabled: false,
     splash: {
       image: './assets/images/splash-icon.png',
       resizeMode: 'contain',
@@ -18,17 +18,35 @@ export default {
     },
     ios: {
         supportsTablet: true,
-        bundleIdentifier: 'com.neptunetech.odyssey',
-        entitlements: {
-            'com.apple.developer.in-app-payments': ['merchant.com.neptunetech.odyssey'],
+        bundleIdentifier: 'com.neptunetech.locale',
+        usesAppleSignIn: true,
+        infoPlist: {
+            CFBundleURLTypes: [
+                {
+                    CFBundleURLSchemes: ['locale', 'com.neptunetech.locale']
+                }
+            ],
         },
     },
     android: {
-        package: 'com.neptunetech.odyssey',
+        package: 'com.neptunetech.locale',
         adaptiveIcon: {
           foregroundImage: './assets/images/adaptive-icon.png',
           backgroundColor: '#ffffff'
-        }
+        },
+        intentFilters: [
+            {
+                action: 'VIEW',
+                autoVerify: true,
+                data: [
+                    {
+                        scheme: 'locale',
+                        host: 'auth'
+                    }
+                ],
+                category: ['BROWSABLE', 'DEFAULT']
+            }
+        ]
     },
     web: {
       bundler: 'metro',
@@ -38,12 +56,15 @@ export default {
     plugins: [
         'expo-router',
         'expo-localization',
+        'expo-apple-authentication',
+        'expo-asset',
+        'expo-font',
+        'expo-secure-store',
         [
             'expo-build-properties',
             {
                 ios: {
                     deploymentTarget: '17.0',
-                    newArchEnabled: true,
                 },
                 android: {
                     compileSdkVersion: 35,
@@ -51,7 +72,6 @@ export default {
                     minSdkVersion: 33,
                     buildToolsVersion: '35.0.0',
                     kotlinVersion: '1.9.25',
-                    newArchEnabled: true,
                 },
             }
         ],

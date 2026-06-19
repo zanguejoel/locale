@@ -49,7 +49,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   
   // Track if we're currently processing the queue
   const processingRef = useRef(false);
-  const displayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const displayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * Show a notification (adds to queue if one is already showing)

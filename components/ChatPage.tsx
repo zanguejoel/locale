@@ -19,7 +19,6 @@ import { Theme } from '@/constants/Types';
 import { useDefaultModel } from '@/hooks/useDefaultModel';
 import { GradientBackground } from './GradientBackground';
 import TypingIndicator from './TypingIndicator';
-import HeaderModelSelector from './HeaderModelSelector';
 import DateSeparator from './DateSeparator';
 import SmartSuggestions from './SmartSuggestions';
 import OfflineBanner from './OfflineBanner';
@@ -41,14 +40,11 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 import ErrorBanner from '@/components/ErrorBanner';
 import EnhancedEmptyState from '@/components/EnhancedEmptyState';
 import { SelectedFile } from '@/components/FilePreviewModal';
-import CreditPurchaseModalIAP from '@/components/CreditPurchaseModalIAP';
 import ArtifactViewerModal from '@/components/artifacts/ArtifactViewerModal';
 import { Artifact } from '@/utils/ArtifactTypes';
 import apiClient from '@/utils/ApiClient';
-import { useCredits } from '@/hooks/useCredits';
-import { useLocalModel } from '@/hooks/useLocalModel';
-import { useModelDownload } from '@/hooks/useModelDownload';
 import { ModelDownloadScreen } from '@/components/ModelDownloadScreen';
+import { DEFAULT_LOCAL_MODEL, LOCAL_MODEL_LIMITS } from '@/constants/LocalModelsConfig';
 
 // Helper function to get time-based greeting
 const getGreeting = (firstName: string = 'there') => {
@@ -101,13 +97,11 @@ const ChatPage = () => {
   const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [errorState, setErrorState] = useState<{ show: boolean; type: 'network' | 'api' | 'permission' | 'model' | 'generic'; message: string } | null>(null);
-  const [showCreditPurchaseModal, setShowCreditPurchaseModal] = useState(false);
   
   // Artifact modal state
   const [artifactModalVisible, setArtifactModalVisible] = useState(false);
   const [selectedArtifacts, setSelectedArtifacts] = useState<Artifact[]>([]);
   const [selectedArtifactIndex, setSelectedArtifactIndex] = useState(0);
-  const [currentModelType, setCurrentModelType] = useState<string | null>(null);
 
 
   // Animation values
@@ -147,16 +141,17 @@ const ChatPage = () => {
     isLocal,
     isLocalModelReady,
     isLocalModelGenerating,
+    localModelDownloadProgress,
+    isLocalModelDownloading,
+    localModelError,
+    isLocalModelSupported,
     llm: globalLLM, // Get global LLM instance
     updateLocalModelReady,
     updateLocalModelGenerating,
   } = chat;
 
   // ============ Local Model Integration ============
-  
-  // Model download management
-  const modelDownload = useModelDownload();
-  
+
   // Local messages state (separate from cloud messages)
   const [localConversationMessages, setLocalConversationMessages] = useState<Message[]>([]);
   const localAssistantMessageIdRef = useRef<string | null>(null);
@@ -605,59 +600,6 @@ const ChatPage = () => {
     }
   };
 
-  // Handle model selection from header
-  const handleModelSelect = async (modelId: string) => {
-    try {
-      // Local models removed - cloud-only mode now
-
-      // For cloud mode, check if we need to auto-switch between Llama and non-Llama models
-      const currentConversation = conversations.find(c => c.id === currentConversationId);
-      const currentConversationModelType = currentConversation?.model_type;
-      setCurrentModelType(currentConversationModelType || null);
-      console.log('[ChatPage] 🎯 Current conversation model type:', currentConversationModelType);
-      // Get current model type - use conversation's model_type if available, 
-      // otherwise fall back to the current default model
-      const currentModelType = currentConversationModelType || selectedCloudModel?.id;
-      
-      // Check if switching between Llama and non-Llama models
-      const currentIsLlama = currentModelType ? isLlamaModel(currentModelType) : false;
-      const newIsLlama = isLlamaModel(modelId);
-      
-      // Only trigger auto-switch if:
-      // 1. We have a model to compare against (conversation or default)
-      // 2. We're switching between Llama and non-Llama
-      // 3. The current conversation has at least one message
-      const isSwitchingBetweenLlamaTypes = currentModelType && 
-                                           currentIsLlama !== newIsLlama;
-      const hasMessages = messages && messages.length > 0;
-
-      // Update model preference in storage
-      storage.set('default_model_id', modelId);
-
-      // If switching between Llama and non-Llama cloud models and there are messages, create new chat
-      if (isSwitchingBetweenLlamaTypes && hasMessages) {
-        try {
-          // Clear current messages from UI
-          resetChat();
-          
-          // Create a new conversation to start fresh
-          const newConvId = await createNewConversation();
-          if (newConvId) {
-            // Navigate to the new conversation
-            router.push(`/(chat)/${newConvId}`);
-          }
-        } catch (error) {
-          // console.error('Error creating new conversation after model switch:', error);
-          Alert.alert('Error', 'Failed to create new conversation, but model switched successfully');
-        }
-      }
-      
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
-      // console.error('Error switching model:', error);
-      Alert.alert('Error', 'Failed to switch model');
-    }
-  };
 
   // Swipe action handlers
   const handleCopyMessage = async (content: string) => {
@@ -1079,6 +1021,25 @@ const ChatPage = () => {
 
   // File preview is handled via FilePreviewModal in ChatInput
 
+  // Gate the chat behind the on-device model being downloaded + loaded.
+  // On first launch ExecuTorch downloads ~1.2GB; show real progress instead
+  // of letting the user type into a model that isn't ready.
+  if (isLocal && isLocalModelSupported && !isLocalModelReady) {
+    return (
+      <GradientBackground variant="background" style={styles.pageContainer}>
+        <ModelDownloadScreen
+          progress={localModelDownloadProgress}
+          isDownloading={isLocalModelDownloading || localModelDownloadProgress > 0}
+          estimatedTimeRemaining={null}
+          downloadSizeMB={1180}
+          onStartDownload={() => { /* ExecuTorch loads automatically */ }}
+          onCancelDownload={() => { /* download is managed by the library */ }}
+          modelName={DEFAULT_LOCAL_MODEL.name}
+        />
+      </GradientBackground>
+    );
+  }
+
   return (
     <GradientBackground variant="background" style={styles.pageContainer}>
       {/* Error Banner - Priority to chatError from useChat */}
@@ -1094,14 +1055,8 @@ const ChatPage = () => {
             }
           }}
           autoHide={true}
-          autoHideDuration={chatError?.type === 'credit' ? 10000 : 5000}
-          action={chatError?.type === 'credit' ? {
-            text: 'Purchase Credits',
-            onPress: () => {
-              clearChatError();
-              setShowCreditPurchaseModal(true);
-            }
-          } : {
+          autoHideDuration={5000}
+          action={{
             text: 'Retry',
             onPress: async () => {
               if (chatError) {
@@ -1158,19 +1113,17 @@ const ChatPage = () => {
         headerTitle: () => (
           <View style={styles.headerContainer}>
             <Image 
-              source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} 
+              source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')} 
               style={styles.logo} 
             />
           </View>
         ),
         headerRight: () => (
-          <View style={{ marginRight: 8 }}>
-            <HeaderModelSelector
-              isLocal={false}
-              currentModelId={currentModelType || selectedCloudModel?.id}
-              onSelectModel={handleModelSelect}
-              isLocalSupported={false}
-            />
+          <View style={{ marginRight: 12, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="hardware-chip-outline" size={16} color={theme.colors.text} />
+            <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: '600' }}>
+              On-device AI
+            </Text>
           </View>
         ),
       }} />
@@ -1199,7 +1152,7 @@ const ChatPage = () => {
             >
               <EnhancedEmptyState
                 firstName={user?.first_name}
-                modelName={isLocal ? 'Local AI' : selectedCloudModel?.displayName}
+                modelName={isLocal ? 'Local AI' : selectedCloudModel?.name}
                 isLocal={isLocal}
               />
             </Animated.View>
@@ -1395,12 +1348,17 @@ const ChatPage = () => {
                 // ===== LOCAL MODEL PATH =====
                 console.log('[ChatPage] 🏠 Sending to local model:', message);
                 
-                if (!globalLLM) {
-                  console.error('[ChatPage] Global LLM not initialized!');
-                  Alert.alert('Error', 'Local model not ready yet');
+                if (!globalLLM || !isLocalModelReady) {
+                  console.error('[ChatPage] Local model not ready!');
+                  Alert.alert(
+                    'Model loading',
+                    isLocalModelDownloading
+                      ? 'The on-device model is still downloading. Please wait for it to finish.'
+                      : 'The on-device model is still loading. Please try again in a moment.'
+                  );
                   return;
                 }
-                
+
                 // Create user message
                 const userMessage: Message = {
                   id: Date.now().toString() + '_user',
@@ -1429,12 +1387,22 @@ const ChatPage = () => {
                   return updated;
                 });
                 
-                // Build context messages
+                // Build context messages from prior local conversation so the
+                // model has multi-turn history (capped to avoid token overflow).
+                const history = localConversationMessages
+                  .filter(m => (m.content || '').trim().length > 0)
+                  .slice(-LOCAL_MODEL_LIMITS.MAX_CONTEXT_MESSAGES)
+                  .map(m => ({
+                    role: m.role === Role.User ? 'user' : 'assistant',
+                    content: m.content || '',
+                  }));
+
                 const contextMessages = [
                   { role: 'system', content: `You are a helpful AI assistant. Current time: ${new Date().toLocaleString()}` },
+                  ...history,
                   { role: 'user', content: message },
                 ];
-                
+
                 // Generate using global LLM
                 console.log('[ChatPage] 🚀 Starting generation with global LLM');
                 await globalLLM.generate(contextMessages);
@@ -1473,43 +1441,6 @@ const ChatPage = () => {
         onClose={() => setEditingMessage(null)}
         onSave={handleSaveEdit}
       />
-      <CreditPurchaseModalIAP
-        visible={showCreditPurchaseModal}
-        onClose={() => setShowCreditPurchaseModal(false)}
-        onSuccess={async () => {
-          // Refetch messages or take appropriate action after purchase
-          if (id) {
-            await fetchMessages(id);
-            
-            // Scroll to bottom after fetching messages
-            // Wait for FlashList to render updated messages
-            setTimeout(() => {
-              if (messageListRef.current && messages.length > 0) {
-                try {
-                  const lastIndex = messages.length - 1;
-                  console.log('[ChatPage] 🔄 Scrolling to bottom after credit purchase (index:', lastIndex, ')');
-                  
-                  messageListRef.current.scrollToIndex({ 
-                    index: lastIndex, 
-                    animated: true,
-                    viewPosition: 1, // Bottom of viewport
-                  });
-                } catch (error) {
-                  // Fallback to scrollToEnd
-                  console.log('[ChatPage] ⚠️ Credit purchase scroll failed, using fallback');
-                  try {
-                    messageListRef.current.scrollToEnd({ animated: true });
-                  } catch (fallbackError) {
-                    // Silent fail
-                  }
-                }
-              }
-            }, 400); // Increased delay for reliability
-          }
-        }}
-        source={chatError?.type === 'credit' ? 'error_banner' : 'header_badge'}
-      />
-      
       {/* Artifact Viewer Modal */}
       <ArtifactViewerModal
         visible={artifactModalVisible}

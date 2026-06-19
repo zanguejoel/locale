@@ -128,6 +128,28 @@ jest.mock('@react-native-community/netinfo', () => ({
   addEventListener: jest.fn(() => jest.fn()),
 }));
 
+// Mock react-native-executorch (native on-device LLM, no JS runtime in tests)
+jest.mock('react-native-executorch', () => ({
+  useLLM: () => ({
+    messageHistory: [],
+    response: '',
+    token: '',
+    isReady: false,
+    isGenerating: false,
+    downloadProgress: 0,
+    error: null,
+    configure: jest.fn(),
+    getGeneratedTokenCount: jest.fn(() => 0),
+    generate: jest.fn(() => Promise.resolve()),
+    sendMessage: jest.fn(() => Promise.resolve()),
+    deleteMessage: jest.fn(),
+    interrupt: jest.fn(),
+  }),
+  LLAMA3_2_1B_QLORA: { modelSource: 'mock', tokenizerSource: 'mock', tokenizerConfigSource: 'mock' },
+  LLAMA3_2_1B_SPINQUANT: { modelSource: 'mock', tokenizerSource: 'mock', tokenizerConfigSource: 'mock' },
+  LLAMA3_2_3B_QLORA: { modelSource: 'mock', tokenizerSource: 'mock', tokenizerConfigSource: 'mock' },
+}));
+
 // Mock Expo Haptics
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(() => Promise.resolve()),

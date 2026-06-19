@@ -21,8 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
-// import OAuthButtons from "@/components/OAuthButtons"; // Commented out for now
 import * as Haptics from 'expo-haptics';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from "@/constants/Types";
 
@@ -32,7 +32,15 @@ interface ErrorType {
 }
 
 const Login = () => {
-  const { signIn, isLoading } = useAuth();
+  const { signIn, isLoading, signInWithApple } = useAuth();
+
+  const onApplePress = async () => {
+    const result = await signInWithApple();
+    if (!result.success && result.error && result.error !== 'Sign-in was cancelled.') {
+      Alert.alert('Apple Sign-In', result.error);
+    }
+    // On success, the auth state listener redirects via the root index.
+  };
   const theme = useTheme();
   const styles = getStyles(theme);
 
@@ -174,7 +182,7 @@ const Login = () => {
               ]}
             >
               <Image
-                source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
+                source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')}
                 style={styles.logo}
               /> 
               
@@ -291,15 +299,19 @@ const Login = () => {
                 <Ionicons name="arrow-forward-outline" size={18} color={theme.colors.white} />
               </TouchableOpacity>
 
-              {/* OAuth Buttons - Commented out for now */}
-              {/* <OAuthButtons
-                onSuccess={(result) => {
-                  console.log('OAuth success:', result);
-                }}
-                onError={(error) => {
-                  console.error('OAuth error:', error);
-                }}
-              /> */}
+              {Platform.OS === 'ios' && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={
+                    theme.isDark
+                      ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                      : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                  }
+                  cornerRadius={12}
+                  style={styles.appleButton}
+                  onPress={onApplePress}
+                />
+              )}
 
               <View style={styles.dividerContainer}>
                 <View style={[styles.divider]} />
@@ -444,6 +456,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderColor: theme.colors.primary
+  },
+  appleButton: {
+    height: 50,
+    width: '100%',
+    marginTop: 16,
   },
   dividerContainer: {
     display: 'flex',

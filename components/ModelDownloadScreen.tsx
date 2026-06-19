@@ -158,7 +158,7 @@ export function ModelDownloadScreen({
               </View>
               
               <View style={styles.benefit}>
-                <Ionicons name="wifi-off" size={20} color="#3b82f6" />
+                <Ionicons name="cloud-offline" size={20} color="#3b82f6" />
                 <Text style={styles.benefitText}>
                   Works Offline - No internet required after download
                 </Text>

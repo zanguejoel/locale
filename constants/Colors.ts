@@ -88,7 +88,7 @@ export interface AppTheme {
   common: CommonColors;
 }
 
-import { OdysseyLightColors, OdysseyDarkColors } from './OdysseyColors';
+import { LocaleLightColors, LocaleDarkColors } from './LocaleColors';
 
 const tintColorLight = "#60a5fa"; // Updated to Odyssey primary
 const tintColorDark = "#fff";
@@ -96,49 +96,49 @@ const tintColorDark = "#fff";
 const theme: AppTheme = {
   light: {
     // Core colors (Odyssey theme)
-    text: OdysseyLightColors.text,
-    background: OdysseyLightColors.background,
+    text: LocaleLightColors.text,
+    background: LocaleLightColors.background,
     tint: tintColorLight,
-    primary: OdysseyLightColors.primary,
-    primaryForeground: OdysseyLightColors.primaryForeground,
+    primary: LocaleLightColors.primary,
+    primaryForeground: LocaleLightColors.primaryForeground,
     
     // Secondary & accent
-    secondary: OdysseyLightColors.secondary,
-    secondaryForeground: OdysseyLightColors.secondaryForeground,
-    accent: OdysseyLightColors.accent,
-    accentForeground: OdysseyLightColors.accentForeground,
-    accentHover: OdysseyLightColors.accentHover,
+    secondary: LocaleLightColors.secondary,
+    secondaryForeground: LocaleLightColors.secondaryForeground,
+    accent: LocaleLightColors.accent,
+    accentForeground: LocaleLightColors.accentForeground,
+    accentHover: LocaleLightColors.accentHover,
     
     // Background gradient system
-    background50: OdysseyLightColors.background50,
-    background100: OdysseyLightColors.background100,
-    background200: OdysseyLightColors.background200,
-    background300: OdysseyLightColors.background300,
-    background400: OdysseyLightColors.background400,
-    background500: OdysseyLightColors.background500,
-    background600: OdysseyLightColors.background600,
-    background700: OdysseyLightColors.background700,
-    background800: OdysseyLightColors.background800,
-    background900: OdysseyLightColors.background900,
-    background950: OdysseyLightColors.background950,
-    backgroundLight: OdysseyLightColors.background200, // Legacy support
+    background50: LocaleLightColors.background50,
+    background100: LocaleLightColors.background100,
+    background200: LocaleLightColors.background200,
+    background300: LocaleLightColors.background300,
+    background400: LocaleLightColors.background400,
+    background500: LocaleLightColors.background500,
+    background600: LocaleLightColors.background600,
+    background700: LocaleLightColors.background700,
+    background800: LocaleLightColors.background800,
+    background900: LocaleLightColors.background900,
+    background950: LocaleLightColors.background950,
+    backgroundLight: LocaleLightColors.background200, // Legacy support
     
     // Text colors
-    foreground: OdysseyLightColors.foreground,
-    textSecondary: OdysseyLightColors.textSecondary,
+    foreground: LocaleLightColors.foreground,
+    textSecondary: LocaleLightColors.textSecondary,
     
     // UI elements
-    card: OdysseyLightColors.card,
-    cardForeground: OdysseyLightColors.cardForeground,
-    border: OdysseyLightColors.border,
-    input: OdysseyLightColors.input,
-    ring: OdysseyLightColors.ring,
-    muted: OdysseyLightColors.muted,
-    mutedForeground: OdysseyLightColors.mutedForeground,
+    card: LocaleLightColors.card,
+    cardForeground: LocaleLightColors.cardForeground,
+    border: LocaleLightColors.border,
+    input: LocaleLightColors.input,
+    ring: LocaleLightColors.ring,
+    muted: LocaleLightColors.muted,
+    mutedForeground: LocaleLightColors.mutedForeground,
     
     // Destructive
-    destructive: OdysseyLightColors.destructive,
-    destructiveForeground: OdysseyLightColors.destructiveForeground,
+    destructive: LocaleLightColors.destructive,
+    destructiveForeground: LocaleLightColors.destructiveForeground,
     
     // Status colors
     success: '#4CD964',  // Green
@@ -151,59 +151,59 @@ const theme: AppTheme = {
     light: '#fff',
     tabIconDefault: "#ccc",
     tabIconSelected: tintColorLight,
-    chatIcons: OdysseyLightColors.foreground,
-    chatInputBg: OdysseyLightColors.card,
-    chatItemBg: OdysseyLightColors.background100,
-    activeChatItem: OdysseyLightColors.background300,
-    pressedChatItem: OdysseyLightColors.background400,
-    chatIconContainer: OdysseyLightColors.background300,
-    chaRawHistoryBG: OdysseyLightColors.background100,
+    chatIcons: LocaleLightColors.foreground,
+    chatInputBg: LocaleLightColors.card,
+    chatItemBg: LocaleLightColors.background100,
+    activeChatItem: LocaleLightColors.background300,
+    pressedChatItem: LocaleLightColors.background400,
+    chatIconContainer: LocaleLightColors.background300,
+    chaRawHistoryBG: LocaleLightColors.background100,
   },
   dark: {
     // Core colors (Odyssey theme)
-    text: OdysseyDarkColors.text,
-    background: OdysseyDarkColors.background,
+    text: LocaleDarkColors.text,
+    background: LocaleDarkColors.background,
     tint: tintColorDark,
-    primary: OdysseyDarkColors.primary,
-    primaryForeground: OdysseyDarkColors.primaryForeground,
+    primary: LocaleDarkColors.primary,
+    primaryForeground: LocaleDarkColors.primaryForeground,
     
     // Secondary & accent
-    secondary: OdysseyDarkColors.secondary,
-    secondaryForeground: OdysseyDarkColors.secondaryForeground,
-    accent: OdysseyDarkColors.accent,
-    accentForeground: OdysseyDarkColors.accentForeground,
-    accentHover: OdysseyDarkColors.accentHover,
+    secondary: LocaleDarkColors.secondary,
+    secondaryForeground: LocaleDarkColors.secondaryForeground,
+    accent: LocaleDarkColors.accent,
+    accentForeground: LocaleDarkColors.accentForeground,
+    accentHover: LocaleDarkColors.accentHover,
     
     // Background gradient system
-    background50: OdysseyDarkColors.background50,
-    background100: OdysseyDarkColors.background100,
-    background200: OdysseyDarkColors.background200,
-    background300: OdysseyDarkColors.background300,
-    background400: OdysseyDarkColors.background400,
-    background500: OdysseyDarkColors.background500,
-    background600: OdysseyDarkColors.background600,
-    background700: OdysseyDarkColors.background700,
-    background800: OdysseyDarkColors.background800,
-    background900: OdysseyDarkColors.background900,
-    background950: OdysseyDarkColors.background950,
-    backgroundLight: OdysseyDarkColors.background600, // Legacy support
+    background50: LocaleDarkColors.background50,
+    background100: LocaleDarkColors.background100,
+    background200: LocaleDarkColors.background200,
+    background300: LocaleDarkColors.background300,
+    background400: LocaleDarkColors.background400,
+    background500: LocaleDarkColors.background500,
+    background600: LocaleDarkColors.background600,
+    background700: LocaleDarkColors.background700,
+    background800: LocaleDarkColors.background800,
+    background900: LocaleDarkColors.background900,
+    background950: LocaleDarkColors.background950,
+    backgroundLight: LocaleDarkColors.background600, // Legacy support
     
     // Text colors
-    foreground: OdysseyDarkColors.foreground,
-    textSecondary: OdysseyDarkColors.textSecondary,
+    foreground: LocaleDarkColors.foreground,
+    textSecondary: LocaleDarkColors.textSecondary,
     
     // UI elements
-    card: OdysseyDarkColors.card,
-    cardForeground: OdysseyDarkColors.cardForeground,
-    border: OdysseyDarkColors.border,
-    input: OdysseyDarkColors.input,
-    ring: OdysseyDarkColors.ring,
-    muted: OdysseyDarkColors.muted,
-    mutedForeground: OdysseyDarkColors.mutedForeground,
+    card: LocaleDarkColors.card,
+    cardForeground: LocaleDarkColors.cardForeground,
+    border: LocaleDarkColors.border,
+    input: LocaleDarkColors.input,
+    ring: LocaleDarkColors.ring,
+    muted: LocaleDarkColors.muted,
+    mutedForeground: LocaleDarkColors.mutedForeground,
     
     // Destructive
-    destructive: OdysseyDarkColors.destructive,
-    destructiveForeground: OdysseyDarkColors.destructiveForeground,
+    destructive: LocaleDarkColors.destructive,
+    destructiveForeground: LocaleDarkColors.destructiveForeground,
     
     // Status colors
     success: '#4CD964',  // Green
@@ -216,13 +216,13 @@ const theme: AppTheme = {
     light: '#fff',
     tabIconDefault: "#ccc",
     tabIconSelected: tintColorDark,
-    chatIcons: OdysseyDarkColors.foreground,
-    chatInputBg: OdysseyDarkColors.card,
-    chatItemBg: OdysseyDarkColors.background700,
-    activeChatItem: OdysseyDarkColors.background600,
-    pressedChatItem: OdysseyDarkColors.background550,
-    chatIconContainer: OdysseyDarkColors.background600,
-    chaRawHistoryBG: OdysseyDarkColors.background800,
+    chatIcons: LocaleDarkColors.foreground,
+    chatInputBg: LocaleDarkColors.card,
+    chatItemBg: LocaleDarkColors.background700,
+    activeChatItem: LocaleDarkColors.background600,
+    pressedChatItem: LocaleDarkColors.background550,
+    chatIconContainer: LocaleDarkColors.background600,
+    chaRawHistoryBG: LocaleDarkColors.background800,
   },
   common: {
     primary: "#60a5fa", // Updated to Odyssey primary

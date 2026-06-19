@@ -24,21 +24,21 @@ export interface Theme {
 
 export interface User {
   first_name: string;
-  middle_name: null | string;
+  middle_name?: null | string;
   last_name: string;
-  username: string;
+  username?: string;
   email: string;
-  phone: string;
+  phone?: string;
   address?: string;
-  date_of_birth: string;
+  date_of_birth?: string;
   city?: string;
   state?: string;
-  country: null | string;
+  country?: null | string;
   postal_code?: string;
-  user_id: number;
-  created_at: string;
-  updated_at: string;
-  user_teams: UserTeam[];
-  // Token is now stored separately in SecureStore for security
-  // Use utils/SecureTokenManager.ts to access the token
+  // Supabase auth user id (uuid). Was a numeric id under the old FastAPI backend.
+  user_id: string;
+  created_at?: string;
+  updated_at?: string;
+  user_teams?: UserTeam[];
+  avatar_url?: string;
 }

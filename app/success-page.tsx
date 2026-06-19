@@ -13,11 +13,9 @@ import {
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import Colors from "@/constants/Colors";
-import { router, useLocalSearchParams } from "expo-router";
-import { useAuth } from "@/hooks/useAuth";
+import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { Theme } from "@/constants/Types";
-import { getSecureSession, clearSecureSession } from "@/utils/SecureSession";
 
 
 interface ErrorType {
@@ -26,46 +24,19 @@ interface ErrorType {
 }
 
 const SuccessPage = () => {
-    const { signIn } = useAuth();
     const theme = useTheme();
     const styles = getStyles(theme);
 
-    const { session } = useLocalSearchParams();
     const [isLoading, setLoading] = useState(false);
-    const [sessionData, setSessionData] = useState<any>(null);
-    const [sessionError, setSessionError] = useState(false);
-    
+
     // Animation values
     const scaleAnim = useRef(new Animated.Value(0)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
-    
-    // Load session data and animations on mount
+
+    // Animations on mount. The user already has an active session here (email
+    // OTP verification / password reset established it), so nothing to sign in.
     useEffect(() => {
-        const loadSession = async () => {
-            if (session) {
-                const data = await getSecureSession(session as string);
-                if (data) {
-                    setSessionData(data);
-                } else {
-                    setSessionError(true);
-                    Alert.alert(
-                        "Session Expired",
-                        "Your session has expired. Please login to continue.",
-                        [{ text: "OK", onPress: () => router.replace('/login') }]
-                    );
-                }
-            } else {
-                setSessionError(true);
-                Alert.alert(
-                    "Invalid Session",
-                    "No session found. Please login to continue.",
-                    [{ text: "OK", onPress: () => router.replace('/login') }]
-                );
-            }
-        };
-        loadSession();
-        
         // Icon scale animation with bounce
         Animated.spring(scaleAnim, {
             toValue: 1,
@@ -73,7 +44,7 @@ const SuccessPage = () => {
             friction: 7,
             useNativeDriver: true,
         }).start();
-        
+
         // Content fade and slide up
         Animated.parallel([
             Animated.timing(fadeAnim, {
@@ -91,39 +62,11 @@ const SuccessPage = () => {
                 easing: Easing.out(Easing.ease),
             }),
         ]).start();
-    }, [session]);
-    
+    }, []);
+
     const handleHome = async () => {
-        if (!sessionData?.email || !sessionData?.password) {
-            Alert.alert("Error", "Session data not available. Please login manually.");
-            router.replace('/login');
-            return;
-        }
-        
         setLoading(true);
-        try {
-            await signIn(sessionData.email, sessionData.password);
-            // Clear the session after successful login
-            if (session) {
-                await clearSecureSession(session as string);
-            }
-        } catch (err: any) {
-            // Extract meaningful error message
-            let errorMessage = "Failed to sign in. Please try again.";
-            
-            if (typeof err === 'string') {
-                errorMessage = err;
-            } else if (err?.message) {
-                errorMessage = err.message;
-            }
-            
-            Alert.alert("Sign In Failed", errorMessage, [
-                { text: "Try Again", onPress: () => setLoading(false) },
-                { text: "Go to Login", onPress: () => router.replace('/login') }
-            ]);
-        } finally {
-            setLoading(false);
-        }
+        router.replace('/(chat)/new');
     }
 
     return (
@@ -131,7 +74,7 @@ const SuccessPage = () => {
             <SafeAreaView style={styles.content}>
                 <View style={styles.headerContainer}>
                     <Image 
-                      source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')} 
+                      source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')} 
                       style={styles.logo} 
                     />
                     
@@ -171,7 +114,7 @@ const SuccessPage = () => {
                             onPress={handleHome}
                             disabled={isLoading}
                         >
-                            <Text style={styles.buttonText}>Continue to Odyssey</Text>
+                            <Text style={styles.buttonText}>Continue to Locale</Text>
                             <Ionicons name="arrow-forward-outline" size={18} color={theme.colors.white} />
                         </TouchableOpacity>
                         <Text style={styles.autoLoginText}>You'll be signed in automatically</Text>

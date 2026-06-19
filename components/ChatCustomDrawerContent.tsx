@@ -28,7 +28,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
-import ModelToggle from './ModelToggle';
 import { storage } from '@/hooks/useMMKVStorage';
 import { isLlamaModel } from '@/constants/Models';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -200,179 +199,6 @@ export const CustomDrawerContent = (props: any) => {
         });
     };
 
-    const handleModelSwitch = async (modelType: 'local' | 'Odyssey') => {
-        const newIsLocal = modelType === 'local';
-        
-        // Check if local models are temporarily disabled due to crashes
-        if (newIsLocal && CrashReporter.isLocalModelsDisabled()) {
-            Alert.alert(
-                'Local Models Temporarily Disabled',
-                'Local models were disabled due to recent crashes. Please try again later or use cloud models.',
-                [
-                    { text: 'Use Cloud', style: 'cancel' },
-                    { text: 'Enable Anyway', onPress: () => {
-                        CrashReporter.reenableLocalModels();
-                        performModelSwitch(true);
-                    }}
-                ]
-            );
-            return;
-        }
-        
-        // Check if trying to switch to local mode on unsupported device
-        if (newIsLocal && !isLocalLLMSupported) {
-            Alert.alert(
-                'Local LLM Not Supported',
-                'Your device does not support local LLM. Please use cloud models instead.',
-                [{ text: 'OK' }]
-            );
-            return;
-        }
-        
-        // Local models removed - skip local model switching logic
-        if (newIsLocal && !isLocal) {
-            // Local models are no longer supported
-            Alert.alert(
-                'Local Models Removed',
-                'Local model functionality has been removed. Please use cloud models.',
-                [{ text: 'OK' }]
-            );
-            return;
-            
-            /* OLD CODE - Local model download logic removed
-            const selectedModel = getLocalModelById(getDefaultLocalModelId());
-            if (selectedModel) {
-                // Check available storage first
-                try {
-                    const deviceStorage = await ModelFileManager.getDeviceStorageInfo();
-                    const requiredBytes = ModelFileManager.parseSizeString(selectedModel.size);
-                    const requiredWithBuffer = requiredBytes * 1.2; // 20% buffer
-                    
-                    if (deviceStorage.freeSpace < requiredWithBuffer) {
-                        const freeSpaceFormatted = ModelFileManager.formatFileSize(deviceStorage.freeSpace);
-                        const requiredFormatted = ModelFileManager.formatFileSize(requiredWithBuffer);
-                        
-                        Alert.alert(
-                            '⚠️ Insufficient Storage',
-                            `Not enough space to download ${selectedModel.displayName}.\n\n` +
-                            `Required: ${requiredFormatted} (with 20% buffer)\n` +
-                            `Available: ${freeSpaceFormatted}\n\n` +
-                            `Please free up approximately ${ModelFileManager.formatFileSize(requiredWithBuffer - deviceStorage.freeSpace)} to continue.\n\n` +
-                            `Tip: Go to Model Manager in settings to delete unused models.`,
-                            [{ text: 'OK' }]
-                        );
-                        return;
-                    }
-                } catch (error) {
-                    console.error('[ChatDrawer] Error checking storage:', error);
-                    // Continue with download if storage check fails
-                }
-
-                // Calculate estimated download time
-                const sizeMatch = selectedModel.size.match(/(\d+\.?\d*)\s*(MB|GB)/i);
-                const sizeValue = sizeMatch ? parseFloat(sizeMatch[1]) : 1000;
-                const sizeUnit = sizeMatch ? sizeMatch[2].toUpperCase() : 'MB';
-                const sizeInMB = sizeUnit === 'GB' ? sizeValue * 1024 : sizeValue;
-                const estimatedMinutes = Math.ceil(sizeInMB / 10);
-                const downloadTimeText = estimatedMinutes < 2 
-                    ? '1-2 minutes' 
-                    : estimatedMinutes < 5 
-                    ? '2-5 minutes'
-                    : `${estimatedMinutes} minutes`;
-
-                Alert.alert(
-                    '📥 Download Local Model?',
-                    `${selectedModel.displayName}\n${selectedModel.description}\n\n` +
-                    `📦 File Size: ${selectedModel.size}\n` +
-                    `⏱️ Estimated Time: ${downloadTimeText}\n` +
-                    `📡 Network Usage: ${selectedModel.size} of data\n` +
-                    `📱 Storage Required: ${selectedModel.size} free space\n\n` +
-                    `💡 We recommend downloading over Wi-Fi to avoid using mobile data.`,
-                    [
-                        { 
-                            text: 'Cancel', 
-                            style: 'cancel' 
-                        },
-                        {
-                            text: 'Download',
-                            onPress: async () => {
-                                await performModelSwitch(true);
-                            },
-                        },
-                    ]
-                );
-                return; // Don't proceed with switch yet
-            }
-        } END OLD CODE */
-        }
-        
-        // Proceed with actual model switch (now cloud-only)
-        await performModelSwitch(newIsLocal);
-    };
-
-    const performModelSwitch = async (newIsLocal: boolean) => {
-        try {
-            setLocalLoading(true);
-            
-            // Clear all conversation history when switching between cloud and local modes
-            // This removes any preservation logic and ensures a clean break
-            if (newIsLocal !== isLocal) {
-                // Delete current conversation if it exists
-                if (currentConversationId) {
-                    await deleteConversation(currentConversationId);
-                }
-                
-                // Clear all conversations to remove any trace of history
-                await clearAllConversations();
-                
-                // Reset chat state completely
-                resetChat();
-            }
-            
-            if (newIsLocal) {
-                // For local mode, switch to local and navigate to new conversation
-                const wasAlreadyLocal = isLocal;
-                
-                // Defer state update to avoid blocking UI
-                await new Promise(resolve => setTimeout(resolve, 50));
-                
-                // Update state to local mode FIRST (before navigation)
-                setIsLocal(true);
-                
-                // Only navigate to new conversation if switching FROM cloud mode
-                if (!wasAlreadyLocal) {
-                    // Small delay before navigation to ensure state is updated
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                    // Navigate to new conversation with completely clean slate
-                    router.push('/(chat)/new');
-                }
-            } else if (newIsLocal !== isLocal) {
-                // For cloud mode, switch to cloud and create new conversation
-                setIsLocal(false);
-                
-                // Small delay to ensure state update propagates
-                await new Promise(resolve => setTimeout(resolve, 50));
-                
-                // Create a new server-side conversation
-                const newConvId = await createNewConversation();
-                if (newConvId) {
-                    router.push(`/(chat)/${newConvId}`);
-                } else {
-                    // Fallback: just navigate to /new route
-                    router.push('/(chat)/new');
-                }
-            }
-        } catch (error) {
-            // console.error('Error handling model switch:', error);
-            Alert.alert('Error', 'Failed to switch model');
-            // Revert state on error
-            setIsLocal(!newIsLocal);
-        } finally {
-            setLocalLoading(false);
-        }
-    };
-
     const loadMoreConversations = useCallback(async () => {
         if (isFetchingMore || !hasMore) return;
         setIsFetchingMore(true);
@@ -475,31 +301,8 @@ export const CustomDrawerContent = (props: any) => {
     );
 
     const handleConversationSelect = useCallback((chatId: string) => {
-        // Find the selected conversation
-        const selectedConversation = conversations.find(c => c.id === chatId);
-        const conversationModelType = selectedConversation?.model_type;
-        
-        // All stored conversations are cloud-based, so we need to switch out of local mode
-        if (isLocal) {
-            // User is currently in local mode but selecting a cloud conversation
-            // Switch to cloud mode
-            setIsLocal(false);
-        }
-        
-        if (conversationModelType) {
-            // Update the default cloud model to match this conversation's model
-            try {
-                console.log('[ChatDrawer] 🔄 Setting model to:', conversationModelType);
-                storage.set('default_model_id', conversationModelType);
-            } catch (error) {
-                console.error('[ChatDrawer] Error updating model selection:', error);
-            }
-        } else {
-            console.log('[ChatDrawer] ⚠️ No model_type found for conversation');
-        }
-        
         router.push(`/(chat)/${chatId}`);
-    }, [router, setIsLocal, conversations, isLocal]);
+    }, [router]);
 
     const renderItem = useCallback(({ item }: { item: Conversations }) => {
         const chatId = item?.id || '';
@@ -723,66 +526,23 @@ export const CustomDrawerContent = (props: any) => {
                 style={styles.headerContainer}
                 entering={FadeIn.duration(400)}
             >
-                {/* Local Model Toggle - Only show on capable devices */}
-                {showLocalAIOption && (
+                {/* On-device AI status (local-only app — no cloud toggle) */}
                 <View style={styles.modelToggleContainer}>
                     <View style={styles.localModelSection}>
                         <View style={styles.localModelHeader}>
-                            <Text style={styles.localModelTitle}>AI Mode</Text>
+                            <Text style={styles.localModelTitle}>📱 On-device AI</Text>
                             {!isLocalModelReady && (
                                 <ActivityIndicator size="small" color={theme.colors.mutedForeground} />
                             )}
                         </View>
-                        
-                        <View style={styles.localModelOptions}>
-                            {/* Cloud Option */}
-                            <TouchableOpacity
-                                style={[
-                                    styles.modelOption,
-                                    !isLocal && styles.modelOptionActive
-                                ]}
-                                onPress={() => setIsLocal(false)}
-                            >
-                                <Text style={[
-                                    styles.modelOptionText,
-                                    !isLocal && styles.modelOptionTextActive
-                                ]}>
-                                    ☁️ Cloud
-                                </Text>
-                            </TouchableOpacity>
-                            
-                            {/* Local Option */}
-                            <TouchableOpacity
-                                style={[
-                                    styles.modelOption,
-                                    isLocal && styles.modelOptionActive,
-                                    !isLocalModelReady && styles.modelOptionDisabled
-                                ]}
-                                onPress={() => setIsLocal(true)}
-                                disabled={!isLocalModelReady}
-                            >
-                                <Text style={[
-                                    styles.modelOptionText,
-                                    isLocal && styles.modelOptionTextActive,
-                                    !isLocalModelReady && styles.modelOptionTextDisabled
-                                ]}>
-                                    📱 Local
-                                </Text>
-                                {!isLocalModelReady && (
-                                    <Text style={styles.modelOptionSubtext}>Loading...</Text>
-                                )}
-                            </TouchableOpacity>
-                        </View>
-                        
+
                         {/* Privacy indicator */}
-                        {isLocal && (
-                            <Text style={styles.privacyText}>
-                                🔒 Private & Offline
-                            </Text>
-                        )}
-                        
+                        <Text style={styles.privacyText}>
+                            {isLocalModelReady ? '🔒 Private & Offline' : '⏳ Loading model…'}
+                        </Text>
+
                         {/* Generating indicator */}
-                        {isLocal && isLocalModelGenerating && (
+                        {isLocalModelGenerating && (
                             <View style={styles.generatingBadge}>
                                 <ActivityIndicator size="small" color="#fff" />
                                 <Text style={styles.generatingText}>Generating...</Text>
@@ -790,7 +550,6 @@ export const CustomDrawerContent = (props: any) => {
                         )}
                     </View>
                 </View>
-                )}
         
                 {/* Show search and history title for cloud mode (or always if local AI not available) */}
                 {(!isLocal || !showLocalAIOption) && (
@@ -994,7 +753,7 @@ export const CustomDrawerContent = (props: any) => {
                             <View style={styles.userInfo}>
                                 <Text style={styles.userName}>{user?.first_name || 'John'} {user?.last_name?.[0] || 'D'}.</Text>
                                 <Text style={styles.userEmail} numberOfLines={1}>
-                                    {user?.email || 'user@odyssey.ai'}
+                                    {user?.email || 'user@locale.ai'}
                                 </Text>
                             </View>
                         </View>

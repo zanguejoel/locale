@@ -7,7 +7,7 @@ import React from 'react';
 import { StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/hooks/useTheme';
-import { OdysseyGradients } from '@/constants/OdysseyColors';
+import { LocaleGradients } from '@/constants/LocaleColors';
 
 interface GradientBackgroundProps {
   children: React.ReactNode;
@@ -28,8 +28,8 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
   
   // Get gradient colors based on theme and variant
   const gradientColors = theme.isDark 
-    ? OdysseyGradients.dark[variant]
-    : OdysseyGradients.light[variant];
+    ? LocaleGradients.dark[variant]
+    : LocaleGradients.light[variant];
   
   return (
     <LinearGradient
@@ -79,8 +79,8 @@ export const HeaderGradient: React.FC<Omit<GradientBackgroundProps, 'variant'>> 
   const theme = useTheme();
   
   const gradientColors = theme.isDark 
-    ? OdysseyGradients.dark.header
-    : OdysseyGradients.light.header;
+    ? LocaleGradients.dark.header
+    : LocaleGradients.light.header;
   
   return (
     <LinearGradient

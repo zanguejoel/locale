@@ -49,8 +49,6 @@ import {
   MessageSaveStatus as PersistenceStatus 
 } from '@/utils/MessagePersistenceManager';
 import { MessageSaveStatus } from '@/utils/Interfaces';
-import { useCreditsContext } from '@/contexts/CreditsContext';
-import { useLocalModel } from './useLocalModel';
 import { useLocalModelGlobal } from './useLocalModelGlobal';
 
 // Import API_URL_PROD from ApiClient configuration
@@ -146,6 +144,10 @@ interface ChatContextType {
   setIsLocal: (value: boolean) => void;
   isLocalModelReady: boolean;
   isLocalModelGenerating: boolean;
+  localModelDownloadProgress: number;
+  isLocalModelDownloading: boolean;
+  localModelError: string | null;
+  isLocalModelSupported: boolean;
   canSafelyUnmount: boolean;
   handleSendLocalMessage: (text: string) => Promise<void>;
   interruptLocalGeneration: () => void;
@@ -250,11 +252,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Initialize at provider level so ready state is available immediately
   const globalLocalModel = useLocalModelGlobal();
 
-  const [isLocal, setIsLocal] = useState(false);
+  // Local-only app: on-device mode is always on.
+  const [isLocal, setIsLocal] = useState(true);
   const [isLocalModelGenerating, setIsLocalModelGenerating] = useState(false);
 
-  // Use the global ready state
+  // Real readiness / download / error state from the single shared instance
   const isLocalModelReady = globalLocalModel.isReady;
+  const localModelDownloadProgress = globalLocalModel.downloadProgress;
+  const isLocalModelDownloading = globalLocalModel.isDownloading;
+  const localModelError = globalLocalModel.error;
+  const isLocalModelSupported = globalLocalModel.isSupported;
 
   const updateLocalModelReady = useCallback((ready: boolean) => {
     console.log('[Chat] updateLocalModelReady called:', ready, '(using global state)');
@@ -287,42 +294,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateLocalModelGenerating,
   }), [isLocal, isLocalModelReady, isLocalModelGenerating, updateLocalModelReady, updateLocalModelGenerating, globalLocalModel.llm]);
 
-  // OPTIMIZED: LRU-based cleanup for conversation stream refs
-  // Prevents memory leaks from accumulating too many conversation refs
+  // Cap the number of cached conversation stream refs to prevent unbounded
+  // memory growth. Map preserves insertion order, so we evict the oldest
+  // entries first (never the currently-streaming conversation).
   const MAX_CONVERSATION_REFS = 5; // Keep only last 5 conversations in memory
-  const CLEANUP_THRESHOLD_MS = 30000; // 30 seconds
-  
+
   const cleanupOldStreamRefs = useCallback(() => {
-    const now = Date.now();
-    const entries = Array.from(conversationStreamRefs.current.entries());
-    
-    // Remove stale entries (> 30s old and not currently streaming)
-    entries.forEach(([id, data]) => {
-      if (now - data.lastUpdate > CLEANUP_THRESHOLD_MS && id !== streamingForConversationIdRef.current) {
-        // Cancel any pending RAF
-        if (data.rafId) {
-          cancelAnimationFrame(data.rafId);
-        }
-        conversationStreamRefs.current.delete(id);
-        console.log('[Chat] 🧹 Cleaned up stale stream ref (LRU):', id);
-      }
+    if (conversationStreamRefs.current.size <= MAX_CONVERSATION_REFS) return;
+
+    const evictable = Array.from(conversationStreamRefs.current.keys())
+      .filter((id) => id !== streamingForConversationIdRef.current);
+
+    const excess = conversationStreamRefs.current.size - MAX_CONVERSATION_REFS;
+    evictable.slice(0, excess).forEach((id) => {
+      conversationStreamRefs.current.delete(id);
+      console.log('[Chat] 🧹 Cleaned up excess stream ref:', id);
     });
-    
-    // If still too many, remove oldest (LRU)
-    if (conversationStreamRefs.current.size > MAX_CONVERSATION_REFS) {
-      const sorted = entries
-        .filter(([id]) => id !== streamingForConversationIdRef.current) // Never remove active stream
-        .sort((a, b) => a[1].lastUpdate - b[1].lastUpdate)
-        .slice(0, conversationStreamRefs.current.size - MAX_CONVERSATION_REFS);
-      
-      sorted.forEach(([id, data]) => {
-        if (data.rafId) {
-          cancelAnimationFrame(data.rafId);
-        }
-        conversationStreamRefs.current.delete(id);
-        console.log('[Chat] 🧹 Cleaned up excess stream ref (LRU):', id);
-      });
-    }
   }, []);
   
   // Run cleanup periodically during streaming (every 10 seconds)
@@ -339,28 +326,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isStreaming = useMemo(() => {
     return isSending && (stream.length > 0 || intermediate.length > 0);
   }, [isSending, stream, intermediate]);
-  
-  // OPTIMIZED: Display-only stream with artifact tags stripped
-  // Keep raw stream for detection, but display cleaned version
-  // This prevents users from seeing raw <jmeArtifact> tags during streaming
-  const displayStream = useMemo(() => {
-    if (!stream) return stream;
-    
-    // Strip artifact tags for display only
-    // Detection still works on the raw stream content stored in conversationStreamRefs
-    const stripped = stripStreamingArtifactTags(stream);
-    
-    // Log when tags are stripped (dev only)
-    if (__DEV__ && stripped !== stream) {
-      console.log('[useChat] 🎨 Stripped artifact tags from display stream:', {
-        originalLength: stream.length,
-        strippedLength: stripped.length,
-        difference: stream.length - stripped.length
-      });
-    }
-    
-    return stripped;
-  }, [stream]);
 
   // ============ Stream Batching for Performance ============
   // RAF-based batching to prevent excessive re-renders during streaming
@@ -663,7 +628,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     func: T,
     wait: number
   ): ((...args: Parameters<T>) => void) => {
-    let timeout: NodeJS.Timeout | null = null;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
     let lastRun = 0;
 
     return (...args: Parameters<T>) => {
@@ -2124,6 +2089,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLocal: localModel.setIsLocal,
       isLocalModelReady: localModel.isLocalModelReady,
       isLocalModelGenerating: localModel.isLocalModelGenerating,
+      localModelDownloadProgress,
+      isLocalModelDownloading,
+      localModelError,
+      isLocalModelSupported,
       canSafelyUnmount: localModel.canSafelyUnmount,
       handleSendLocalMessage: localModel.handleSendLocalMessage,
       interruptLocalGeneration: localModel.interruptLocalGeneration,
@@ -2174,6 +2143,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localModel.isLocal,
     localModel.isLocalModelReady,
     localModel.isLocalModelGenerating,
+    localModelDownloadProgress,
+    isLocalModelDownloading,
+    localModelError,
+    isLocalModelSupported,
     localModel.llm,
     localModel.updateLocalModelReady,
     localModel.updateLocalModelGenerating,

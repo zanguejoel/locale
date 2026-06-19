@@ -12,13 +12,13 @@ module.exports = {
   apps: {
     'ios.debug': {
       type: 'ios.app',
-      binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/Odyssey.app',
-      build: 'xcodebuild -workspace ios/Odyssey.xcworkspace -scheme Odyssey -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -quiet',
+      binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/Locale.app',
+      build: 'xcodebuild -workspace ios/Locale.xcworkspace -scheme Locale -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -quiet',
     },
     'ios.release': {
       type: 'ios.app',
-      binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/Odyssey.app',
-      build: 'xcodebuild -workspace ios/Odyssey.xcworkspace -scheme Odyssey -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -quiet',
+      binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/Locale.app',
+      build: 'xcodebuild -workspace ios/Locale.xcworkspace -scheme Locale -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -quiet',
     },
     'android.debug': {
       type: 'android.apk',

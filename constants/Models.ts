@@ -351,9 +351,6 @@ export const models: Model[] = [
   }, */
 ];
 
-// Default model
-export const DEFAULT_MODEL_ID = 'claude-sonnet-4-5-20250929';
-
 // Helper function to get model by ID
 export const getModelById = (id: string): Model | undefined => {
   return models.find(model => model.id === id);

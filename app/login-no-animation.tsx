@@ -112,7 +112,7 @@ const Login = () => {
 
 
         <View style={styles.headerContainer}>
-          <Image source={require('@/assets/images/Odysseylogodark.png')} style={styles.logo} />
+          <Image source={require('@/assets/images/Localelogodark.png')} style={styles.logo} />
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
         </View>

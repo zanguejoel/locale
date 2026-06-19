@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 
 interface ModelToggleProps {
-  onSelectModel: (modelType: 'local' | 'Odyssey') => void;
+  onSelectModel: (modelType: 'local' | 'Locale') => void;
   initialState?: boolean;
   disableLocal?: boolean;
 }
@@ -32,7 +32,7 @@ const ModelToggle: React.FC<ModelToggleProps> = ({
 
   const handleToggle = (local: boolean): void => {
     setIsLocal(local);
-    onSelectModel(local ? 'local' : 'Odyssey');
+    onSelectModel(local ? 'local' : 'Locale');
     
     Animated.timing(animation, {
       toValue: local ? 0 : 1,
@@ -82,7 +82,7 @@ const ModelToggle: React.FC<ModelToggleProps> = ({
             styles.optionText, 
             { color: !isLocal ? '#FFFFFF' : theme.isDark ? '#BBBBBB' : '#9E9E9E' }
           ]}>
-          Odyssey
+          Locale
           </Text>
         </TouchableOpacity>
       </View>
@@ -92,7 +92,7 @@ const ModelToggle: React.FC<ModelToggleProps> = ({
           ? 'Local model not supported on this device' 
           : isLocal 
             ? 'Using local model (works offline)' 
-            : 'Using Odyssey (more powerful)'}
+            : 'Using Locale (more powerful)'}
       </Text>
     </View>
   );

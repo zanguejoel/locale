@@ -68,7 +68,7 @@ const CONFIG = {
   VERIFY_TIMEOUT: 10000, // 10s timeout for verification
   
   // Storage
-  STORAGE_KEY: '@odyssey_message_queue',
+  STORAGE_KEY: '@locale_message_queue',
   CLEANUP_INTERVAL: 300000, // 5 minutes
   MESSAGE_RETENTION: 86400000, // 24 hours
 };
@@ -77,8 +77,8 @@ const CONFIG = {
 
 class MessagePersistenceManager {
   private messageQueue: Map<string, MessageSaveRecord> = new Map();
-  private retryTimeouts: Map<string, NodeJS.Timeout> = new Map();
-  private cleanupInterval: NodeJS.Timeout | null = null;
+  private retryTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private cleanupInterval: ReturnType<typeof setTimeout> | null = null;
   private onErrorCallback: ((error: string, conversationId: string) => void) | null = null;
   private onSuccessCallback: ((messageId: string, conversationId: string) => void) | null = null;
   

@@ -5,8 +5,6 @@ import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCredits } from '@/hooks/useCredits';
-import CreditPurchaseModalIAP from './CreditPurchaseModalIAP';
 
 interface EnhancedEmptyStateProps {
   firstName?: string;
@@ -21,9 +19,7 @@ const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
 }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
-  const { credits, isLoading: creditsLoading } = useCredits();
-  const [showCreditPurchaseModal, setShowCreditPurchaseModal] = useState(false);
-  
+
   // Animation refs
   const logoScale = useRef(new Animated.Value(0)).current;
   const logoRotate = useRef(new Animated.Value(0)).current;
@@ -124,49 +120,14 @@ const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
           {getGreeting()}, {firstName}! 👋
         </Text>
         <Text style={styles.subGreeting}>
-          I'm Odyssey, ready to help you with anything.
+          I'm Locale, ready to help you with anything.
         </Text>
         
-        {/* Credits Display */}
-        {!isLocal && (
-          <TouchableOpacity
-            style={styles.creditsBadge}
-            onPress={async () => {
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setShowCreditPurchaseModal(true);
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.creditsIconContainer}>
-              <Ionicons name="diamond" size={16} color={theme.colors.primary} />
-            </View>
-            {creditsLoading ? (
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-            ) : credits ? (
-              <>
-                <Text style={styles.creditsAmount}>
-                  {credits.remaining_credits.toLocaleString()}
-                </Text>
-                <Text style={styles.creditsLabel}>credits available</Text>
-              </>
-            ) : null}
-            <Ionicons name="add-circle" size={20} color={theme.colors.primary} style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
-        )}
-        
-        {isLocal && (
-          <View style={styles.localBadge}>
-            <Ionicons name="phone-portrait" size={14} color="#34C759" />
-            <Text style={styles.localBadgeText}>Running locally on your device</Text>
-          </View>
-        )}
+        <View style={styles.localBadge}>
+          <Ionicons name="phone-portrait" size={14} color="#34C759" />
+          <Text style={styles.localBadgeText}>Running locally on your device</Text>
+        </View>
       </Animated.View>
-
-      <CreditPurchaseModalIAP
-        visible={showCreditPurchaseModal}
-        onClose={() => setShowCreditPurchaseModal(false)}
-        source="empty_state"
-      />
     </ScrollView>
   );
 };

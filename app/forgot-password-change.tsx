@@ -22,7 +22,6 @@ import CustomInput from "@/components/CustomInput";
 import { useTheme } from '@/hooks/useTheme';
 import { getErrorMessage } from "@/utils/ErrorValidation";
 import { Theme } from "@/constants/Types";
-import { getSecureSession, clearSecureSession } from "@/utils/SecureSession";
 
 interface ErrorType {
   email?: string;
@@ -36,8 +35,6 @@ const ForgotPasswordChange = () => {
 
   const [error, setError] = useState<ErrorType>({});
   const [loading, setLoading] = useState(false);
-  const [sessionData, setSessionData] = useState<any>(null);
-  const [sessionError, setSessionError] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -50,38 +47,23 @@ const ForgotPasswordChange = () => {
     confirmNewPassword: false,
   });
 
-  const { session } = useLocalSearchParams();
-  
+  const params = useLocalSearchParams();
+  const email = (params.email as string) || '';
+
   // Input refs for keyboard navigation
   const newPasswordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
 
-  // Load session data on mount
+  // Guard: a recovery session should already be active from the prior screen.
   useEffect(() => {
-    const loadSession = async () => {
-      if (session) {
-        const data = await getSecureSession(session as string);
-        if (data) {
-          setSessionData(data);
-        } else {
-          setSessionError(true);
-          Alert.alert(
-            "Session Expired",
-            "Your reset session has expired. Please request a new password reset code.",
-            [{ text: "OK", onPress: () => router.replace('/forgot-password') }]
-          );
-        }
-      } else {
-        setSessionError(true);
-        Alert.alert(
-          "Invalid Session",
-          "No session found. Please request a password reset code.",
-          [{ text: "OK", onPress: () => router.replace('/forgot-password') }]
-        );
-      }
-    };
-    loadSession();
-  }, [session]);
+    if (!email) {
+      Alert.alert(
+        "Invalid Session",
+        "No email found. Please request a password reset code.",
+        [{ text: "OK", onPress: () => router.replace('/forgot-password') }]
+      );
+    }
+  }, [email]);
 
   // Keyboard visibility listeners
   useEffect(() => {
@@ -133,29 +115,23 @@ const ForgotPasswordChange = () => {
       return;
     }
     
-    // Check session data
-    if (!sessionData?.email || !sessionData?.token) {
+    if (!email) {
       Alert.alert(
         "Session Error",
-        "Session data not available. Please request a new password reset.",
+        "Email not available. Please request a new password reset.",
         [{ text: "OK", onPress: () => router.replace('/forgot-password') }]
       );
       return;
     }
-    
+
     try {
       setLoading(true);
       await handleForgotPasswordChange(
-        sessionData.email,
-        sessionData.token,
+        email,
+        '',
         formData.newPassword,
-        router 
+        router
       );
-      
-      // Clear the session after successful password change
-      if (session) {
-        await clearSecureSession(session as string);
-      }
     } catch (err: any) {
       // Extract meaningful error message
       let errorMessage = "Failed to reset password. Please try again.";
@@ -208,7 +184,7 @@ const ForgotPasswordChange = () => {
 
             <View style={[styles.headerContainer, keyboardVisible && styles.headerContainerCompact]}>
               <Image
-                source={theme.isDark ? require('@/assets/images/Odysseylogodark.png') : require('@/assets/images/Odysseylogowhite.png')}
+                source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')}
                 style={[styles.logo, keyboardVisible && styles.logoCompact]}
               />
               <Text style={[styles.title, { color: theme.colors.text }]}>Reset Password</Text>

@@ -6,7 +6,7 @@ import { useCallback, useRef } from 'react';
  */
 export function useBatchedUpdates() {
   const pendingUpdatesRef = useRef<(() => void)[]>([]);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const batchUpdate = useCallback((updateFn: () => void) => {
     pendingUpdatesRef.current.push(updateFn);

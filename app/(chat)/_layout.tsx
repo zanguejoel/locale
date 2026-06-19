@@ -89,7 +89,7 @@ const Layout = () => {
 
 
           <Drawer.Screen name="new" component={ChatPage} options={{
-            title: 'Odyssey',
+            title: 'Locale',
             headerRight: () => (
               <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
                 <Ionicons
@@ -103,7 +103,7 @@ const Layout = () => {
 
           <Drawer.Screen name="[id]"
             component={ChatPageId} options={{
-              title: 'Odyssey',
+              title: 'Locale',
               headerRight: () => (
                 <TouchableOpacity style={styles.headerButton} onPress={handleNewChat}>
                   <Ionicons
