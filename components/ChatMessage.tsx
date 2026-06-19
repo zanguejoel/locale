@@ -20,10 +20,11 @@ import {
   Clipboard,
   Share,
   Alert,
+  NativeSyntheticEvent,
 } from 'react-native';
 import LazyImage from './LazyImage';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as ContextMenu from 'zeego/context-menu';
+import ContextMenu, { ContextMenuOnPressNativeEvent } from 'react-native-context-menu-view';
 import { useCallback, useEffect, useRef } from 'react';
 import { Audio, Video } from 'expo-av';
 import * as Haptics from 'expo-haptics';
@@ -641,7 +642,6 @@ const ChatMessage = memo(({
     }
 
     // For platforms with ActionSheet but without context menu (older Android versions)
-    // Note: Context menu is available on all platforms with zeego
     if (Platform.OS === 'android' && !ContextMenu) {
       Alert.alert(
         'Message Options',
@@ -861,57 +861,44 @@ const ChatMessage = memo(({
     const imageUrl = instructionForImageChatDisplay(overrideUrl);
 
     return (
-      <ContextMenu.Root>
-        <ContextMenu.Trigger>
-          <Link
-            href={`/(modal)/image/${encodeURIComponent(imageUrl)}?prompt=${encodeURIComponent(prompt || '')}`}
-            asChild
+      <ContextMenu
+        actions={contextItems.map((item) => ({ title: item.title, systemIcon: item.systemIcon }))}
+        onPress={(e: NativeSyntheticEvent<ContextMenuOnPressNativeEvent>) => {
+          contextItems[e.nativeEvent.index]?.action(imageUrl);
+        }}
+      >
+        <Link
+          href={`/(modal)/image/${encodeURIComponent(imageUrl)}?prompt=${encodeURIComponent(prompt || '')}`}
+          asChild
+        >
+          <Pressable
+            onLongPress={onLongPress}
+            // ✅ REMOVED onPress={handlePress} to allow Link navigation to work
+            // The Link component handles the press for fullscreen navigation
+            accessible={true}
+            accessibilityLabel={`Image preview. ${prompt}`}
+            accessibilityRole="image"
+            testID="image-preview-pressable"
+            style={{width: '100%'}}
           >
-            <Pressable
-              onLongPress={onLongPress}
-              // ✅ REMOVED onPress={handlePress} to allow Link navigation to work
-              // The Link component handles the press for fullscreen navigation
-              accessible={true}
-              accessibilityLabel={`Image preview. ${prompt}`}
-              accessibilityRole="image"
-              testID="image-preview-pressable"
-              style={{width: '100%'}}
-            >
-              <LazyImage
-                uri={imageUrl}
-                style={styles.previewImage}
-                containerStyle={styles.imageContainer}
-                resizeMode="cover"
-                onError={handleImageError}
-                onLoad={() => {
-                  setContentLoaded(true);
-                }}
-                threshold={600}
-                showLoadingIndicator={true}
-                priority="high"
-                cachePolicy="memory-disk"
-                testID="preview-image"
-              />
-            </Pressable>
-          </Link>
-        </ContextMenu.Trigger>
-        <ContextMenu.Content>
-          {contextItems.map((item) => (
-            <ContextMenu.Item
-              key={item.id}
-              onSelect={() => item.action(imageUrl)}
-            >
-              <ContextMenu.ItemTitle>{item.title}</ContextMenu.ItemTitle>
-              <ContextMenu.ItemIcon
-                ios={{
-                  name: item.systemIcon,
-                  pointSize: 18,
-                }}
-              />
-            </ContextMenu.Item>
-          ))}
-        </ContextMenu.Content>
-      </ContextMenu.Root>
+            <LazyImage
+              uri={imageUrl}
+              style={styles.previewImage}
+              containerStyle={styles.imageContainer}
+              resizeMode="cover"
+              onError={handleImageError}
+              onLoad={() => {
+                setContentLoaded(true);
+              }}
+              threshold={600}
+              showLoadingIndicator={true}
+              priority="high"
+              cachePolicy="memory-disk"
+              testID="preview-image"
+            />
+          </Pressable>
+        </Link>
+      </ContextMenu>
     );
   };
 
@@ -1132,8 +1119,19 @@ const ChatMessage = memo(({
     if (ContextMenu) {
       return (
         <>
-          <ContextMenu.Root>
-            <ContextMenu.Trigger>
+          <ContextMenu
+            actions={[
+              { title: 'Copy', systemIcon: 'doc.on.doc' },
+              { title: 'Share', systemIcon: 'square.and.arrow.up' },
+            ]}
+            onPress={(e: NativeSyntheticEvent<ContextMenuOnPressNativeEvent>) => {
+              if (e.nativeEvent.index === 0) {
+                handleCopyText();
+              } else if (e.nativeEvent.index === 1) {
+                handleShareText();
+              }
+            }}
+          >
                 {role === Role.User ? (
                   // User message - media outside bubble, text in gradient bubble
                   <>
@@ -1339,29 +1337,8 @@ const ChatMessage = memo(({
                     )}
                   </Pressable>
                 )}
-              </ContextMenu.Trigger>
-              <ContextMenu.Content>
-                <ContextMenu.Item key='copy-text' onSelect={handleCopyText}>
-                  <ContextMenu.ItemTitle>Copy</ContextMenu.ItemTitle>
-                  <ContextMenu.ItemIcon
-                    ios={{
-                      name: 'doc.on.doc',
-                      pointSize: 18,
-                    }}
-                  />
-                </ContextMenu.Item>
-                <ContextMenu.Item key='share-text' onSelect={handleShareText}>
-                  <ContextMenu.ItemTitle>Share</ContextMenu.ItemTitle>
-                  <ContextMenu.ItemIcon
-                    ios={{
-                      name: 'square.and.arrow.up',
-                      pointSize: 18,
-                    }}
-                  />
-                </ContextMenu.Item>
-              </ContextMenu.Content>
-            </ContextMenu.Root>
-          
+          </ContextMenu>
+
           {/* Render AI-generated content (additional_data) - shown outside message bubble */}
           {(() => {
             const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';

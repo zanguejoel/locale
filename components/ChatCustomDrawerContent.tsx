@@ -12,11 +12,12 @@ import {
     Pressable,
     ActivityIndicator,
     RefreshControl,
+    NativeSyntheticEvent,
 } from 'react-native';
 import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 
-import * as ContextMenu from 'zeego/context-menu';
+import ContextMenu, { ContextMenuOnPressNativeEvent } from 'react-native-context-menu-view';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useChat, Conversations } from '@/hooks/useChat';
@@ -322,8 +323,32 @@ export const CustomDrawerContent = (props: any) => {
                     setOpenSwipeableId(chatId);
                 }}
             >
-                <ContextMenu.Root>
-                    <ContextMenu.Trigger>
+                <ContextMenu
+                    previewBackgroundColor="transparent"
+                    preview={
+                        <View style={styles.contextMenuPreview}>
+                            <Text style={styles.previewTitle}>{chatTitle}</Text>
+                        </View>
+                    }
+                    actions={[
+                        { title: pinnedChats.has(chatId) ? 'Unpin' : 'Pin', systemIcon: pinnedChats.has(chatId) ? 'pin.slash' : 'pin' },
+                        { title: 'Rename', systemIcon: 'pencil' },
+                        { title: 'Delete', systemIcon: 'trash', destructive: true },
+                    ]}
+                    onPress={(e: NativeSyntheticEvent<ContextMenuOnPressNativeEvent>) => {
+                        switch (e.nativeEvent.index) {
+                            case 0:
+                                togglePinChat(chatId);
+                                break;
+                            case 1:
+                                onRenameChat(chatId, chatTitle);
+                                break;
+                            case 2:
+                                onDeleteChat(chatId);
+                                break;
+                        }
+                    }}
+                >
                         {chatId.toString() === currentConversationId?.toString() ? (
                             // Active chat with modern gradient
                             <LinearGradient
@@ -437,50 +462,7 @@ export const CustomDrawerContent = (props: any) => {
                                 </View>
                             </Pressable>
                         )}
-                    </ContextMenu.Trigger>
-
-                    <ContextMenu.Content>
-                        <ContextMenu.Preview>
-                            {() => (
-                                <View style={styles.contextMenuPreview}>
-                                    <Text style={styles.previewTitle}>{chatTitle}</Text>
-                                </View>
-                            )}
-                        </ContextMenu.Preview>
-
-                        <ContextMenu.Item key={'pin'} onSelect={() => togglePinChat(chatId)}>
-                            <ContextMenu.ItemTitle>
-                                {pinnedChats.has(chatId) ? 'Unpin' : 'Pin'}
-                            </ContextMenu.ItemTitle>
-                            <ContextMenu.ItemIcon
-                                ios={{
-                                    name: pinnedChats.has(chatId) ? 'pin.slash' : 'pin',
-                                    pointSize: 18,
-                                }}
-                            />
-                        </ContextMenu.Item>
-
-                        <ContextMenu.Item key={'rename'} onSelect={() => onRenameChat(chatId, chatTitle)}>
-                            <ContextMenu.ItemTitle>Rename</ContextMenu.ItemTitle>
-                            <ContextMenu.ItemIcon
-                                ios={{
-                                    name: 'pencil',
-                                    pointSize: 18,
-                                }}
-                            />
-                        </ContextMenu.Item>
-
-                        <ContextMenu.Item key={'delete'} onSelect={() => onDeleteChat(chatId)} destructive>
-                            <ContextMenu.ItemTitle>Delete</ContextMenu.ItemTitle>
-                            <ContextMenu.ItemIcon
-                                ios={{
-                                    name: 'trash',
-                                    pointSize: 18,
-                                }}
-                            />
-                        </ContextMenu.Item>
-                    </ContextMenu.Content>
-                </ContextMenu.Root>
+                </ContextMenu>
             </Swipeable>
         );
     }, [

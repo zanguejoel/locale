@@ -2,9 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { View, StyleSheet, TouchableOpacity, Image, Keyboard, Platform, Alert } from 'react-native';
 import { Text } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedKeyboard,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
@@ -50,8 +47,6 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
 
   const inputRef = useRef<TextInput>(null);
   const [inputHeight, setInputHeight] = useState<number>(CHAT_INPUT.MIN_HEIGHT);
-  const keyboard = useAnimatedKeyboard();
-
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const recordingStartTime = useRef<number | null>(null); // Track recording start time for duration

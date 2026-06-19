@@ -6,7 +6,7 @@ export default {
     icon: './assets/images/icon.png',
     scheme: 'locale',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: false,
+    newArchEnabled: true,
     splash: {
       image: './assets/images/splash-icon.png',
       resizeMode: 'contain',
