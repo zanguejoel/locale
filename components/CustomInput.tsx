@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
+import { LocaleGlass } from '@/constants/LocaleColors';
 
 interface CustomInputProps extends TextInputProps {
   icon: string;
@@ -91,23 +92,13 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
     borderWidth: 1.5,
-    borderColor: theme.colors.greyLight,
+    borderColor: (theme.isDark ? LocaleGlass.dark : LocaleGlass.light).border,
     borderRadius: 12,
-    backgroundColor: theme.colors.background,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 3.84,
-    elevation: 5,
+    backgroundColor: (theme.isDark ? LocaleGlass.dark : LocaleGlass.light).surfaceFillStrong,
   },
   inputFocused: {
-    borderColor: theme.colors.primary,
+    borderColor: (theme.isDark ? LocaleGlass.dark : LocaleGlass.light).highlightBorder,
     borderWidth: 1.5,
-    shadowOpacity: 0.1,
-    shadowRadius: 4.84,
   },
   inputIcon: {
     paddingLeft: 12,

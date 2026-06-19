@@ -26,6 +26,8 @@ import WebView from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import contries from '@/data/countries.json'
 import { useTheme } from '@/hooks/useTheme';
+import { GradientBackground } from '@/components/GradientBackground';
+import { GlassCard } from '@/components/GlassSurface';
 
 interface ErrorType {
   firstName?: string;
@@ -282,9 +284,10 @@ const Registration = () => {
   };
 
   return (
+    <GradientBackground variant="background" style={styles.container}>
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={styles.keyboardView}
     >
       {isLoading && (
         <View style={[defaultStyles.loadingOverlay, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
@@ -306,6 +309,7 @@ const Registration = () => {
           </View>
 
           <View style={styles.formContainer}>
+          <GlassCard style={styles.formCard}>
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>First Name</Text>
               <CustomInput
@@ -451,6 +455,7 @@ const Registration = () => {
                 </TouchableOpacity>
               </View>
             </View>
+          </GlassCard>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -500,11 +505,15 @@ const Registration = () => {
         </View>
       </Modal>
     </KeyboardAvoidingView>
+    </GradientBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  keyboardView: {
     flex: 1,
   },
   scrollContainer: {
@@ -541,6 +550,9 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     paddingHorizontal: 24,
+  },
+  formCard: {
+    borderRadius: 24,
   },
   inputGroup: {
     marginBottom: 20,

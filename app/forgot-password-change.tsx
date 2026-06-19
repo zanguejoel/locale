@@ -20,6 +20,8 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from '@/hooks/useTheme';
+import { GradientBackground } from '@/components/GradientBackground';
+import { GlassCard } from '@/components/GlassSurface';
 import { getErrorMessage } from "@/utils/ErrorValidation";
 import { Theme } from "@/constants/Types";
 
@@ -163,7 +165,8 @@ const ForgotPasswordChange = () => {
 
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <GradientBackground variant="background" style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
@@ -194,6 +197,7 @@ const ForgotPasswordChange = () => {
             </View>
 
             <View style={styles.formContainer}>
+            <GlassCard style={styles.formCard}>
               <View style={styles.inputContainer}>
                 <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>New Password</Text>
                 <CustomInput
@@ -249,11 +253,13 @@ const ForgotPasswordChange = () => {
                   </Text>
                 </TouchableOpacity>
               </View>
+            </GlassCard>
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </GradientBackground>
   );
 };
 
@@ -305,6 +311,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   formContainer: {
     paddingHorizontal: 24,
   },
+  formCard: {
+    borderRadius: 24,
+  },
   errorText: {
     fontSize: 12,
     marginTop: 4,
@@ -332,7 +341,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
     marginBottom: 80,
-    backgroundColor: theme.colors.background,
   },
   inputContainer: {
     marginBottom: 16,

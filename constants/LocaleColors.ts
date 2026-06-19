@@ -134,11 +134,36 @@ export const LocaleGradients = {
   },
 } as const;
 
+// Glassmorphic / frosted surface tokens.
+// Surfaces use expo-blur's BlurView for the frosted effect; these are the
+// translucent fill/border/shadow that sit on top of the blur.
+export const LocaleGlass = {
+  light: {
+    blurTint: 'light' as const,
+    surfaceFill: 'rgba(255, 255, 255, 0.55)',
+    surfaceFillStrong: 'rgba(255, 255, 255, 0.75)',
+    border: 'rgba(255, 255, 255, 0.6)',
+    highlightBorder: 'rgba(96, 165, 250, 0.5)',     // primary blue, translucent
+    shadowColor: '#1e293b',
+    shadowOpacity: 0.12,
+  },
+  dark: {
+    blurTint: 'dark' as const,
+    surfaceFill: 'rgba(30, 41, 59, 0.55)',
+    surfaceFillStrong: 'rgba(30, 41, 59, 0.75)',
+    border: 'rgba(255, 255, 255, 0.12)',
+    highlightBorder: 'rgba(96, 165, 250, 0.55)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.35,
+  },
+} as const;
+
 // Export combined theme
 export const LocaleTheme = {
   light: LocaleLightColors,
   dark: LocaleDarkColors,
   gradients: LocaleGradients,
+  glass: LocaleGlass,
 };
 
 // Helper to get color by key for both light and dark

@@ -16,6 +16,7 @@ import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { Theme } from "@/constants/Types";
+import { GradientBackground } from "@/components/GradientBackground";
 
 
 interface ErrorType {
@@ -70,7 +71,7 @@ const SuccessPage = () => {
     }
 
     return (
-        <View style={styles.container} >
+        <GradientBackground variant="background" style={styles.container}>
             <SafeAreaView style={styles.content}>
                 <View style={styles.headerContainer}>
                     <Image 
@@ -121,14 +122,13 @@ const SuccessPage = () => {
                     </View>
                 </Animated.View>
             </SafeAreaView>
-        </View>
+        </GradientBackground>
     );
 };
 
 const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
     },
     content: {
         justifyContent: 'space-between',

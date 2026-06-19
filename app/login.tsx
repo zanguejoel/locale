@@ -25,6 +25,8 @@ import * as Haptics from 'expo-haptics';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from "@/constants/Types";
+import { GradientBackground } from "@/components/GradientBackground";
+import { GlassCard } from "@/components/GlassSurface";
 
 interface ErrorType {
   email?: string;
@@ -154,7 +156,7 @@ const Login = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <GradientBackground variant="background" style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
@@ -199,6 +201,7 @@ const Login = () => {
               }
             ]}
           >
+          <GlassCard style={styles.formCard}>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email Address</Text>
               <CustomInput
@@ -331,18 +334,18 @@ const Login = () => {
                 </Text>
               </TouchableOpacity>
             </View>
+          </GlassCard>
           </Animated.View>
           </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
-    </View>
+    </GradientBackground>
   );
 };
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -386,6 +389,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   formContainer: {
     paddingHorizontal: 24,
+  },
+  formCard: {
+    borderRadius: 24,
   },
   inputGroup: {
     marginBottom: 20,

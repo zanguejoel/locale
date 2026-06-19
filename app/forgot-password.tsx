@@ -21,6 +21,8 @@ import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from '@/hooks/useTheme';
+import { GradientBackground } from '@/components/GradientBackground';
+import { GlassCard } from '@/components/GlassSurface';
 
 interface ErrorType {
   email?: string;
@@ -195,7 +197,8 @@ const ForgotPassword = () => {
 
   if (resetSent) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <GradientBackground variant="background" style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.keyboardView}
@@ -218,6 +221,7 @@ const ForgotPassword = () => {
                   We've sent verification code to:
                 </Text>
                 <Text style={[styles.emailText, { color: theme.colors.primary }]}>{email}</Text>
+                <GlassCard style={styles.formCard}>
                 <View style={styles.inputGroup}>
                   <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Verification Code</Text>
                   <CustomInput
@@ -277,16 +281,19 @@ const ForgotPassword = () => {
                     <Text style={[styles.timerText, { color: theme.colors.primary }]}>{resendTimer}s</Text>
                   </View>
                 )}
+                </GlassCard>
               </View>
             </ScrollView>
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <GradientBackground variant="background" style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
@@ -318,6 +325,7 @@ const ForgotPassword = () => {
             </View>
 
             <View style={styles.formContainer}>
+            <GlassCard style={styles.formCard}>
               <View style={styles.inputGroup}>
                 <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Email Address</Text>
                 <CustomInput
@@ -360,16 +368,21 @@ const ForgotPassword = () => {
                   </Text>
                 </TouchableOpacity>
               </View>
+            </GlassCard>
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </GradientBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  safeArea: {
     flex: 1,
   },
   keyboardView: {
@@ -432,6 +445,10 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     paddingHorizontal: 24,
+  },
+  formCard: {
+    borderRadius: 24,
+    width: '100%',
   },
   inputGroup: {
     marginBottom: 20,

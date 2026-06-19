@@ -22,6 +22,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from "@/hooks/useTheme";
 import { Theme } from "@/constants/Types";
+import { GradientBackground } from "@/components/GradientBackground";
+import { GlassCard } from "@/components/GlassSurface";
 
 interface ErrorType {
     email?: string;
@@ -81,7 +83,8 @@ const EmailVerification = () => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <GradientBackground variant="background" style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.keyboardView}
@@ -112,6 +115,7 @@ const EmailVerification = () => {
                         </View>
 
                         <View style={styles.formContainer}>
+                        <GlassCard style={styles.formCard}>
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Verification Code</Text>
                                 <CustomInput
@@ -155,18 +159,22 @@ const EmailVerification = () => {
                                     </Text>
                                 </TouchableOpacity>
                             </View>
+                        </GlassCard>
                         </View>
                     </ScrollView>
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
         </SafeAreaView>
+        </GradientBackground>
     );
 };
 
 const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
+    },
+    safeArea: {
+        flex: 1,
     },
     keyboardView: {
         flex: 1,
@@ -215,6 +223,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     formContainer: {
         paddingHorizontal: 24,
+    },
+    formCard: {
+        borderRadius: 24,
     },
     inputGroup: {
         marginBottom: 20,
