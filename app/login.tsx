@@ -183,11 +183,14 @@ const Login = () => {
                 }
               ]}
             >
-              <Image
-                source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')}
-                style={styles.logo}
-              /> 
-              
+              <View style={styles.brandRow}>
+                <Image
+                  source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')}
+                  style={styles.logo}
+                />
+                <Text style={styles.brandName}>Locale</Text>
+              </View>
+
               <Text style={[styles.welcomeText]}>Welcome Back</Text>
               <Text style={[styles.subtitle]}>Sign in to continue</Text>
             </Animated.View>
@@ -364,10 +367,22 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     position: "relative",
     paddingVertical: 20,
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
   logo: {
-    width: 180,
-    height: 100,
+    width: 56,
+    height: 56,
     resizeMode: 'contain',
+  },
+  brandName: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: theme.colors.text,
+    letterSpacing: -0.3,
   },
   title: {
     fontSize: 42,
