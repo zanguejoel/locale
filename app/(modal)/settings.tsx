@@ -9,6 +9,7 @@ import { Theme } from '@/constants/Types';
 import { useTheme, ThemeMode, setThemeMode } from '@/hooks/useTheme';
 import useMMKVStorage from '@/hooks/useMMKVStorage';
 import { GradientBackground } from '@/components/GradientBackground';
+import { GlassCard } from '@/components/GlassSurface';
 import { mixpanelService } from '@/utils/mixpanel/MixpanelService';
 import { SettingsEvent } from '@/types/mixpanel';
 import { useEffect } from 'react';
@@ -217,9 +218,9 @@ const Page = () => {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.container}>
         <View style={styles.contentContainer}>
-          <View style={styles.menuContainer}>
+          <GlassCard style={styles.menuContainer} padding={0} borderRadius={16}>
             {visibleMenuItems.map((item, index) => renderRaw(item, index, visibleMenuItems))}
-          </View>
+          </GlassCard>
           
           <View style={styles.footer}>
             {/* Logo commented out */}
@@ -248,19 +249,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     paddingTop: 16,
     flex: 1,
   },
-  menuContainer: {
-    borderRadius: 12,
-    backgroundColor: theme.colors.card,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 2,
-    overflow: 'hidden',
-  },
+  menuContainer: {},
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',

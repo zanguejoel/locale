@@ -24,6 +24,8 @@ import { useEffect } from "react";
 import api from "@/utils/ApiClient";
 import { router } from "expo-router";
 import { deleteToken } from "@/utils/SecureTokenManager";
+import { GradientBackground } from "@/components/GradientBackground";
+import { GlassCard } from "@/components/GlassSurface";
 
 // Define profile-specific form data type
 interface ProfileFormData {
@@ -237,6 +239,7 @@ const Profile = () => {
   };
 
   return (
+    <GradientBackground variant="background" style={styles.gradientWrapper}>
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
       <View style={styles.container}>
         <View style={styles.profileHeader}>
@@ -255,9 +258,9 @@ const Profile = () => {
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
-          <View style={styles.infoContainer}>
+          <GlassCard style={styles.infoContainer} padding={10} borderRadius={12}>
             {renderProfileInfo()}
-          </View>
+          </GlassCard>
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => setIsModalVisible(true)}
@@ -320,7 +323,7 @@ const Profile = () => {
         resendCooldown={resendCooldown}
       />
     </ScrollView>
-
+    </GradientBackground>
   );
 };
 
@@ -330,14 +333,15 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     marginBottom: 80,
     backgroundColor: theme.colors.background,
   },
+  gradientWrapper: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 80,
-    backgroundColor: theme.colors.background,
   },
   container: {
     flex: 1,
@@ -390,19 +394,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     letterSpacing: -0.2,
     opacity: 0.9,
   },
-  infoContainer: {
-    borderRadius: 12,
-    backgroundColor: theme.colors.card,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 2,
-    padding: 10,
-  },
+  infoContainer: {},
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',

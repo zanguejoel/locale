@@ -17,6 +17,8 @@ import { router } from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from "@/hooks/useTheme";
 import { Theme } from "@/constants/Types";
+import { GradientBackground } from "@/components/GradientBackground";
+import { GlassCard } from "@/components/GlassSurface";
 
 const ChangePassword = () => {
   const theme = useTheme();
@@ -91,10 +93,11 @@ const ChangePassword = () => {
   };
 
   return (
+    <GradientBackground variant="background" style={styles.gradientWrapper}>
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
       <View style={styles.container}>
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+          <GlassCard style={styles.modalContent} borderRadius={20}>
             <View style={styles.inputContainer}>
               <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Current Password</Text>
               <CustomInput
@@ -143,7 +146,7 @@ const ChangePassword = () => {
                 blurOnSubmit={true}
               />
             </View>
-          </View>
+          </GlassCard>
         </View>
         <TouchableOpacity
           style={styles.editButton}
@@ -158,6 +161,7 @@ const ChangePassword = () => {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </GradientBackground>
   );
 };
 
@@ -176,13 +180,13 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   headerContainer: {
     alignItems: 'center'
   },
+  gradientWrapper: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
-  scrollContent: {
-    backgroundColor: theme.colors.background,
-  },
+  scrollContent: {},
   container: {
     flex: 1,
     paddingHorizontal: 16,
