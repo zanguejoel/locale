@@ -8,7 +8,6 @@ import MessageIdeas from '@/components/MessageIdeas';
 import ChatInput from '@/components/ChatInput';
 import { defaultStyles } from '@/constants/Styles';
 import { Message, Role, MessageReaction } from '@/utils/Interfaces';
-import Colors from '@/constants/Colors';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useRoute } from '@react-navigation/native';
@@ -18,6 +17,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { useDefaultModel } from '@/hooks/useDefaultModel';
 import { GradientBackground } from './GradientBackground';
+import { GlassSurface } from './GlassSurface';
 import { LocaleGlass } from '@/constants/LocaleColors';
 import TypingIndicator from './TypingIndicator';
 import DateSeparator from './DateSeparator';
@@ -658,6 +658,131 @@ const ChatPage = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
+  // Shared send path. Routes on the global isLocal state so the input bar AND
+  // the empty-state starter chips trigger the exact same persistence + generation
+  // flow (lazy Supabase conversation create -> persist user/assistant -> generate).
+  const handleSendMessage = useCallback(async (
+    message: string,
+    type?: string,
+    operation?: string | null,
+    additionalData?: string,
+    options?: any,
+  ) => {
+    if (!isLocal) {
+      // ===== CLOUD MODEL PATH =====
+      console.log('[ChatPage] ☁️ Sending to cloud model');
+      return sendMessage(message, type, operation, additionalData, options);
+    }
+
+    // ===== LOCAL MODEL PATH =====
+    console.log('[ChatPage] 🏠 Sending to local model:', message);
+
+    if (!globalLLM || !isLocalModelReady) {
+      console.error('[ChatPage] Local model not ready!');
+      Alert.alert(
+        'Model loading',
+        isLocalModelDownloading
+          ? 'The on-device model is still downloading. Please wait for it to finish.'
+          : 'The on-device model is still loading. Please try again in a moment.'
+      );
+      return;
+    }
+
+    // Persist conversation lazily on the first message of a new chat.
+    let convId = id;
+    const isFirstMessage = !convId;
+    if (!convId) {
+      try {
+        convId = await createNewConversation();
+        router.setParams({ id: convId });
+      } catch (error) {
+        console.error('[ChatPage] Failed to create local conversation:', error);
+      }
+    }
+
+    // Create user message
+    const userMessage: Message = {
+      id: Date.now().toString() + '_user',
+      chat_id: Date.now().toString() + '_user',
+      role: Role.User,
+      content: message,
+      timestamp: new Date(),
+    };
+
+    // Create empty assistant message for streaming
+    const assistantId = Date.now().toString() + '_assistant';
+    localAssistantMessageIdRef.current = assistantId;
+    localAssistantDbIdRef.current = null;
+
+    const assistantMessage: Message = {
+      id: assistantId,
+      chat_id: assistantId,
+      role: Role.Bot,
+      content: '',
+      timestamp: new Date(),
+    };
+
+    // Add both to local conversation
+    setLocalConversationMessages(prev => {
+      const updated = [...prev, userMessage, assistantMessage];
+      console.log('[ChatPage] 💬 Local messages updated, total:', updated.length);
+      return updated;
+    });
+
+    if (convId) {
+      saveLocalMessage({ conversationId: convId, role: Role.User, content: message }).catch(error =>
+        console.error('[ChatPage] Failed to save local user message:', error)
+      );
+      saveLocalMessage({ conversationId: convId, role: Role.Bot, content: '' })
+        .then(row => { localAssistantDbIdRef.current = row.id ?? null; })
+        .catch(error => console.error('[ChatPage] Failed to save local assistant message:', error));
+    }
+
+    // Build context messages from prior local conversation so the
+    // model has multi-turn history (capped to avoid token overflow).
+    const history = localConversationMessages
+      .filter(m => (m.content || '').trim().length > 0)
+      .slice(-LOCAL_MODEL_LIMITS.MAX_CONTEXT_MESSAGES)
+      .map(m => ({
+        role: m.role === Role.User ? 'user' : 'assistant',
+        content: m.content || '',
+      }));
+
+    const contextMessages = [
+      { role: 'system', content: `You are a helpful AI assistant. Current time: ${new Date().toLocaleString()}` },
+      ...history,
+      { role: 'user', content: message },
+    ];
+
+    // Generate using global LLM
+    console.log('[ChatPage] 🚀 Starting generation with global LLM');
+    await globalLLM.generate(contextMessages);
+    console.log('[ChatPage] ✅ Generation complete');
+
+    // Persist the final assistant content and bump/title the conversation.
+    if (convId) {
+      const finalContent = localStreamContentRef.current || globalLLM.response || '';
+      if (localAssistantDbIdRef.current) {
+        updateLocalMessageContent(localAssistantDbIdRef.current, finalContent).catch(error =>
+          console.error('[ChatPage] Failed to update local assistant message:', error)
+        );
+      }
+      if (isFirstMessage) {
+        renameConversation(convId, message.slice(0, 60)).catch(error =>
+          console.error('[ChatPage] Failed to title local conversation:', error)
+        );
+      } else {
+        touchLocalConversation(convId).catch(error =>
+          console.error('[ChatPage] Failed to touch local conversation:', error)
+        );
+      }
+    }
+  }, [
+    isLocal, sendMessage, globalLLM, isLocalModelReady, isLocalModelDownloading,
+    id, createNewConversation, router, localConversationMessages,
+    saveLocalMessage, updateLocalMessageContent, renameConversation, touchLocalConversation,
+  ]);
+
   // Messages in chronological order (oldest first, newest last)
   // Newest messages appear at top of screen with bottom spacing
   const displayMessages = useMemo(() => {
@@ -1178,6 +1303,7 @@ const ChatPage = () => {
                 firstName={user?.first_name}
                 modelName={isLocal ? 'Local AI' : selectedCloudModel?.name}
                 isLocal={isLocal}
+                onSelectPrompt={(text) => handleSendMessage(text)}
               />
             </Animated.View>
           )}
@@ -1293,22 +1419,24 @@ const ChatPage = () => {
           )}
           {showScrollButton && messages.length > 0 && (
             <TouchableOpacity
-              style={[styles.scrollButton, styles.touchTarget]}
+              style={styles.scrollButton}
               onPress={() => scrollToBottom(true)}
               accessibilityLabel="Scroll to latest message"
               accessibilityRole="button"
-              activeOpacity={0.6}
+              activeOpacity={0.7}
             >
-              <Text style={isSending && styles.textScrollDown}>
-                {isSending ? 'Streaming...' : ''}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color={theme.isDark ? theme.colors.text : Colors.common.grey} />
+              <GlassSurface style={styles.scrollButtonInner} borderRadius={20} strong>
+                {isSending && (
+                  <Text style={styles.textScrollDown}>Streaming…</Text>
+                )}
+                <Ionicons name="chevron-down" size={18} color={theme.colors.text} />
+              </GlassSurface>
             </TouchableOpacity>
           )}
         </View>
         
         {/* Bottom Section - Fixed Elements (Outside scrollable area) */}
-        <View style={[styles.bottomSection, { paddingBottom: insets.bottom }]}>
+        <GlassSurface style={[styles.bottomSection, { paddingBottom: insets.bottom }]} borderRadius={0} strong>
           {/* Voice Recording UI */}
           <VoiceRecordingUI 
             isRecording={isRecording}
@@ -1366,118 +1494,7 @@ const ChatPage = () => {
             files={isLocal ? [] : files} // No file attachments in local mode
             setFiles={isLocal ? () => {} : setFiles} // Disable file setting in local mode
             fetchMessages={handleFetchMessages}
-            onShouldSend={async (message: string, type?: string, operation?: string | null, additionalData?: string, options?: any) => {
-              // Separation of concerns: Route based on global isLocal state
-              if (isLocal) {
-                // ===== LOCAL MODEL PATH =====
-                console.log('[ChatPage] 🏠 Sending to local model:', message);
-                
-                if (!globalLLM || !isLocalModelReady) {
-                  console.error('[ChatPage] Local model not ready!');
-                  Alert.alert(
-                    'Model loading',
-                    isLocalModelDownloading
-                      ? 'The on-device model is still downloading. Please wait for it to finish.'
-                      : 'The on-device model is still loading. Please try again in a moment.'
-                  );
-                  return;
-                }
-
-                // Persist conversation lazily on the first message of a new chat.
-                let convId = id;
-                const isFirstMessage = !convId;
-                if (!convId) {
-                  try {
-                    convId = await createNewConversation();
-                    router.setParams({ id: convId });
-                  } catch (error) {
-                    console.error('[ChatPage] Failed to create local conversation:', error);
-                  }
-                }
-
-                // Create user message
-                const userMessage: Message = {
-                  id: Date.now().toString() + '_user',
-                  chat_id: Date.now().toString() + '_user',
-                  role: Role.User,
-                  content: message,
-                  timestamp: new Date(),
-                };
-
-                // Create empty assistant message for streaming
-                const assistantId = Date.now().toString() + '_assistant';
-                localAssistantMessageIdRef.current = assistantId;
-                localAssistantDbIdRef.current = null;
-
-                const assistantMessage: Message = {
-                  id: assistantId,
-                  chat_id: assistantId,
-                  role: Role.Bot,
-                  content: '',
-                  timestamp: new Date(),
-                };
-
-                // Add both to local conversation
-                setLocalConversationMessages(prev => {
-                  const updated = [...prev, userMessage, assistantMessage];
-                  console.log('[ChatPage] 💬 Local messages updated, total:', updated.length);
-                  return updated;
-                });
-
-                if (convId) {
-                  saveLocalMessage({ conversationId: convId, role: Role.User, content: message }).catch(error =>
-                    console.error('[ChatPage] Failed to save local user message:', error)
-                  );
-                  saveLocalMessage({ conversationId: convId, role: Role.Bot, content: '' })
-                    .then(row => { localAssistantDbIdRef.current = row.id ?? null; })
-                    .catch(error => console.error('[ChatPage] Failed to save local assistant message:', error));
-                }
-
-                // Build context messages from prior local conversation so the
-                // model has multi-turn history (capped to avoid token overflow).
-                const history = localConversationMessages
-                  .filter(m => (m.content || '').trim().length > 0)
-                  .slice(-LOCAL_MODEL_LIMITS.MAX_CONTEXT_MESSAGES)
-                  .map(m => ({
-                    role: m.role === Role.User ? 'user' : 'assistant',
-                    content: m.content || '',
-                  }));
-
-                const contextMessages = [
-                  { role: 'system', content: `You are a helpful AI assistant. Current time: ${new Date().toLocaleString()}` },
-                  ...history,
-                  { role: 'user', content: message },
-                ];
-
-                // Generate using global LLM
-                console.log('[ChatPage] 🚀 Starting generation with global LLM');
-                await globalLLM.generate(contextMessages);
-                console.log('[ChatPage] ✅ Generation complete');
-
-                // Persist the final assistant content and bump/title the conversation.
-                if (convId) {
-                  const finalContent = localStreamContentRef.current || globalLLM.response || '';
-                  if (localAssistantDbIdRef.current) {
-                    updateLocalMessageContent(localAssistantDbIdRef.current, finalContent).catch(error =>
-                      console.error('[ChatPage] Failed to update local assistant message:', error)
-                    );
-                  }
-                  if (isFirstMessage) {
-                    renameConversation(convId, message.slice(0, 60)).catch(error =>
-                      console.error('[ChatPage] Failed to title local conversation:', error)
-                    );
-                  } else {
-                    touchLocalConversation(convId).catch(error =>
-                      console.error('[ChatPage] Failed to touch local conversation:', error)
-                    );
-                  }
-                }
-              } else {
-                // ===== CLOUD MODEL PATH =====
-                console.log('[ChatPage] ☁️ Sending to cloud model');
-                return sendMessage(message, type, operation, additionalData, options);
-              }
-            }}
+            onShouldSend={handleSendMessage}
             isLoading={isSending || (isLocal && isLocalModelGenerating)}
             onStopStreaming={async () => {
               if (isLocal && globalLLM?.interrupt) {
@@ -1496,7 +1513,7 @@ const ChatPage = () => {
             messages={messages}
             conversationTitle={id ? `Conversation ${id}` : 'Chat'}
           />
-        </View>
+        </GlassSurface>
       </KeyboardAvoidingView>
 
       {/* Modals */}
@@ -1539,7 +1556,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   attachmentPreviewContainer: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: theme.colors.background,
+    // No solid bg — the frosted bottom section shows through.
   },
   attachmentPreview: {
     position: 'relative',
@@ -1619,12 +1636,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     backgroundColor: 'transparent', // Let gradient show through
   },
   bottomSection: {
-    // Container for all bottom fixed elements (input, attachments, etc.)
-    // Fixed to bottom with proper safe area padding
+    // Frosted container for all bottom fixed elements (input, attachments, etc.).
+    // GlassSurface provides the blur + translucent fill; it frosts over the
+    // gradient instead of punching a flat opaque rectangle through it.
     width: '100%',
-    backgroundColor: theme.colors.background,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
   },
   logo: {
     width: 118,
@@ -1644,23 +1659,25 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     right: 16,
+    shadowColor: (theme.isDark ? LocaleGlass.dark : LocaleGlass.light).shadowColor,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: (theme.isDark ? LocaleGlass.dark : LocaleGlass.light).shadowOpacity,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  scrollButtonInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.isDark ? theme.colors.background : 'rgba(240, 240, 240, 0.9)',
+    justifyContent: 'center',
+    minHeight: 40,
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
+    paddingHorizontal: 14,
+    gap: 4,
   },
   textScrollDown: {
     fontSize: 12,
-    color: theme.isDark ? theme.colors.text : Colors.common.grey,
+    color: theme.colors.text,
     fontWeight: '500',
-    marginRight: 4,
   },
   closeIcon: {
     left: 33,
@@ -1670,16 +1687,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   replyContainer: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: theme.colors.background,
-    borderTopWidth: 1,
-    borderTopColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
-  },
-  // Touch target improvements (minimum 44px as per iOS HIG)
-  touchTarget: {
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
+    // No solid bg — the frosted bottom section shows through.
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)',
   },
   // Loading overlay styles
   loadingOverlay: {

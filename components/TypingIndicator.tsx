@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { layout } from '@/constants/Layout';
+import { GlassSurface } from './GlassSurface';
 
 interface TypingIndicatorProps {
   modelName?: string;
@@ -70,7 +71,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.bubble}>
+      <GlassSurface style={styles.bubble} borderRadius={layout.radius.lg}>
         <View style={styles.content}>
           <Text style={styles.text}>{modelName} is thinking</Text>
           <View style={styles.dotsContainer}>
@@ -79,7 +80,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
             <Animated.View style={[styles.dot, dotStyle(dot3)]} />
           </View>
         </View>
-      </View>
+      </GlassSurface>
     </View>
   );
 };
@@ -91,13 +92,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     alignItems: 'flex-start',
   },
   bubble: {
-    backgroundColor: theme.colors.card,
-    borderRadius: layout.radius.lg,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     maxWidth: '80%',
+    alignSelf: 'flex-start',
   },
   content: {
     flexDirection: 'row',

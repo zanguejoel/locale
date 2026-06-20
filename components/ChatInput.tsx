@@ -560,35 +560,39 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
     <View style={[styles.container]}>
       <GlassSurface style={styles.inputContainer} borderRadius={28} strong>
         <View style={styles.row}>
-          <View style={styles.attachmentButtonContainer}>
-            <TouchableOpacity 
-              disabled={isLoading}
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                // Always show attachments modal - file preview is already visible above input
-                setShowAttachmentsModal(true);
-              }} 
-              style={styles.roundBtn}
-              accessibilityLabel="Show attachments and AI options"
-              accessibilityRole="button"
-              accessibilityHint="Opens modal to show camera, gallery, document options, and AI settings"
-              accessibilityState={{ disabled: isLoading }}
-            >
-              <Ionicons 
-                name="add" 
-                size={30} 
-                color={isLoading ? theme.colors.mutedForeground : theme.colors.chatIcons} 
-                style={{ opacity: isLoading ? 0.5 : 1 }}
-              />
-            </TouchableOpacity>
-            
-            {/* File count badge */}
-            {files.length > 0 && (
-              <View style={styles.fileBadge}>
-                <Text style={styles.fileBadgeText}>{files.length}</Text>
-              </View>
-            )}
-          </View>
+          {/* Attachments are hidden in local mode — the on-device text-only model
+              can't consume images/documents, so offering them would mislead. */}
+          {!isLocal && (
+            <View style={styles.attachmentButtonContainer}>
+              <TouchableOpacity
+                disabled={isLoading}
+                onPress={async () => {
+                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  // Always show attachments modal - file preview is already visible above input
+                  setShowAttachmentsModal(true);
+                }}
+                style={styles.roundBtn}
+                accessibilityLabel="Show attachments and AI options"
+                accessibilityRole="button"
+                accessibilityHint="Opens modal to show camera, gallery, document options, and AI settings"
+                accessibilityState={{ disabled: isLoading }}
+              >
+                <Ionicons
+                  name="add"
+                  size={30}
+                  color={isLoading ? theme.colors.mutedForeground : theme.colors.chatIcons}
+                  style={{ opacity: isLoading ? 0.5 : 1 }}
+                />
+              </TouchableOpacity>
+
+              {/* File count badge */}
+              {files.length > 0 && (
+                <View style={styles.fileBadge}>
+                  <Text style={styles.fileBadgeText}>{files.length}</Text>
+                </View>
+              )}
+            </View>
+          )}
 
           <TextInput
             // autoFocus

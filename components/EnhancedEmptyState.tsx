@@ -1,33 +1,47 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { GlassSurface } from './GlassSurface';
 
 interface EnhancedEmptyStateProps {
   firstName?: string;
   modelName?: string;
   isLocal?: boolean;
+  onSelectPrompt?: (text: string) => void;
 }
+
+/**
+ * Starter prompts tuned to what the on-device Llama 3.2 1B (text-only) model can
+ * actually do — no image/video/web/PDF tasks it can't fulfill.
+ */
+const STARTER_PROMPTS: { icon: keyof typeof Ionicons.glyphMap; label: string; prompt: string }[] = [
+  { icon: 'bulb-outline', label: 'Explain a concept', prompt: 'Explain how something works in simple terms — start by asking me what topic.' },
+  { icon: 'create-outline', label: 'Draft a message', prompt: 'Help me draft a short, friendly email. Ask me what it should be about.' },
+  { icon: 'sparkles-outline', label: 'Brainstorm ideas', prompt: 'Brainstorm a list of creative ideas with me. Ask me the topic first.' },
+  { icon: 'color-wand-outline', label: 'Rewrite text', prompt: 'Rewrite some text to make it clearer and more concise. Ask me to paste it.' },
+  { icon: 'document-text-outline', label: 'Summarize text', prompt: 'Summarize a piece of text into key points. Ask me to paste it.' },
+  { icon: 'git-compare-outline', label: 'Help me decide', prompt: 'Help me weigh the pros and cons of a decision. Ask me what I am deciding.' },
+];
 
 const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
   firstName = 'there',
   modelName = 'AI',
   isLocal = false,
+  onSelectPrompt,
 }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
 
-  // Animation refs
-  const logoScale = useRef(new Animated.Value(0)).current;
-  const logoRotate = useRef(new Animated.Value(0)).current;
+  // Subtle entrance animation (no spinning — keep it calm and on-brand).
+  const logoScale = useRef(new Animated.Value(0.8)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
-    // Logo entrance animation
     Animated.parallel([
       Animated.spring(logoScale, {
         toValue: 1,
@@ -35,26 +49,16 @@ const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
         friction: 7,
         useNativeDriver: true,
       }),
-      Animated.timing(logoRotate, {
-        toValue: 1,
-        duration: 800,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Content fade in
-    Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 600,
-        delay: 200,
+        delay: 150,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 600,
-        delay: 200,
+        delay: 150,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -68,52 +72,40 @@ const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
     return 'Good evening';
   };
 
-
-  const spin = logoRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  const handlePromptPress = (prompt: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onSelectPrompt?.(prompt);
+  };
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
-      {/* Animated Logo */}
+      {/* On-brand logo mark */}
       <Animated.View
         style={[
           styles.logoContainer,
-          {
-            transform: [
-              { scale: logoScale },
-              { rotate: spin },
-            ],
-          },
+          { transform: [{ scale: logoScale }] },
         ]}
       >
         <LinearGradient
-          colors={['#667eea', '#764ba2']}
+          colors={theme.isDark ? ['#3b82f6', '#2563eb'] : ['#60a5fa', '#3b82f6']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.logoGradient}
         >
-          <Ionicons 
-            name="sparkles" 
-            size={48} 
-            color="#FFFFFF"
-          />
+          <Ionicons name="sparkles" size={44} color="#FFFFFF" />
         </LinearGradient>
       </Animated.View>
 
-      {/* Greeting and Description */}
+      {/* Greeting and description */}
       <Animated.View
         style={[
           styles.greetingContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
         ]}
       >
         <Text style={styles.greeting}>
@@ -122,11 +114,40 @@ const EnhancedEmptyState: React.FC<EnhancedEmptyStateProps> = ({
         <Text style={styles.subGreeting}>
           I'm Locale, ready to help you with anything.
         </Text>
-        
-        <View style={styles.localBadge}>
-          <Ionicons name="phone-portrait" size={14} color="#34C759" />
-          <Text style={styles.localBadgeText}>Running locally on your device</Text>
-        </View>
+
+        {isLocal && (
+          <View style={styles.localBadge}>
+            <Ionicons name="phone-portrait" size={14} color="#34C759" />
+            <Text style={styles.localBadgeText}>Running locally on your device</Text>
+          </View>
+        )}
+      </Animated.View>
+
+      {/* Tappable starter prompts */}
+      <Animated.View
+        style={[
+          styles.promptsContainer,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        {STARTER_PROMPTS.map((item) => (
+          <TouchableOpacity
+            key={item.label}
+            activeOpacity={0.8}
+            onPress={() => handlePromptPress(item.prompt)}
+            disabled={!onSelectPrompt}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+            style={styles.promptChipTouchable}
+          >
+            <GlassSurface style={styles.promptChip} borderRadius={16}>
+              <View style={styles.promptIconWrap}>
+                <Ionicons name={item.icon} size={18} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.promptLabel} numberOfLines={1}>{item.label}</Text>
+            </GlassSurface>
+          </TouchableOpacity>
+        ))}
       </Animated.View>
     </ScrollView>
   );
@@ -139,30 +160,30 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   contentContainer: {
     padding: 20,
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: 56,
   },
   logoContainer: {
     marginBottom: 24,
   },
   logoGradient: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#667eea', // Solid background for efficient shadow calculation
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 },
+    backgroundColor: '#3b82f6', // Solid base for efficient shadow calculation
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowRadius: 14,
     elevation: 8,
   },
   greetingContainer: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
   },
   greeting: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: theme.colors.text,
     marginBottom: 8,
@@ -188,60 +209,38 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     color: '#34C759',
     fontWeight: '600',
   },
-  creditsBadge: {
+  promptsContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  promptChipTouchable: {
+    width: '47%',
+  },
+  promptChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.backgroundLight,
-    paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 24,
-    marginTop: 16,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.primary + '40',
+    paddingHorizontal: 12,
+    gap: 10,
   },
-  creditsIconContainer: {
+  promptIconWrap: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.primary + '20',
-    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: theme.isDark ? 'rgba(96, 165, 250, 0.16)' : 'rgba(59, 130, 246, 0.12)',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  creditsAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  creditsLabel: {
+  promptLabel: {
+    flex: 1,
     fontSize: 13,
-    color: theme.colors.mutedForeground,
-  },
-  capabilitiesContainer: {
-    width: '100%',
-    backgroundColor: theme.colors.card,
-    borderRadius: 16,
-    padding: 16,
-  },
-  capabilitiesTitle: {
-    fontSize: 16,
     fontWeight: '600',
     color: theme.colors.text,
-    marginBottom: 12,
-  },
-  capabilitiesList: {
-    gap: 8,
-  },
-  capabilityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  capabilityText: {
-    fontSize: 14,
-    color: theme.colors.mutedForeground,
+    letterSpacing: -0.2,
   },
 });
 
 export default EnhancedEmptyState;
-

@@ -38,6 +38,7 @@ import AudioPlayer from './AudioPlayer';
 import DocumentPreview from './DocumentPreview';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
+import { LocaleGlass } from '@/constants/LocaleColors';
 import { shadows } from '@/constants/Shadows';
 import { isAudio, isImage, isDocument } from '@/utils/FileTypeHelpers';
 import { CHAT_MESSAGE } from '@/constants/ChatConstants';
@@ -1994,13 +1995,13 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     // No shadows for clean look
   },
   userContent: {
-    backgroundColor: theme.colors.primary, // Solid background for efficient shadow calculation
+    backgroundColor: theme.colors.primary, // Solid primary fill
     borderBottomRightRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS,
-    // Subtle shadow for blended appearance
-    shadowColor: theme.isDark ? '#000000' : theme.colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: theme.isDark ? 0.4 : 0.15,
-    shadowRadius: 6,
+    // Soft shadow aligned to the glass design tokens for a blended look
+    shadowColor: (theme.isDark ? LocaleGlass.dark : LocaleGlass.light).shadowColor,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: (theme.isDark ? LocaleGlass.dark : LocaleGlass.light).shadowOpacity,
+    shadowRadius: 12,
     elevation: 3,
     paddingVertical: 6,
   },
