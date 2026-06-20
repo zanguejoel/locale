@@ -18,6 +18,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { useDefaultModel } from '@/hooks/useDefaultModel';
 import { GradientBackground } from './GradientBackground';
+import { LocaleGlass } from '@/constants/LocaleColors';
 import TypingIndicator from './TypingIndicator';
 import DateSeparator from './DateSeparator';
 import SmartSuggestions from './SmartSuggestions';
@@ -1110,6 +1111,9 @@ const ChatPage = () => {
       )}
       <Stack.Screen options={{
         headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: (theme.isDark ? LocaleGlass.dark : LocaleGlass.light).surfaceFillStrong,
+        },
         headerTitle: () => (
           <View style={styles.headerContainer}>
             <Image 

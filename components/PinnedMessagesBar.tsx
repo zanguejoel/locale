@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
 import { Message, Role } from '@/utils/Interfaces';
+import { GlassSurface } from './GlassSurface';
 
 interface PinnedMessagesBarProps {
   pinnedMessages: Message[];
@@ -43,7 +44,7 @@ const PinnedMessagesBar: React.FC<PinnedMessagesBarProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <GlassSurface style={styles.container} borderRadius={0}>
       <View style={styles.header}>
         <Ionicons name="pin" size={14} color={theme.colors.primary} />
         <Text style={styles.headerText}>
@@ -91,15 +92,12 @@ const PinnedMessagesBar: React.FC<PinnedMessagesBarProps> = ({
           </TouchableOpacity>
         ))}
       </ScrollView>
-    </View>
+    </GlassSurface>
   );
 };
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
-    backgroundColor: theme.colors.backgroundLight,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.isDark ? '#3a3a3a' : '#e0e0e0',
     paddingVertical: 8,
   },
   header: {

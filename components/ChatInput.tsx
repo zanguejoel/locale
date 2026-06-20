@@ -12,6 +12,7 @@ import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 import { Theme } from '@/constants/Types';
+import { GlassSurface } from './GlassSurface';
 import { GenerationOptionsState } from './GenerationOptions';
 import { CHAT_INPUT } from '@/constants/ChatConstants';
 import { handleError } from '@/utils/ErrorHandler';
@@ -557,7 +558,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
 
   return (
     <View style={[styles.container]}>
-      <View style={styles.inputContainer}>
+      <GlassSurface style={styles.inputContainer} borderRadius={28} strong>
         <View style={styles.row}>
           <View style={styles.attachmentButtonContainer}>
             <TouchableOpacity 
@@ -653,7 +654,7 @@ const ChatInput = ({ onShouldSend, fetchMessages, files = [], setFiles, isLoadin
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </GlassSurface>
 
       {/* Attachments Modal with integrated AI Options */}
       <AttachmentsModal
@@ -687,28 +688,28 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     backgroundColor: 'transparent',
   },
   inputContainer: {
+    marginHorizontal: 12,
+    marginTop: 8,
+    marginBottom: Platform.OS === 'ios' ? 6 : 10,
     paddingTop: 10,
     paddingBottom: 5,
-    backgroundColor: 'transparent',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     paddingBottom: 8,
   },
   messageInput: {
     flex: 1,
     minHeight: CHAT_INPUT.MIN_HEIGHT,
     marginHorizontal: 10,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingTop: Platform.OS === 'ios' ? 10 : 8,
     paddingBottom: Platform.OS === 'ios' ? 10 : 8,
     color: theme.colors.text,
-    borderColor: theme.colors.greyLight,
-    backgroundColor: theme.colors.chatInputBg,
+    backgroundColor: 'transparent',
     fontSize: 16,
     lineHeight: 20,
   },

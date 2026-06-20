@@ -35,6 +35,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FEATURES } from '@/constants/Config';
 import { formatMessageTimestamp } from '@/utils/dateHelpers';
 import { checkLocalAISupport } from '@/utils/DeviceCapabilities';
+import { GradientBackground } from './GradientBackground';
+import { GlassSurface, GlassCard } from './GlassSurface';
 
 
 export const CustomDrawerContent = (props: any) => {
@@ -480,9 +482,13 @@ export const CustomDrawerContent = (props: any) => {
     const keyExtractor = useCallback((item: Conversations) => item?.id?.toString() || '', []);
 
     return (
+        <GradientBackground
+            variant="background"
+            style={styles.drawerContainer}
+        >
         <View
             ref={viewRef}
-            style={styles.drawerContainer}>
+            style={styles.drawerInner}>
             {showLoading && (
                 <View style={styles.loadingOverlay}>
                     <View style={styles.loadingContent}>
@@ -510,7 +516,7 @@ export const CustomDrawerContent = (props: any) => {
             >
                 {/* On-device AI status (local-only app — no cloud toggle) */}
                 <View style={styles.modelToggleContainer}>
-                    <View style={styles.localModelSection}>
+                    <GlassCard style={styles.localModelSection} padding={12} borderRadius={12}>
                         <View style={styles.localModelHeader}>
                             <Text style={styles.localModelTitle}>📱 On-device AI</Text>
                             {!isLocalModelReady && (
@@ -530,14 +536,14 @@ export const CustomDrawerContent = (props: any) => {
                                 <Text style={styles.generatingText}>Generating...</Text>
                             </View>
                         )}
-                    </View>
+                    </GlassCard>
                 </View>
-        
+
                 {/* Show search and history title for cloud mode (or always if local AI not available) */}
                 {(!isLocal || !showLocalAIOption) && (
                     <>
                         <View style={styles.searchContainer}>
-                            <View style={styles.searchSection}>
+                            <GlassSurface style={styles.searchSection} borderRadius={12}>
                                 <Ionicons style={styles.searchIcon} name="search" size={18} color={theme.colors.greyLight} />
                                 <TextInput
                                     style={styles.input}
@@ -548,14 +554,14 @@ export const CustomDrawerContent = (props: any) => {
                                     value={query}
                                 />
                                 {query ? (
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         onPress={() => setQuery('')}
                                         style={styles.clearButton}
                                     >
                                         <Ionicons name="close-circle" size={18} color={theme.colors.greyLight} />
                                     </TouchableOpacity>
                                 ) : null}
-                            </View>
+                            </GlassSurface>
                         </View>
                         <View style={styles.historyHeader}>
                             <Text style={styles.historyTitle}>Recent Chats</Text>
@@ -712,10 +718,11 @@ export const CustomDrawerContent = (props: any) => {
                         </>
                     )}
                 </View>
-            <Animated.View 
+            <Animated.View
                 style={[styles.footerContainer, { paddingBottom: 10 + bottom }]}
                 entering={FadeIn.delay(200).duration(400)}
             >
+                <GlassSurface style={styles.footerGlass} borderRadius={16}>
                 <Link href="/(modal)/settings" asChild>
                     <TouchableOpacity style={styles.footer} activeOpacity={0.7}>
                         <View style={styles.userContainer}>
@@ -744,8 +751,10 @@ export const CustomDrawerContent = (props: any) => {
                         </View>
                     </TouchableOpacity>
                 </Link>
+                </GlassSurface>
             </Animated.View>
         </View>
+        </GradientBackground>
     );
 };
 
@@ -753,10 +762,11 @@ export const CustomDrawerContent = (props: any) => {
 const getStyles = (theme: Theme) => StyleSheet.create({
     drawerContainer: {
         flex: 1,
-        backgroundColor: theme.colors.background,
+    },
+    drawerInner: {
+        flex: 1,
     },
     headerContainer: {
-        backgroundColor: theme.colors.background,
         paddingBottom: 10,
         paddingTop: 8,
         borderBottomWidth: 0,
@@ -837,17 +847,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     searchSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.backgroundLight,
-        borderWidth: 1.5,
-        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-        borderRadius: 12,
         height: 42,
         paddingHorizontal: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 3,
-        elevation: 2,
     },
     searchIcon: {
         marginRight: 8,
@@ -859,7 +860,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         paddingVertical: 8,
     },
     scrollViewContent: {
-        backgroundColor: theme.colors.background,
         paddingTop: 6,
         paddingHorizontal: 14,
         paddingBottom: 16,
@@ -1098,9 +1098,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         paddingHorizontal: 12,
         paddingTop: 10,
         paddingBottom: 8,
-        borderTopWidth: 1,
-        borderTopColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-        backgroundColor: theme.colors.background,
+    },
+    footerGlass: {
+        // wraps the settings/profile row in a glass card
     },
     footer: {
         flexDirection: 'row',
@@ -1246,9 +1246,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     
     // ===== Local Model Styles =====
     localModelSection: {
-        backgroundColor: theme.isDark ? '#1e1e1e' : '#f8f8f8',
-        borderRadius: 12,
-        padding: 12,
         marginBottom: 16,
     },
     localModelHeader: {
