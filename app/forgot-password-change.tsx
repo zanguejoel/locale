@@ -287,7 +287,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   logo: {
     width: 180,
-    height: 100,
+    height: 46,
     resizeMode: 'contain',
     marginBottom: 20,
   },

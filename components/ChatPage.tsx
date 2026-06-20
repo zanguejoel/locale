@@ -1566,7 +1566,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     borderTopColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
   },
   logo: {
-    width: 180,
+    width: 118,
     resizeMode: 'contain',
     height: 30,
   },

@@ -303,8 +303,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     paddingTop: 24,
   },
   logo: {
-    width: 120,
-    height: 60,
+    width: 160,
+    height: 41,
     resizeMode: 'contain',
     marginBottom: 6,
     opacity: 0.9,

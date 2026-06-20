@@ -183,15 +183,11 @@ const Login = () => {
                 }
               ]}
             >
-              <View style={styles.brandRow}>
-                <Image
-                  source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')}
-                  style={styles.logo}
-                />
-                <Text style={styles.brandName}>Locale</Text>
-              </View>
+              <Image
+                source={theme.isDark ? require('@/assets/images/Localelogodark.png') : require('@/assets/images/Localelogowhite.png')}
+                style={styles.logo}
+              />
 
-              <Text style={[styles.welcomeText]}>Welcome Back</Text>
               <Text style={[styles.subtitle]}>Sign in to continue</Text>
             </Animated.View>
 
@@ -362,27 +358,15 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   headerContainer: {
     alignItems: "center",
-    marginTop: 60,
-    marginBottom: 40,
+    marginTop: 72,
+    marginBottom: 32,
     position: "relative",
-    paddingVertical: 20,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
   },
   logo: {
-    width: 56,
+    width: 220,
     height: 56,
     resizeMode: 'contain',
-  },
-  brandName: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: theme.colors.text,
-    letterSpacing: -0.3,
+    marginBottom: 14,
   },
   title: {
     fontSize: 42,
@@ -390,12 +374,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     marginBottom: 8,
     color: theme.colors.primary,
     letterSpacing: 1,
-  },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: "600",
-    marginBottom: 8,
-    color: theme.colors.text,
   },
   subtitle: {
     fontSize: 16,

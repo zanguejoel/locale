@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
   logo: {
     resizeMode: 'contain',
     width: 180,
-    height: 100,
+    height: 46,
   },
   appTitle: {
     fontSize: 42,

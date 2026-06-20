@@ -200,7 +200,8 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: 180,
-    height: 100,
+    height: 46,
+    resizeMode: 'contain',
   },
   title: {
     fontSize: 28,
