@@ -149,20 +149,41 @@ const ChatPage = () => {
     llm: globalLLM, // Get global LLM instance
     updateLocalModelReady,
     updateLocalModelGenerating,
+    saveLocalMessage,
+    updateLocalMessageContent,
+    touchLocalConversation,
+    renameConversation,
   } = chat;
+
+  const id = (params as { id?: string })?.id
 
   // ============ Local Model Integration ============
 
   // Local messages state (separate from cloud messages)
   const [localConversationMessages, setLocalConversationMessages] = useState<Message[]>([]);
   const localAssistantMessageIdRef = useRef<string | null>(null);
+  const localAssistantDbIdRef = useRef<string | null>(null);
   const [localStreamContent, setLocalStreamContent] = useState('');
+  // Mirrors localStreamContent synchronously so we can read the final
+  // generated text right after `await globalLLM.generate(...)` resolves,
+  // without relying on a possibly-stale closure over React state.
+  const localStreamContentRef = useRef('');
+
+  // Seed local conversation messages from Supabase history when reopening an
+  // existing local conversation. Only seeds once per conversation load so it
+  // doesn't clobber messages appended live during an active send.
+  useEffect(() => {
+    if (isLocal && id && messages.length > 0 && localConversationMessages.length === 0) {
+      setLocalConversationMessages(messages);
+    }
+  }, [isLocal, id, messages]);
   
   // Monitor global LLM response for streaming
   useEffect(() => {
     if (isLocal && globalLLM?.response) {
       const response = globalLLM.response;
       console.log('[ChatPage] Global LLM stream update:', response.length, 'chars');
+      localStreamContentRef.current = response;
       setLocalStreamContent(response);
     }
   }, [globalLLM?.response, isLocal]);
@@ -218,7 +239,6 @@ const ChatPage = () => {
   }, [messages, insets]);
 
 
-  const id = (params as { id?: string })?.id
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   
   // Only show streaming content if it belongs to the current conversation
@@ -1363,6 +1383,18 @@ const ChatPage = () => {
                   return;
                 }
 
+                // Persist conversation lazily on the first message of a new chat.
+                let convId = id;
+                const isFirstMessage = !convId;
+                if (!convId) {
+                  try {
+                    convId = await createNewConversation();
+                    router.setParams({ id: convId });
+                  } catch (error) {
+                    console.error('[ChatPage] Failed to create local conversation:', error);
+                  }
+                }
+
                 // Create user message
                 const userMessage: Message = {
                   id: Date.now().toString() + '_user',
@@ -1371,11 +1403,12 @@ const ChatPage = () => {
                   content: message,
                   timestamp: new Date(),
                 };
-                
+
                 // Create empty assistant message for streaming
                 const assistantId = Date.now().toString() + '_assistant';
                 localAssistantMessageIdRef.current = assistantId;
-                
+                localAssistantDbIdRef.current = null;
+
                 const assistantMessage: Message = {
                   id: assistantId,
                   chat_id: assistantId,
@@ -1383,14 +1416,23 @@ const ChatPage = () => {
                   content: '',
                   timestamp: new Date(),
                 };
-                
+
                 // Add both to local conversation
                 setLocalConversationMessages(prev => {
                   const updated = [...prev, userMessage, assistantMessage];
                   console.log('[ChatPage] 💬 Local messages updated, total:', updated.length);
                   return updated;
                 });
-                
+
+                if (convId) {
+                  saveLocalMessage({ conversationId: convId, role: Role.User, content: message }).catch(error =>
+                    console.error('[ChatPage] Failed to save local user message:', error)
+                  );
+                  saveLocalMessage({ conversationId: convId, role: Role.Bot, content: '' })
+                    .then(row => { localAssistantDbIdRef.current = row.id ?? null; })
+                    .catch(error => console.error('[ChatPage] Failed to save local assistant message:', error));
+                }
+
                 // Build context messages from prior local conversation so the
                 // model has multi-turn history (capped to avoid token overflow).
                 const history = localConversationMessages
@@ -1411,6 +1453,25 @@ const ChatPage = () => {
                 console.log('[ChatPage] 🚀 Starting generation with global LLM');
                 await globalLLM.generate(contextMessages);
                 console.log('[ChatPage] ✅ Generation complete');
+
+                // Persist the final assistant content and bump/title the conversation.
+                if (convId) {
+                  const finalContent = localStreamContentRef.current || globalLLM.response || '';
+                  if (localAssistantDbIdRef.current) {
+                    updateLocalMessageContent(localAssistantDbIdRef.current, finalContent).catch(error =>
+                      console.error('[ChatPage] Failed to update local assistant message:', error)
+                    );
+                  }
+                  if (isFirstMessage) {
+                    renameConversation(convId, message.slice(0, 60)).catch(error =>
+                      console.error('[ChatPage] Failed to title local conversation:', error)
+                    );
+                  } else {
+                    touchLocalConversation(convId).catch(error =>
+                      console.error('[ChatPage] Failed to touch local conversation:', error)
+                    );
+                  }
+                }
               } else {
                 // ===== CLOUD MODEL PATH =====
                 console.log('[ChatPage] ☁️ Sending to cloud model');

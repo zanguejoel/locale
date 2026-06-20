@@ -32,7 +32,6 @@ import { Theme } from '@/constants/Types';
 import { storage } from '@/hooks/useMMKVStorage';
 import { isLlamaModel } from '@/constants/Models';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FEATURES } from '@/constants/Config';
 import { formatMessageTimestamp } from '@/utils/dateHelpers';
 import { checkLocalAISupport } from '@/utils/DeviceCapabilities';
 import { GradientBackground } from './GradientBackground';
@@ -539,8 +538,8 @@ export const CustomDrawerContent = (props: any) => {
                     </GlassCard>
                 </View>
 
-                {/* Show search and history title for cloud mode (or always if local AI not available) */}
-                {(!isLocal || !showLocalAIOption) && (
+                {/* Show search and history title (conversations persist to Supabase in both local and cloud mode) */}
+                {(
                     <>
                         <View style={styles.searchContainer}>
                             <GlassSurface style={styles.searchSection} borderRadius={12}>
@@ -630,46 +629,8 @@ export const CustomDrawerContent = (props: any) => {
             </Animated.View>
 
             <View style={{ flex: 1 }}>
-                {(isLocal && FEATURES.LOCAL_LLM_ENABLED) ? (
-                        // Local mode - show modern info message
-                        <Animated.View 
-                            style={styles.localModeInfoContainer}
-                            entering={FadeIn.duration(500)}
-                        >
-                            <View style={styles.localModeIconContainer}>
-                                <LinearGradient
-                                    colors={['#10b981', '#059669']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                    style={styles.localModeIconGradient}
-                                >
-                                    <Ionicons name="shield-checkmark" size={40} color="#FFFFFF" />
-                                </LinearGradient>
-                            </View>
-                            <Text style={styles.localModeTitle}>Local & Private</Text>
-                            <Text style={styles.localModeText}>
-                                Your conversations run completely offline on your device with end-to-end privacy.
-                            </Text>
-                            <View style={styles.localModeFeatures}>
-                                <View style={styles.localModeFeature}>
-                                    <Ionicons name="wifi-outline" size={20} color={theme.colors.primary} style={styles.localModeFeatureIcon} />
-                                    <Text style={styles.localModeFeatureText}>Works offline</Text>
-                                </View>
-                                <View style={styles.localModeFeature}>
-                                    <Ionicons name="lock-closed" size={20} color={theme.colors.primary} style={styles.localModeFeatureIcon} />
-                                    <Text style={styles.localModeFeatureText}>100% private</Text>
-                                </View>
-                                <View style={styles.localModeFeature}>
-                                    <Ionicons name="flash" size={20} color={theme.colors.primary} style={styles.localModeFeatureIcon} />
-                                    <Text style={styles.localModeFeatureText}>Fast responses</Text>
-                                </View>
-                            </View>
-                            <Text style={styles.localModeSubText}>
-                                Note: Conversations aren't synced to cloud
-                            </Text>
-                        </Animated.View>
-                    ) : (
-                        // Cloud mode - show conversation list
+                {(
+                        // Conversation list (persisted to Supabase for both local and cloud mode)
                         <>
                             {filteredConversations.length === 0 ? (
                                 <Animated.View 

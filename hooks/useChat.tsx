@@ -22,6 +22,18 @@ import React, {
 
 import useMMKVStorage, { storage } from './useMMKVStorage';
 import api, { API_URL_PROD } from '@/utils/ApiClient';
+import {
+  listConversations as listSupabaseConversations,
+  createConversation as createSupabaseConversation,
+  renameConversation as renameSupabaseConversation,
+  deleteConversation as deleteSupabaseConversation,
+  touchConversation as touchSupabaseConversation,
+} from '@/lib/supabase/conversations';
+import {
+  listMessages as listSupabaseMessages,
+  insertMessage as insertSupabaseMessage,
+  updateMessageContent as updateSupabaseMessageContent,
+} from '@/lib/supabase/messages';
 import { Message, Role } from '@/utils/Interfaces';
 import { processStream } from '@/utils/ChatStream';
 import { Keyboard, Alert, Platform } from 'react-native';
@@ -138,7 +150,12 @@ interface ChatContextType {
   getDocumentsForMessage: (messageId: string) => DocumentBlock[];
   updateMessageReaction: (messageId: string, reaction: 'like' | 'dislike' | null) => void;
   streamingForConversationId: string | null; // Track which conversation the stream belongs to
-  
+
+  // ===== Local persistence (Supabase) helpers, used by the local-model send path =====
+  saveLocalMessage: (input: { conversationId: string; role: Role; content: string }) => Promise<Message>;
+  updateLocalMessageContent: (messageId: string, content: string) => Promise<void>;
+  touchLocalConversation: (conversationId: string) => Promise<void>;
+
   // ===== Local Model Properties =====
   isLocal: boolean;
   setIsLocal: (value: boolean) => void;
@@ -1699,6 +1716,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchConversation = useCallback(async (q?: string, limitValue?: number, updateCurrentRoom?: (a: string) => void) => {
     const effectiveLimit = limitValue || 20;
+    if (isLocal) {
+      try {
+        const data = await listSupabaseConversations(effectiveLimit, q);
+        setConversations(data);
+        return data;
+      } catch (error) {
+        console.error('[Chat] Fetch local conversations error:', error);
+        return [];
+      } finally {
+        setIsLoading(false);
+      }
+    }
     try {
       const token = await getToken();
       await api.setAuthToken(token || '');
@@ -1735,15 +1764,30 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
       }
     }
-  }, [user]);
+  }, [user, isLocal]);
 
   const fetchMessages = useCallback(async (conversationId?: string) => {
     if (!conversationId) return;
-    
+
     // Update active conversation in StreamingStateContext
     // This ensures we track which conversation is currently focused
     setActiveConversationFn(conversationId);
-    
+
+    if (isLocal) {
+      try {
+        setIsLoading(true);
+        const msgs = await listSupabaseMessages(conversationId);
+        if (currentConversationIdRef.current === conversationId || !currentConversationIdRef.current) {
+          setMessages(msgs);
+        }
+      } catch (error) {
+        console.error('[Chat] Fetch local messages error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     // Clear streaming UI states if they belong to a different conversation
     // This prevents background streams from appearing in the wrong conversation
     if (streamingForConversationIdRef.current && streamingForConversationIdRef.current !== conversationId) {
@@ -1835,7 +1879,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fetchControllerRef.current = null;
       setIsLoading(false);
     }
-  }, [setActiveConversationFn]); // Depends only on the specific function we need
+  }, [setActiveConversationFn, isLocal]);
 
   const createConversation = useCallback(async (participantIds: string[]): Promise<string> => {
     try {
@@ -1920,12 +1964,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteConversation = useCallback(async (conversationId: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      const token = await getToken();
-      await api.setAuthToken(token || '');
-      const response = await api.delete(`/conversation/${conversationId}`);
-      if (!response.ok) {
-        // console.error(JSON.stringify(response.problem));
-        return false;
+      if (isLocal) {
+        await deleteSupabaseConversation(conversationId);
+      } else {
+        const token = await getToken();
+        await api.setAuthToken(token || '');
+        const response = await api.delete(`/conversation/${conversationId}`);
+        if (!response.ok) {
+          return false;
+        }
       }
       setConversations(prev => prev.filter(conv => conv.id !== conversationId));
       setMessages([]);
@@ -1950,17 +1997,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [user, currentConversationId, conversations, setCurrentRoom, resetChat]);
+  }, [user, isLocal, currentConversationId, conversations, setCurrentRoom, resetChat]);
 
   const renameConversation = useCallback(async (conversationId: string, newTitle: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      const token = await getToken();
-      await api.setAuthToken(token || '');
-      const response = await api.put(`/conversation/${conversationId}`, { title: newTitle });
-      if (!response.ok) {
-        // console.error(JSON.stringify(response.problem));
-        return false;
+      if (isLocal) {
+        await renameSupabaseConversation(conversationId, newTitle);
+      } else {
+        const token = await getToken();
+        await api.setAuthToken(token || '');
+        const response = await api.put(`/conversation/${conversationId}`, { title: newTitle });
+        if (!response.ok) {
+          return false;
+        }
       }
       setConversations(prev =>
         prev.map(conv => conv.id === conversationId ? { ...conv, title: newTitle } : conv)
@@ -1972,22 +2022,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, isLocal]);
 
   const clearAllConversations = useCallback(async (): Promise<boolean> => {
     try {
       setIsLoading(true);
+      if (isLocal) {
+        await Promise.all(conversations.map(conv => conv.id ? deleteSupabaseConversation(conv.id) : Promise.resolve()));
+        setConversations([]);
+        setMessages([]);
+        setCurrentConversationId(null);
+        resetChat();
+        return true;
+      }
+
       const token = await getToken();
       await api.setAuthToken(token || '');
-      
+
       // Delete all conversations one by one
-      const deletePromises = conversations.map(conv => 
+      const deletePromises = conversations.map(conv =>
         api.delete(`/conversation/${conv.id}`)
       );
-      
+
       const results = await Promise.all(deletePromises);
       const allSucceeded = results.every(response => response.ok);
-      
+
       if (allSucceeded) {
         setConversations([]);
         setMessages([]);
@@ -1995,7 +2054,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetChat();
         return true;
       }
-      
+
       return false;
     } catch (error) {
       // console.error('Clear all conversations error:', error);
@@ -2003,18 +2062,27 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [conversations, resetChat]);
+  }, [conversations, resetChat, isLocal]);
 
   const createNewConversation = useCallback(async (): Promise<string> => {
     try {
       setIsLoading(true);
+
+      if (isLocal) {
+        const newConversation = await createSupabaseConversation({ title: 'New Chat' });
+        setConversations(prev => [newConversation, ...prev]);
+        setCurrentRoom(newConversation.id || '');
+        resetChat();
+        return newConversation.id || '';
+      }
+
       const token = await getToken();
       await api.setAuthToken(token || '');
-      
+
       // Get default model (local models removed)
       const defaultModelId = getDefaultModelId();
-      
-      const response = await api.post<Conversations>('/conversation', { 
+
+      const response = await api.post<Conversations>('/conversation', {
         title: 'New Chat',
         model_type: defaultModelId
       });
@@ -2032,7 +2100,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [user, setConversations, setCurrentRoom, resetChat]);
+  }, [user, isLocal, setConversations, setCurrentRoom, resetChat]);
+
+  const saveLocalMessage = useCallback(async (input: { conversationId: string; role: Role; content: string }): Promise<Message> => {
+    return insertSupabaseMessage(input);
+  }, []);
+
+  const updateLocalMessageContent = useCallback(async (messageId: string, content: string): Promise<void> => {
+    await updateSupabaseMessageContent(messageId, content);
+  }, []);
+
+  const touchLocalConversation = useCallback(async (conversationId: string): Promise<void> => {
+    await touchSupabaseConversation(conversationId);
+  }, []);
 
   const contextValue = useMemo(() => {
     // Log context updates for debugging intermediate state
@@ -2083,6 +2163,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateMessageReaction,
       streamingForConversationId,
       isStreaming,
+
+      saveLocalMessage,
+      updateLocalMessageContent,
+      touchLocalConversation,
 
       // ===== Local Model Functionality =====
       isLocal: localModel.isLocal,
@@ -2140,6 +2224,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateMessageReaction,
     streamingForConversationId,
     isStreaming,
+    saveLocalMessage,
+    updateLocalMessageContent,
+    touchLocalConversation,
     localModel.isLocal,
     localModel.isLocalModelReady,
     localModel.isLocalModelGenerating,

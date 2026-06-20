@@ -269,6 +269,41 @@ jest.mock('mixpanel-react-native', () => ({
   })),
 }));
 
+// Mock Supabase client (no real network/env in tests)
+jest.mock('@/lib/supabase/client', () => {
+  const queryBuilder: any = {
+    select: jest.fn(() => queryBuilder),
+    insert: jest.fn(() => queryBuilder),
+    update: jest.fn(() => queryBuilder),
+    delete: jest.fn(() => queryBuilder),
+    eq: jest.fn(() => queryBuilder),
+    ilike: jest.fn(() => queryBuilder),
+    order: jest.fn(() => queryBuilder),
+    limit: jest.fn(() => queryBuilder),
+    single: jest.fn(() => Promise.resolve({ data: null, error: null })),
+    then: (resolve: any) => resolve({ data: [], error: null }),
+  };
+  return {
+    supabase: {
+      auth: {
+        getSession: jest.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+        getUser: jest.fn(() => Promise.resolve({ data: { user: null }, error: null })),
+        onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn() } } })),
+        signInWithPassword: jest.fn(() => Promise.resolve({ error: null })),
+        signUp: jest.fn(() => Promise.resolve({ error: null })),
+        signOut: jest.fn(() => Promise.resolve({ error: null })),
+        verifyOtp: jest.fn(() => Promise.resolve({ data: null, error: null })),
+        resetPasswordForEmail: jest.fn(() => Promise.resolve({ error: null })),
+        resend: jest.fn(() => Promise.resolve({ error: null })),
+        updateUser: jest.fn(() => Promise.resolve({ error: null })),
+        signInWithIdToken: jest.fn(() => Promise.resolve({ error: null })),
+      },
+      from: jest.fn(() => queryBuilder),
+    },
+    registerSupabaseAutoRefresh: jest.fn(),
+  };
+});
+
 // Mock Expo Constants
 jest.mock('expo-constants', () => ({
   default: {
