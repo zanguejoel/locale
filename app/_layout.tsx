@@ -201,6 +201,8 @@ const Layout = () => {
         }}
       />
       <Stack.Screen name="(chat)" options={{ headerShown: false }} />
+      <Stack.Screen name="(legal)" options={{ headerShown: false }} />
+      <Stack.Screen name="(freelancer)" options={{ headerShown: false }} />
 
       <Stack.Screen
         name="(modal)/settings"

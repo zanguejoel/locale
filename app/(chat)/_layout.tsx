@@ -135,7 +135,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerButton: {
-    padding: 12,
+    paddingVertical: 12,
+    paddingLeft: 12,
+    paddingRight: 8,
+    marginRight: 8,
   },
   headerTitleContainer: {
     flexDirection: 'row',

@@ -14,7 +14,6 @@ import {
     RefreshControl,
     NativeSyntheticEvent,
 } from 'react-native';
-import Colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 
 import ContextMenu, { ContextMenuOnPressNativeEvent } from 'react-native-context-menu-view';
@@ -36,6 +35,7 @@ import { formatMessageTimestamp } from '@/utils/dateHelpers';
 import { checkLocalAISupport } from '@/utils/DeviceCapabilities';
 import { GradientBackground } from './GradientBackground';
 import { GlassSurface, GlassCard } from './GlassSurface';
+import { NAVIGATOR_MODULES } from '@/lib/navigators/registry';
 
 
 export const CustomDrawerContent = (props: any) => {
@@ -309,6 +309,9 @@ export const CustomDrawerContent = (props: any) => {
     const renderItem = useCallback(({ item }: { item: Conversations }) => {
         const chatId = item?.id || '';
         const chatTitle = item?.title || 'Untitled Chat';
+        const chatDate = item?.time_updated ?? item?.time_created;
+        const chatDateLabel = chatDate ? new Date(chatDate).toLocaleDateString() : '';
+        const isActive = chatId.toString() === currentConversationId?.toString();
 
         return (
             <Swipeable
@@ -325,12 +328,6 @@ export const CustomDrawerContent = (props: any) => {
                 }}
             >
                 <ContextMenu
-                    previewBackgroundColor="transparent"
-                    preview={
-                        <View style={styles.contextMenuPreview}>
-                            <Text style={styles.previewTitle}>{chatTitle}</Text>
-                        </View>
-                    }
                     actions={[
                         { title: pinnedChats.has(chatId) ? 'Unpin' : 'Pin', systemIcon: pinnedChats.has(chatId) ? 'pin.slash' : 'pin' },
                         { title: 'Rename', systemIcon: 'pencil' },
@@ -350,119 +347,50 @@ export const CustomDrawerContent = (props: any) => {
                         }
                     }}
                 >
-                        {chatId.toString() === currentConversationId?.toString() ? (
-                            // Active chat with modern gradient
-                            <LinearGradient
-                                colors={theme.isDark 
-                                    ? ['#2563eb', '#1e40af', '#1e3a8a']
-                                    : ['#60a5fa', '#3b82f6', '#2563eb']
-                                }
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={[styles.chatItem, styles.activeChatItemGradient]}
-                            >
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.chatItemContentTransparent,
-                                        pressed && styles.pressedChatItem,
-                                    ]}
-                                    onPress={() => handleConversationSelect(chatId)}
-                                >
-                                    <View style={styles.chatItemContent}>
-                                        <View style={[styles.chatIconContainer, styles.activeChatIconContainer]}>
-                                            <Ionicons name="chatbubble" size={18} color="#FFFFFF" />
-                                        </View>
-                                        <View style={styles.chatDetails}>
-                                            <View style={styles.chatTitleRow}>
-                                                <Text style={[styles.chatTitle, styles.activeChatText]} numberOfLines={1}>
-                                                    {chatTitle}
-                                                </Text>
-                                                {pinnedChats.has(chatId) && (
-                                                    <View style={styles.pinnedBadge}>
-                                                        <Ionicons name="pin" size={10} color="#FFFFFF" />
-                                                    </View>
-                                                )}
-                                            </View>
-                                            <View style={styles.chatMetaRow}>
-                                                <Ionicons name="time-outline" size={10} color="rgba(255, 255, 255, 0.8)" />
-                                                <Text style={[styles.chatTimestamp, styles.activeChatTimestamp]} numberOfLines={1}>
-                                                    {new Date().toLocaleDateString()}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                        <View style={styles.chatActions}>
-                                            <Pressable
-                                                style={[styles.actionButton, styles.activeActionButton]}
-                                                onPress={() => onRenameChat(chatId, chatTitle)}
-                                            >
-                                                <Ionicons name="pencil" size={14} color="#FFFFFF" />
-                                            </Pressable>
-                                            <Pressable
-                                                style={[styles.actionButton, styles.activeActionButton]}
-                                                onPress={() => onDeleteChat(chatId)}
-                                            >
-                                                <Ionicons name="trash-outline" size={14} color="#FFFFFF" />
-                                            </Pressable>
-                                        </View>
-                                    </View>
-                                </Pressable>
-                            </LinearGradient>
-                        ) : (
-                            // Non-active chat with modern design
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.chatItem,
-                                    pressed && styles.pressedChatItem,
-                                ]}
-                                onPress={() => handleConversationSelect(chatId)}
+                        <Pressable
+                            style={({ pressed }) => [pressed && styles.pressedChatItem]}
+                            onPress={() => handleConversationSelect(chatId)}
+                        >
+                            <GlassSurface
+                                style={styles.chatItem}
+                                borderRadius={12}
+                                strong={isActive}
+                                highlighted={isActive}
                             >
                                 <View style={styles.chatItemContent}>
-                                    <LinearGradient
-                                        colors={theme.isDark 
-                                            ? ['rgba(59, 130, 246, 0.15)', 'rgba(99, 102, 241, 0.15)']
-                                            : ['rgba(59, 130, 246, 0.12)', 'rgba(99, 102, 241, 0.12)']
-                                        }
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                        style={styles.chatIconContainer}
-                                    >
-                                        <Ionicons name="chatbubble-outline" size={18} color={theme.colors.primary} />
-                                    </LinearGradient>
+                                    <View style={[styles.chatIconContainer, isActive && styles.activeChatIconContainer]}>
+                                        <Ionicons
+                                            name={isActive ? 'chatbubble' : 'chatbubble-outline'}
+                                            size={18}
+                                            color={isActive ? theme.colors.primary : theme.colors.greyLight}
+                                        />
+                                    </View>
                                     <View style={styles.chatDetails}>
                                         <View style={styles.chatTitleRow}>
-                                            <Text style={styles.chatTitle} numberOfLines={1}>
+                                            <Text
+                                                style={[styles.chatTitle, isActive && styles.activeChatText]}
+                                                numberOfLines={1}
+                                            >
                                                 {chatTitle}
                                             </Text>
                                             {pinnedChats.has(chatId) && (
-                                                <View style={[styles.pinnedBadge, styles.inactivePinnedBadge]}>
-                                                    <Ionicons name="pin" size={9} color={theme.colors.primary} />
+                                                <View style={[styles.pinnedBadge, !isActive && styles.inactivePinnedBadge]}>
+                                                    <Ionicons name="pin" size={10} color={isActive ? '#FFFFFF' : theme.colors.primary} />
                                                 </View>
                                             )}
                                         </View>
-                                        <View style={styles.chatMetaRow}>
-                                            <Ionicons name="time-outline" size={10} color={theme.colors.greyLight} />
-                                            <Text style={styles.chatTimestamp} numberOfLines={1}>
-                                                {new Date().toLocaleDateString()}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    <View style={styles.chatActions}>
-                                        <Pressable
-                                            style={styles.actionButton}
-                                            onPress={() => onRenameChat(chatId, chatTitle)}
-                                        >
-                                            <Ionicons name="create-outline" size={16} color={theme.colors.primary} />
-                                        </Pressable>
-                                        <Pressable
-                                            style={styles.actionButton}
-                                            onPress={() => onDeleteChat(chatId)}
-                                        >
-                                            <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                                        </Pressable>
+                                        {!!chatDateLabel && (
+                                            <View style={styles.chatMetaRow}>
+                                                <Ionicons name="time-outline" size={10} color={theme.colors.greyLight} />
+                                                <Text style={styles.chatTimestamp} numberOfLines={1}>
+                                                    {chatDateLabel}
+                                                </Text>
+                                            </View>
+                                        )}
                                     </View>
                                 </View>
-                            </Pressable>
-                        )}
+                            </GlassSurface>
+                        </Pressable>
                 </ContextMenu>
             </Swipeable>
         );
@@ -536,6 +464,51 @@ export const CustomDrawerContent = (props: any) => {
                             </View>
                         )}
                     </GlassCard>
+                </View>
+
+                {/* Navigator modules (Legal, and future modules) — rendered from the registry */}
+                <View style={styles.navigatorSection}>
+                    {NAVIGATOR_MODULES.map((mod) => (
+                        <TouchableOpacity
+                            key={mod.id}
+                            activeOpacity={0.8}
+                            onPress={() => {
+                                (navigation as any).closeDrawer?.();
+                                router.push(mod.route as any);
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel={mod.title}
+                        >
+                            <GlassSurface style={styles.navigatorRow} borderRadius={12}>
+                                <View style={styles.navigatorIconWrap}>
+                                    <Ionicons name={mod.icon as any} size={20} color={theme.colors.primary} />
+                                </View>
+                                <Text style={styles.navigatorLabel}>{mod.title}</Text>
+                                <Ionicons name="chevron-forward" size={16} color={theme.colors.greyLight} />
+                            </GlassSurface>
+                        </TouchableOpacity>
+                    ))}
+
+                    {/* Freelancer Hub: a multi-entity business-management module, not a
+                        single-case NavigatorModule, so it's a standalone row here rather
+                        than coming from the registry loop above. */}
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => {
+                            (navigation as any).closeDrawer?.();
+                            router.push('/(freelancer)' as any);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Freelancer Hub"
+                    >
+                        <GlassSurface style={styles.navigatorRow} borderRadius={12}>
+                            <View style={styles.navigatorIconWrap}>
+                                <Ionicons name="briefcase-outline" size={20} color={theme.colors.primary} />
+                            </View>
+                            <Text style={styles.navigatorLabel}>Freelancer Hub</Text>
+                            <Ionicons name="chevron-forward" size={16} color={theme.colors.greyLight} />
+                        </GlassSurface>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Show search and history title (conversations persist to Supabase in both local and cloud mode) */}
@@ -929,30 +902,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         fontStyle: 'italic',
     },
     chatItem: {
-        borderRadius: 12,
         marginBottom: 6,
-        backgroundColor: theme.colors.chatItemBg,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: theme.isDark ? 0.08 : 0.04,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    activeChatItem: {
-        backgroundColor: theme.colors.activeChatItem,
-    },
-    activeChatItemGradient: {
-        backgroundColor: '#3b82f6',
-        borderColor: '#2563eb',
-        shadowColor: '#3b82f6',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
-        transform: [{ scale: 1.01 }],
     },
     pressedChatItem: {
         opacity: 0.85,
@@ -963,15 +913,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         alignItems: 'center',
         padding: 10,
     },
-    chatItemContentTransparent: {
-        backgroundColor: 'transparent',
-    },
     activeChatText: {
-        color: '#FFFFFF',
+        color: theme.colors.primary,
         fontWeight: '700',
-    },
-    activeChatTimestamp: {
-        color: 'rgba(255, 255, 255, 0.85)',
     },
     chatIconContainer: {
         width: 36,
@@ -981,16 +925,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 10,
-        shadowColor: theme.colors.primary,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.12,
-        shadowRadius: 3,
-        elevation: 2,
     },
     activeChatIconContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.25)',
-        shadowColor: '#FFFFFF',
-        shadowOpacity: 0.2,
+        backgroundColor: theme.isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.15)',
     },
     chatDetails: {
         flex: 1,
@@ -1031,29 +968,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         fontSize: 11,
         color: theme.colors.greyLight,
         fontWeight: '500',
-    },
-    chatActions: {
-        flexDirection: 'row',
-        gap: 4,
-    },
-    actionButton: {
-        padding: 6,
-        borderRadius: 8,
-        backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-    },
-    activeActionButton: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    },
-    contextMenuPreview: {
-        padding: 16,
-        height: 80,
-        backgroundColor: '#FFFFFF',
-        justifyContent: 'center',
-    },
-    previewTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: Colors.common.grey,
     },
     footerContainer: {
         paddingHorizontal: 12,
@@ -1208,6 +1122,32 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     // ===== Local Model Styles =====
     localModelSection: {
         marginBottom: 16,
+    },
+    navigatorSection: {
+        marginBottom: 16,
+        gap: 8,
+    },
+    navigatorRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        gap: 10,
+    },
+    navigatorIconWrap: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        backgroundColor: theme.isDark ? 'rgba(96, 165, 250, 0.16)' : 'rgba(59, 130, 246, 0.12)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    navigatorLabel: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: '600',
+        color: theme.colors.text,
+        letterSpacing: -0.2,
     },
     localModelHeader: {
         flexDirection: 'row',

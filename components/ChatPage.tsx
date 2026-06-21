@@ -45,7 +45,9 @@ import ArtifactViewerModal from '@/components/artifacts/ArtifactViewerModal';
 import { Artifact } from '@/utils/ArtifactTypes';
 import apiClient from '@/utils/ApiClient';
 import { ModelDownloadScreen } from '@/components/ModelDownloadScreen';
-import { DEFAULT_LOCAL_MODEL, LOCAL_MODEL_LIMITS } from '@/constants/LocalModelsConfig';
+import { DEFAULT_LOCAL_MODEL } from '@/constants/LocalModelsConfig';
+import { buildMessages } from '@/lib/llm/generate';
+import { detectPotentialCase, DetectedCase } from '@/lib/navigators/detect';
 
 // Helper function to get time-based greeting
 const getGreeting = (firstName: string = 'there') => {
@@ -168,6 +170,8 @@ const ChatPage = () => {
   // generated text right after `await globalLLM.generate(...)` resolves,
   // without relying on a possibly-stale closure over React state.
   const localStreamContentRef = useRef('');
+  // Potential-case suggestion banner (normal chat -> Legal Navigator hand-off).
+  const [detectedCase, setDetectedCase] = useState<DetectedCase | null>(null);
 
   // Seed local conversation messages from Supabase history when reopening an
   // existing local conversation. Only seeds once per conversation load so it
@@ -677,6 +681,14 @@ const ChatPage = () => {
     // ===== LOCAL MODEL PATH =====
     console.log('[ChatPage] 🏠 Sending to local model:', message);
 
+    // Opt-in suggestion: flag potential legal matters so the user can spin
+    // up a Legal Navigator case from this message. Heuristic only — no extra
+    // model call on the hot send path.
+    const detected = detectPotentialCase(message);
+    if (detected) {
+      setDetectedCase(detected);
+    }
+
     if (!globalLLM || !isLocalModelReady) {
       console.error('[ChatPage] Local model not ready!');
       Alert.alert(
@@ -742,17 +754,16 @@ const ChatPage = () => {
     // model has multi-turn history (capped to avoid token overflow).
     const history = localConversationMessages
       .filter(m => (m.content || '').trim().length > 0)
-      .slice(-LOCAL_MODEL_LIMITS.MAX_CONTEXT_MESSAGES)
       .map(m => ({
-        role: m.role === Role.User ? 'user' : 'assistant',
+        role: (m.role === Role.User ? 'user' : 'assistant') as 'user' | 'assistant',
         content: m.content || '',
       }));
 
-    const contextMessages = [
-      { role: 'system', content: `You are a helpful AI assistant. Current time: ${new Date().toLocaleString()}` },
-      ...history,
-      { role: 'user', content: message },
-    ];
+    const contextMessages = buildMessages({
+      systemPrompt: `You are a helpful AI assistant. Current time: ${new Date().toLocaleString()}`,
+      history,
+      userText: message,
+    });
 
     // Generate using global LLM
     console.log('[ChatPage] 🚀 Starting generation with global LLM');
@@ -1267,14 +1278,6 @@ const ChatPage = () => {
             />
           </View>
         ),
-        headerRight: () => (
-          <View style={{ marginRight: 12, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Ionicons name="hardware-chip-outline" size={16} color={theme.colors.text} />
-            <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: '600' }}>
-              On-device AI
-            </Text>
-          </View>
-        ),
       }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1435,6 +1438,34 @@ const ChatPage = () => {
           )}
         </View>
         
+        {/* Potential Case Detected — opt-in hand-off to Legal Navigator */}
+        {detectedCase && (
+          <GlassSurface style={styles.caseDetectedBanner} borderRadius={16} highlighted>
+            <View style={styles.caseDetectedHeader}>
+              <Ionicons name="briefcase-outline" size={18} color={theme.colors.primary} />
+              <Text style={styles.caseDetectedTitle}>Potential Case Detected</Text>
+              <TouchableOpacity onPress={() => setDetectedCase(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close" size={18} color={theme.colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.caseDetectedCategory}>Category: {detectedCase.category}</Text>
+            <TouchableOpacity
+              style={styles.caseDetectedButton}
+              activeOpacity={0.85}
+              onPress={() => {
+                const c = detectedCase;
+                setDetectedCase(null);
+                router.push({
+                  pathname: '/(legal)/new',
+                  params: { title: c.title, category: c.category },
+                } as any);
+              }}
+            >
+              <Text style={styles.caseDetectedButtonText}>Create Case</Text>
+            </TouchableOpacity>
+          </GlassSurface>
+        )}
+
         {/* Bottom Section - Fixed Elements (Outside scrollable area) */}
         <GlassSurface style={[styles.bottomSection, { paddingBottom: insets.bottom }]} borderRadius={0} strong>
           {/* Voice Recording UI */}
@@ -1634,6 +1665,40 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
     backgroundColor: 'transparent', // Let gradient show through
+  },
+  caseDetectedBanner: {
+    marginHorizontal: 12,
+    marginBottom: 8,
+    padding: 12,
+  },
+  caseDetectedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  caseDetectedTitle: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  caseDetectedCategory: {
+    fontSize: 12,
+    color: theme.colors.mutedForeground,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  caseDetectedButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  caseDetectedButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
   },
   bottomSection: {
     // Frosted container for all bottom fixed elements (input, attachments, etc.).

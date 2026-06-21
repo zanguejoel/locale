@@ -28,12 +28,12 @@ import {
   renameConversation as renameSupabaseConversation,
   deleteConversation as deleteSupabaseConversation,
   touchConversation as touchSupabaseConversation,
-} from '@/lib/supabase/conversations';
+} from '@/lib/chatdb/conversations';
 import {
   listMessages as listSupabaseMessages,
   insertMessage as insertSupabaseMessage,
   updateMessageContent as updateSupabaseMessageContent,
-} from '@/lib/supabase/messages';
+} from '@/lib/chatdb/messages';
 import { Message, Role } from '@/utils/Interfaces';
 import { processStream } from '@/utils/ChatStream';
 import { Keyboard, Alert, Platform } from 'react-native';

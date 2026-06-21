@@ -105,11 +105,15 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - ExpoPrint (15.0.8):
+    - ExpoModulesCore
   - ExpoSecureStore (14.2.4):
     - ExpoModulesCore
   - ExpoSharing (13.1.5):
     - ExpoModulesCore
   - ExpoSplashScreen (0.30.10):
+    - ExpoModulesCore
+  - ExpoSQLite (16.0.10):
     - ExpoModulesCore
   - ExpoSystemUI (5.0.11):
     - ExpoModulesCore
@@ -2394,6 +2398,28 @@ PODS:
   - SDWebImageWebPCoder (0.14.6):
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
+  - SelectableText (2.1.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -2423,9 +2449,11 @@ DEPENDENCIES:
   - "ExpoLocalization (from `../node_modules/.pnpm/expo-localization@16.1.6_expo@54.0.35_react@19.1.4/node_modules/expo-localization/ios`)"
   - "ExpoMediaLibrary (from `../node_modules/.pnpm/expo-media-library@17.1.7_expo@54.0.35_react-native@0.81.6_@babel+core@7.28.4_@react-na_e8f9a316696ddebb2d50ddd036ba6756/node_modules/expo-media-library/ios`)"
   - "ExpoModulesCore (from `../node_modules/.pnpm/expo-modules-core@3.0.30_react-native@0.81.6_@babel+core@7.28.4_@react-native-community_9e8740948d2a1a595d41c52a2d75eb79/node_modules/expo-modules-core`)"
+  - "ExpoPrint (from `../node_modules/.pnpm/expo-print@15.0.8_expo@54.0.35_react-native@0.81.6_@babel+core@7.28.4_@react-native-com_37909a7918a43888cdb0dbe1ff34ed5e/node_modules/expo-print/ios`)"
   - "ExpoSecureStore (from `../node_modules/.pnpm/expo-secure-store@14.2.4_expo@54.0.35/node_modules/expo-secure-store/ios`)"
   - "ExpoSharing (from `../node_modules/.pnpm/expo-sharing@13.1.5_expo@54.0.35/node_modules/expo-sharing/ios`)"
   - "ExpoSplashScreen (from `../node_modules/.pnpm/expo-splash-screen@0.30.10_expo@54.0.35/node_modules/expo-splash-screen/ios`)"
+  - "ExpoSQLite (from `../node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.35_react-native@0.81.6_@babel+core@7.28.4_@react-native-c_36ebdcd80f9ca899f466488879b2e1e1/node_modules/expo-sqlite/ios`)"
   - "ExpoSystemUI (from `../node_modules/.pnpm/expo-system-ui@5.0.11_expo@54.0.35_react-native-web@0.20.0_react-dom@19.1.4_react@19.1._b62baed29107e26afee516b44d84f525/node_modules/expo-system-ui/ios`)"
   - "ExpoWebBrowser (from `../node_modules/.pnpm/expo-web-browser@14.2.0_expo@54.0.35_react-native@0.81.6_@babel+core@7.28.4_@react-nati_61eb4299c80409498df1cf5b4868372b/node_modules/expo-web-browser/ios`)"
   - "FBLazyVector (from `../node_modules/.pnpm/react-native@0.81.6_@babel+core@7.28.4_@react-native-community+cli@18.0.0_typescript@5._cad35a51faa096ff21bd7311ab003098/node_modules/react-native/Libraries/FBLazyVector`)"
@@ -2518,6 +2546,7 @@ DEPENDENCIES:
   - "RNScreens (from `../node_modules/.pnpm/react-native-screens@4.16.0_react-native@0.81.6_@babel+core@7.28.4_@react-native-commun_80c035323b87403d8d4d3cb8267a264b/node_modules/react-native-screens`)"
   - "RNSound (from `../node_modules/.pnpm/react-native-sound@0.11.2_react-native@0.81.6_@babel+core@7.28.4_@react-native-communit_b919f3a4cf48804eb4c0e9fcd68867a8/node_modules/react-native-sound`)"
   - "RNSVG (from `../node_modules/.pnpm/react-native-svg@15.12.1_react-native@0.81.6_@babel+core@7.28.4_@react-native-community_b6a5adf6aabab964f3bc965fd837d4c5/node_modules/react-native-svg`)"
+  - "SelectableText (from `../node_modules/.pnpm/@rob117+react-native-selectable-text@2.1.0_react-native@0.81.6_@babel+core@7.28.4_@reac_90448e0ede850cfe5d64415e7ced74cd/node_modules/@rob117/react-native-selectable-text`)"
   - "Yoga (from `../node_modules/.pnpm/react-native@0.81.6_@babel+core@7.28.4_@react-native-community+cli@18.0.0_typescript@5._cad35a51faa096ff21bd7311ab003098/node_modules/react-native/ReactCommon/yoga`)"
 
 SPEC REPOS:
@@ -2585,12 +2614,16 @@ EXTERNAL SOURCES:
     :path: "../node_modules/.pnpm/expo-media-library@17.1.7_expo@54.0.35_react-native@0.81.6_@babel+core@7.28.4_@react-na_e8f9a316696ddebb2d50ddd036ba6756/node_modules/expo-media-library/ios"
   ExpoModulesCore:
     :path: "../node_modules/.pnpm/expo-modules-core@3.0.30_react-native@0.81.6_@babel+core@7.28.4_@react-native-community_9e8740948d2a1a595d41c52a2d75eb79/node_modules/expo-modules-core"
+  ExpoPrint:
+    :path: "../node_modules/.pnpm/expo-print@15.0.8_expo@54.0.35_react-native@0.81.6_@babel+core@7.28.4_@react-native-com_37909a7918a43888cdb0dbe1ff34ed5e/node_modules/expo-print/ios"
   ExpoSecureStore:
     :path: "../node_modules/.pnpm/expo-secure-store@14.2.4_expo@54.0.35/node_modules/expo-secure-store/ios"
   ExpoSharing:
     :path: "../node_modules/.pnpm/expo-sharing@13.1.5_expo@54.0.35/node_modules/expo-sharing/ios"
   ExpoSplashScreen:
     :path: "../node_modules/.pnpm/expo-splash-screen@0.30.10_expo@54.0.35/node_modules/expo-splash-screen/ios"
+  ExpoSQLite:
+    :path: "../node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.35_react-native@0.81.6_@babel+core@7.28.4_@react-native-c_36ebdcd80f9ca899f466488879b2e1e1/node_modules/expo-sqlite/ios"
   ExpoSystemUI:
     :path: "../node_modules/.pnpm/expo-system-ui@5.0.11_expo@54.0.35_react-native-web@0.20.0_react-dom@19.1.4_react@19.1._b62baed29107e26afee516b44d84f525/node_modules/expo-system-ui/ios"
   ExpoWebBrowser:
@@ -2774,6 +2807,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/.pnpm/react-native-sound@0.11.2_react-native@0.81.6_@babel+core@7.28.4_@react-native-communit_b919f3a4cf48804eb4c0e9fcd68867a8/node_modules/react-native-sound"
   RNSVG:
     :path: "../node_modules/.pnpm/react-native-svg@15.12.1_react-native@0.81.6_@babel+core@7.28.4_@react-native-community_b6a5adf6aabab964f3bc965fd837d4c5/node_modules/react-native-svg"
+  SelectableText:
+    :path: "../node_modules/.pnpm/@rob117+react-native-selectable-text@2.1.0_react-native@0.81.6_@babel+core@7.28.4_@reac_90448e0ede850cfe5d64415e7ced74cd/node_modules/@rob117/react-native-selectable-text"
   Yoga:
     :path: "../node_modules/.pnpm/react-native@0.81.6_@babel+core@7.28.4_@react-native-community+cli@18.0.0_typescript@5._cad35a51faa096ff21bd7311ab003098/node_modules/react-native/ReactCommon/yoga"
 
@@ -2804,9 +2839,11 @@ SPEC CHECKSUMS:
   ExpoLocalization: 999a1ff61a7f5917d65c2bd9234883009019ca9f
   ExpoMediaLibrary: 0daf5e811e00daa47690f5da2989e71ff7de56e0
   ExpoModulesCore: 9e6a5514828e7dd5ded9e99d33557be2d284e660
+  ExpoPrint: 813bfa965eda2ecc4b1cdc61612c820e239c382a
   ExpoSecureStore: 3f1b632d6d40bcc62b4983ef9199cd079592a50a
   ExpoSharing: b0377be82430d07398c6a4cd60b5a15696accbd3
   ExpoSplashScreen: 0ad5acac1b5d2953c6e00d4319f16d616f70d4dd
+  ExpoSQLite: 7eedbe476870a5f18d6b89c817c4ac6f299830ad
   ExpoSystemUI: 433a971503b99020318518ed30a58204288bab2d
   ExpoWebBrowser: dc39a88485f007e61a3dff05d6a75f22ab4a2e92
   FBLazyVector: 14ce6e3675cacb2683ad30272f04274a4ee5b67d
@@ -2907,6 +2944,7 @@ SPEC CHECKSUMS:
   SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
+  SelectableText: d78bb18cae7508bd797c4ea3294dc0e3df935172
   Yoga: 786fa7d9d2ff6060b4e688062243fa69c323d140
 
 PODFILE CHECKSUM: 30479d006185b7d8a11312c24813821f20d097ca

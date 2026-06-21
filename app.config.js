@@ -60,6 +60,8 @@ export default {
         'expo-asset',
         'expo-font',
         'expo-secure-store',
+        'expo-sqlite',
+        'expo-notifications',
         [
             'expo-build-properties',
             {

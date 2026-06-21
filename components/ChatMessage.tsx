@@ -1,4 +1,4 @@
-import { memo, useState, useMemo } from 'react';
+import { memo, useState, useMemo, Component, type ReactNode } from 'react';
 import Colors from '@/constants/Colors';
 import useMarkdownDisplay from '@/hooks/useMarkdownDisplay';
 import { copyImageToClipboard, downloadAndSaveImage, downloadAndSaveVideo, shareImage } from '@/utils/Image';
@@ -21,8 +21,10 @@ import {
   Share,
   Alert,
   NativeSyntheticEvent,
+  ViewStyle,
 } from 'react-native';
 import LazyImage from './LazyImage';
+import { SelectableTextView } from '@rob117/react-native-selectable-text';
 import { LinearGradient } from 'expo-linear-gradient';
 import ContextMenu, { ContextMenuOnPressNativeEvent } from 'react-native-context-menu-view';
 import { useCallback, useEffect, useRef } from 'react';
@@ -55,6 +57,49 @@ import { DocumentBlock } from '@/utils/DocumentTypes';
 import DocumentIndicator from './DocumentIndicator';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import { useChat } from '@/hooks/useChat';
+
+interface BotTextContainerProps {
+  style: ViewStyle;
+  onSelection: (event: { chosenOption: string; highlightedText: string }) => void;
+  children: ReactNode;
+}
+
+interface BotTextContainerState {
+  hasError: boolean;
+}
+
+/**
+ * Wraps assistant message text in native selection (SelectableTextView).
+ * SelectableTextView is a Fabric native view — on the New Architecture,
+ * `UIManager.getViewManagerConfig` can't detect it (Fabric components don't
+ * register in the legacy view-manager registry), so a pre-render capability
+ * check is unreliable. An error boundary catches the "Unimplemented
+ * component" render failure directly and falls back to a plain text view —
+ * this works correctly whether or not the native rebuild has happened yet.
+ */
+class BotTextContainer extends Component<BotTextContainerProps, BotTextContainerState> {
+  state: BotTextContainerState = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.warn('[ChatMessage] SelectableTextView unavailable, falling back to plain text:', error);
+  }
+
+  render() {
+    const { style, onSelection, children } = this.props;
+    if (this.state.hasError) {
+      return <Animated.View style={style}>{children}</Animated.View>;
+    }
+    return (
+      <SelectableTextView menuOptions={['Copy', 'Share']} onSelection={onSelection} style={style}>
+        {children}
+      </SelectableTextView>
+    );
+  }
+}
 
 interface ChatMessageProps extends Message {
   loading?: boolean;
@@ -656,6 +701,18 @@ const ChatMessage = memo(({
     }
   }, [onLongPress, handleCopyText, handleShareText]);
 
+  // Assistant messages use native text selection (SelectableTextView) instead
+  // of a long-press context menu — Copy/Share act on the highlighted text.
+  const handleBotTextSelection = useCallback((event: { chosenOption: string; highlightedText: string }) => {
+    const { chosenOption, highlightedText } = event;
+    if (!highlightedText) return;
+    if (chosenOption === 'Copy') {
+      Clipboard.setString(highlightedText);
+    } else if (chosenOption === 'Share') {
+      Share.share({ message: highlightedText }).catch(() => {});
+    }
+  }, []);
+
   const playAudio = async () => {
     if (!soundRef.current) {
       console.warn('[ChatMessage] Sound ref not initialized');
@@ -1120,28 +1177,29 @@ const ChatMessage = memo(({
     if (ContextMenu) {
       return (
         <>
-          <ContextMenu
-            actions={[
-              { title: 'Copy', systemIcon: 'doc.on.doc' },
-              { title: 'Share', systemIcon: 'square.and.arrow.up' },
-            ]}
-            onPress={(e: NativeSyntheticEvent<ContextMenuOnPressNativeEvent>) => {
-              if (e.nativeEvent.index === 0) {
-                handleCopyText();
-              } else if (e.nativeEvent.index === 1) {
-                handleShareText();
-              }
-            }}
-          >
                 {role === Role.User ? (
-                  // User message - media outside bubble, text in gradient bubble
+                  // User message - media outside bubble, text in gradient bubble.
+                  // Keeps the long-press context menu (Copy/Share).
+                  <ContextMenu
+                    actions={[
+                      { title: 'Copy', systemIcon: 'doc.on.doc' },
+                      { title: 'Share', systemIcon: 'square.and.arrow.up' },
+                    ]}
+                    onPress={(e: NativeSyntheticEvent<ContextMenuOnPressNativeEvent>) => {
+                      if (e.nativeEvent.index === 0) {
+                        handleCopyText();
+                      } else if (e.nativeEvent.index === 1) {
+                        handleShareText();
+                      }
+                    }}
+                  >
                   <>
                     {/* Render media OUTSIDE gradient bubble for cleaner look */}
                     {(() => {
                       const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
                       const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
                       const hasAudioContent = isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice';
-                      
+
                       return (
                         <>
                           {hasFileImage && (
@@ -1162,83 +1220,92 @@ const ChatMessage = memo(({
                         </>
                       );
                     })()}
-                    
+
                     {/* Text bubble - only render if there's text or document content */}
                     {(() => {
                       const displayText = getDisplayText();
                       const hasTextContent = displayText && !isAudio(displayText);
                       const hasDocumentContent = isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document';
-                      
+
                       // Only render gradient bubble if there's text or document content
                       if (!hasTextContent && !hasDocumentContent) {
                         return null;
                       }
-                      
+
                       return (
-                        <LinearGradient
-                          colors={theme.isDark 
-                            ? ['#1e293b', '#334155'] // Subtle slate gradient for dark mode
-                            : ['#60a5fa', '#3b82f6'] // Softer blue gradient for light mode
-                          }
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
+                        <Pressable
+                          onLongPress={showTextContextMenu}
+                          onPress={handlePress}
+                          accessible={true}
+                          accessibilityLabel={`Your message: ${displayText}`}
+                          accessibilityRole="text"
+                          testID="markdown-container"
                           style={[
                             styles.contentContainer,
                             styles.userContent,
                             streamingContent && styles.streamingContent,
                           ]}
                         >
-                          <Pressable
-                            onLongPress={showTextContextMenu}
-                            onPress={handlePress}
-                            accessible={true}
-                            accessibilityLabel={`Your message: ${displayText}`}
-                            accessibilityRole="text"
-                            testID="markdown-container"
-                          >
-                            {/* Text content */}
-                            {hasTextContent && (
-                              <Animated.View
-                                style={[
-                                  styles.markdownContainer,
-                                  streamingContent && { transform: [] },
-                                  streamingContent && { backgroundColor: `transparent` },
-                                ]}
-                              >
-                                <View style={styles.userTextWrapper}>
-                                  <MarkdownDisplay additionalStyles={{
-                                    body: { color: '#FFFFFF', lineHeight: 28 },
-                                    heading1: { color: '#FFFFFF' },
-                                    heading2: { color: '#FFFFFF' },
-                                    heading3: { color: '#FFFFFF' },
-                                    heading4: { color: '#FFFFFF' },
-                                    heading5: { color: '#FFFFFF' },
-                                    heading6: { color: '#FFFFFF' },
-                                    paragraph: { color: '#FFFFFF', lineHeight: 28 },
-                                    text: { color: '#FFFFFF', lineHeight: 28 },
-                                  }}>
-                                    {displayText}
-                                  </MarkdownDisplay>
-                                </View>
-                              </Animated.View>
-                            )}
-                            
-                            {/* Document content within message bubble */}
-                            {hasDocumentContent && (
-                              <View style={styles.documentInMessage}>
-                                {renderDocument()}
+                          {/* Gradient lives in its own clipped layer so the rounded corners
+                              cut it cleanly, while the outer Pressable (unclipped) still casts
+                              its shadow normally. Rendered as a background sibling, not a
+                              parent — on Fabric, LinearGradient can otherwise paint its layer
+                              above its children instead of behind them, hiding the text. */}
+                          <View style={styles.userGradientClip}>
+                            <LinearGradient
+                              colors={theme.isDark
+                                ? ['#0f172a', '#1e293b'] // Darker slate gradient for dark mode
+                                : ['#60a5fa', '#3b82f6'] // Softer blue gradient for light mode
+                              }
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={StyleSheet.absoluteFillObject}
+                            />
+                          </View>
+
+                          {/* Text content */}
+                          {hasTextContent && (
+                            <Animated.View
+                              style={[
+                                styles.markdownContainer,
+                                streamingContent && { transform: [] },
+                                streamingContent && { backgroundColor: `transparent` },
+                              ]}
+                            >
+                              <View style={styles.userTextWrapper}>
+                                <MarkdownDisplay additionalStyles={{
+                                  body: { color: '#FFFFFF', lineHeight: 24 },
+                                  heading1: { color: '#FFFFFF' },
+                                  heading2: { color: '#FFFFFF' },
+                                  heading3: { color: '#FFFFFF' },
+                                  heading4: { color: '#FFFFFF' },
+                                  heading5: { color: '#FFFFFF' },
+                                  heading6: { color: '#FFFFFF' },
+                                  paragraph: { color: '#FFFFFF', lineHeight: 24 },
+                                  text: { color: '#FFFFFF', lineHeight: 24 },
+                                }}>
+                                  {displayText}
+                                </MarkdownDisplay>
                               </View>
-                            )}
-                          </Pressable>
-                        </LinearGradient>
+                            </Animated.View>
+                          )}
+
+                          {/* Document content within message bubble */}
+                          {hasDocumentContent && (
+                            <View style={styles.documentInMessage}>
+                              {renderDocument()}
+                            </View>
+                          )}
+                        </Pressable>
                       );
                     })()}
                   </>
+                  </ContextMenu>
                 ) : (
-                  // Bot message without gradient - includes text and media
-                  <Pressable
-                    onLongPress={showTextContextMenu}
-                    onPress={handlePress}
+                  // Bot message without gradient - includes text and media. No
+                  // long-press context menu — text selection is native via
+                  // SelectableTextView, with Copy/Share acting on the selection.
+                  <View
                     style={[
                       styles.contentContainer,
                       styles.botContent,
@@ -1256,8 +1323,8 @@ const ChatMessage = memo(({
                         isStreaming={!thinkingData.thinking.isComplete}
                       />
                     )}
-                    
-                    {/* 
+
+                    {/*
                       Render reasoning block if present
                       Sources:
                       1. streamingReasoning: Real-time reasoning during active streaming
@@ -1266,7 +1333,7 @@ const ChatMessage = memo(({
                     {(() => {
                       const hasStreamingReasoning = streamingReasoning && streamingReasoning.trim().length > 0;
                       const hasHistoricalReasoning = reasoningData.reasoning && reasoningData.reasoning.content.trim().length > 0;
-                      
+
                       if (hasStreamingReasoning || hasHistoricalReasoning) {
                         console.log('[ChatMessage] 🧠 Rendering reasoning block:', {
                           hasStreamingReasoning,
@@ -1275,7 +1342,7 @@ const ChatMessage = memo(({
                           historicalReasoningLength: reasoningData.reasoning?.content.length || 0,
                         });
                       }
-                      
+
                       return (hasStreamingReasoning || hasHistoricalReasoning) && (
                         <ReasoningBlock
                           content={streamingReasoning || reasoningData.reasoning?.content || ''}
@@ -1283,30 +1350,31 @@ const ChatMessage = memo(({
                         />
                       );
                     })()}
-                    
+
                     {/* Render content segments inline (text and artifacts in original order) */}
                     {contentSegments.length > 0 && !isAudio(content) && !isAudio(imageData || '') && (
-                      <View style={styles.botMessageWrapper}>
-                        <Animated.View
-                          style={[
+                      <Pressable onPress={handlePress} style={styles.botMessageWrapper}>
+                        <BotTextContainer
+                          onSelection={handleBotTextSelection}
+                          style={StyleSheet.flatten([
                             styles.markdownContainer,
-                            streamingContent && { transform: [] },
+                            streamingContent && { transform: [] as [] },
                             streamingContent && { backgroundColor: `transparent` },
-                            isSending && { width: 'auto', flex: 1 }, // Allow space for dot when streaming
-                          ]}
+                            isSending && { width: 'auto' as const, flex: 1 }, // Allow space for dot when streaming
+                          ])}
                         >
                           {renderContentSegments()}
-                        </Animated.View>
+                        </BotTextContainer>
                         {/* Show streaming cursor when actively sending */}
                         {isSending && <StreamingCursor />}
-                      </View>
+                      </Pressable>
                     )}
-                    
+
                     {/* Render media after text for bot messages */}
                     {(() => {
                       const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
                       const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
-                      
+
                       return (
                         <>
                           {hasFileImage && (
@@ -1322,23 +1390,22 @@ const ChatMessage = memo(({
                         </>
                       );
                     })()}
-                    
+
                     {/* Audio content within message bubble */}
                     {(isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice') && (
                       <View style={styles.audioInMessage}>
                         {renderAudio()}
                       </View>
                     )}
-                    
+
                     {/* Document content within message bubble */}
                     {(isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document') && (
                       <View style={styles.documentInMessage}>
                         {renderDocument()}
                       </View>
                     )}
-                  </Pressable>
+                  </View>
                 )}
-          </ContextMenu>
 
           {/* Render AI-generated content (additional_data) - shown outside message bubble */}
           {(() => {
@@ -1403,70 +1470,78 @@ const ChatMessage = memo(({
                 }
                 
                 return (
-                  <LinearGradient
-                    colors={theme.isDark 
-                      ? ['#1e293b', '#334155'] // Subtle slate gradient for dark mode
-                      : ['#60a5fa', '#3b82f6'] // Softer blue gradient for light mode
-                    }
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                  <Pressable
+                    onLongPress={showTextContextMenu}
+                    onPress={handlePress}
+                    accessible={true}
+                    accessibilityLabel={`Your message: ${displayText}`}
+                    accessibilityRole="text"
+                    testID="markdown-container"
                     style={[
                       styles.contentContainer,
                       styles.userContent,
                       streamingContent && styles.streamingContent,
                     ]}
                   >
-                    <Pressable
-                      onLongPress={showTextContextMenu}
-                      onPress={handlePress}
-                      accessible={true}
-                      accessibilityLabel={`Your message: ${displayText}`}
-                      accessibilityRole="text"
-                      testID="markdown-container"
-                    >
-                      {/* Text content */}
-                      {hasTextContent && (
-                        <Animated.View
-                          style={[
-                            styles.markdownContainer,
-                            streamingContent && { transform: [] },
-                            streamingContent && { backgroundColor: `transparent` },
-                          ]}
-                        >
-                          <View style={styles.userTextWrapper}>
-                            <MarkdownDisplay additionalStyles={{
-                              body: { color: '#FFFFFF', lineHeight: 28 },
-                              heading1: { color: '#FFFFFF' },
-                              heading2: { color: '#FFFFFF' },
-                              heading3: { color: '#FFFFFF' },
-                              heading4: { color: '#FFFFFF' },
-                              heading5: { color: '#FFFFFF' },
-                              heading6: { color: '#FFFFFF' },
-                              paragraph: { color: '#FFFFFF', lineHeight: 28 },
-                              text: { color: '#FFFFFF', lineHeight: 28 },
-                            }}>
-                              {displayText}
-                            </MarkdownDisplay>
-                          </View>
-                        </Animated.View>
-                      )}
-                      
-                      {/* Document content within message bubble */}
-                      {hasDocumentContent && (
-                        <View style={styles.documentInMessage}>
-                          {renderDocument()}
+                    {/* Gradient lives in its own clipped layer so the rounded corners
+                        cut it cleanly, while the outer Pressable (unclipped) still casts
+                        its shadow normally. Rendered as a background sibling, not a
+                        parent — on Fabric, LinearGradient can otherwise paint its layer
+                        above its children instead of behind them, hiding the text. */}
+                    <View style={styles.userGradientClip}>
+                      <LinearGradient
+                        colors={theme.isDark
+                          ? ['#0f172a', '#1e293b'] // Darker slate gradient for dark mode
+                          : ['#60a5fa', '#3b82f6'] // Softer blue gradient for light mode
+                        }
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFillObject}
+                      />
+                    </View>
+
+                    {/* Text content */}
+                    {hasTextContent && (
+                      <Animated.View
+                        style={[
+                          styles.markdownContainer,
+                          streamingContent && { transform: [] },
+                          streamingContent && { backgroundColor: `transparent` },
+                        ]}
+                      >
+                        <View style={styles.userTextWrapper}>
+                          <MarkdownDisplay additionalStyles={{
+                            body: { color: '#FFFFFF', lineHeight: 24 },
+                            heading1: { color: '#FFFFFF' },
+                            heading2: { color: '#FFFFFF' },
+                            heading3: { color: '#FFFFFF' },
+                            heading4: { color: '#FFFFFF' },
+                            heading5: { color: '#FFFFFF' },
+                            heading6: { color: '#FFFFFF' },
+                            paragraph: { color: '#FFFFFF', lineHeight: 24 },
+                            text: { color: '#FFFFFF', lineHeight: 24 },
+                          }}>
+                            {displayText}
+                          </MarkdownDisplay>
                         </View>
-                      )}
-                    </Pressable>
-                  </LinearGradient>
+                      </Animated.View>
+                    )}
+
+                    {/* Document content within message bubble */}
+                    {hasDocumentContent && (
+                      <View style={styles.documentInMessage}>
+                        {renderDocument()}
+                      </View>
+                    )}
+                  </Pressable>
                 );
               })()}
             </>
           ) : (
-            // Bot message without gradient - includes text and media
-            <Pressable
-              onLongPress={showTextContextMenu}
-              onPress={handlePress}
+            // Bot message without gradient - includes text and media. No
+            // long-press context menu — text selection is native via
+            // SelectableTextView, with Copy/Share acting on the selection.
+            <View
               style={[
                 styles.contentContainer,
                 styles.botContent,
@@ -1479,27 +1554,28 @@ const ChatMessage = memo(({
             >
               {/* Render content segments inline (text and artifacts in original order) */}
               {contentSegments.length > 0 && !isAudio(content) && !isAudio(imageData || '') && (
-                <View style={styles.botMessageWrapper}>
-                  <Animated.View
-                    style={[
+                <Pressable onPress={handlePress} style={styles.botMessageWrapper}>
+                  <BotTextContainer
+                    onSelection={handleBotTextSelection}
+                    style={StyleSheet.flatten([
                       styles.markdownContainer,
-                      streamingContent && { transform: [] },
+                      streamingContent && { transform: [] as [] },
                       streamingContent && { backgroundColor: `transparent` },
-                      isSending && { width: 'auto', flex: 1 }, // Allow space for dot when streaming
-                    ]}
+                      isSending && { width: 'auto' as const, flex: 1 }, // Allow space for dot when streaming
+                    ])}
                   >
                     {renderContentSegments()}
-                  </Animated.View>
+                  </BotTextContainer>
                   {/* Show streaming cursor when actively sending */}
                   {isSending && <StreamingCursor />}
-                </View>
+                </Pressable>
               )}
-              
+
               {/* Render media after text for bot messages */}
               {(() => {
                 const hasFileVideo = files?.[0]?.file_type === 'video' || files?.[0]?.data_type === 'video';
                 const hasFileImage = (imageData && isImage(imageData)) || files?.[0]?.file_type === 'img';
-                
+
                 return (
                   <>
                     {hasFileImage && (
@@ -1515,21 +1591,21 @@ const ChatMessage = memo(({
                   </>
                 );
               })()}
-              
+
               {/* Audio content within message bubble */}
               {(isAudio(content) || isAudio(imageData || '') || files?.[0]?.file_type === 'voice') && (
                 <View style={styles.audioInMessage}>
                   {renderAudio()}
                 </View>
               )}
-              
+
               {/* Document content within message bubble */}
               {(isDocument(content) || isDocument(imageData || '') || files?.[0]?.file_type === 'document') && (
                 <View style={styles.documentInMessage}>
                   {renderDocument()}
                 </View>
               )}
-            </Pressable>
+            </View>
           )}
           
           {/* Render AI-generated content (additional_data) - shown outside message bubble */}
@@ -2005,6 +2081,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     elevation: 3,
     paddingVertical: 6,
   },
+  userGradientClip: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: CHAT_MESSAGE.MESSAGE_BORDER_RADIUS,
+    borderBottomRightRadius: CHAT_MESSAGE.TAIL_BORDER_RADIUS,
+    overflow: 'hidden',
+  },
   text: {
     fontSize: 16,
     lineHeight: 24,
@@ -2015,7 +2097,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   userText: {
     color: '#FFFFFF', // White text on primary blue background
     fontWeight: '500',
-    lineHeight: 28,
+    lineHeight: 24,
   },
   loadingVideo: {
     position: 'absolute',
