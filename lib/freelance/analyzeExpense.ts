@@ -1,7 +1,7 @@
 /**
  * Expense receipt analysis: feed extracted receipt text to a constrained LLM
  * pass returning vendor/amount/date/category as strict JSON. Same pattern as
- * lib/docs/analyze.ts (Legal Navigator's document summary extraction).
+ * lib/docs/analyze.ts (Procedure Hub's document summary extraction).
  */
 import { LlmHandle } from '@/lib/llm/generate';
 import { repairAndParseJsonObject } from '@/lib/llm/jsonRepair';

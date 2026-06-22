@@ -143,7 +143,7 @@ export default function CaseChat() {
           )}
         />
         {sending && isLocalModelGenerating && (
-          <TypingIndicator modelName="Legal Navigator" />
+          <TypingIndicator modelName="Procedure Hub" />
         )}
         <GlassSurface style={[styles.inputBar, { paddingBottom: insets.bottom }]} borderRadius={0} strong>
           <ChatInput onShouldSend={handleSend} isLoading={sending} isLocal />

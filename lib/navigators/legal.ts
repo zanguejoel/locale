@@ -1,5 +1,5 @@
 /**
- * Legal Navigator module definition.
+ * Procedure Hub module definition.
  *
  * Informational only — never legal advice. The prompts enforce the behavioral
  * rules (ask clarifying questions, identify jurisdiction, separate facts from
@@ -27,10 +27,10 @@ export const LEGAL_CATEGORIES = [
 
 export const legalModule: NavigatorModule = {
   id: 'legal',
-  title: 'Legal Navigator',
+  title: 'Procedure Hub',
   icon: 'briefcase-outline',
   route: '/(legal)',
-  systemMode: 'LEGAL_NAVIGATOR_MODE',
+  systemMode: 'PROCEDURE_HUB_MODE',
   categories: LEGAL_CATEGORIES,
   followUpTypes: ['email', 'letter', 'complaint', 'status_request', 'information_request'],
   tones: ['professional', 'neutral', 'assertive'],
@@ -39,7 +39,7 @@ export const legalModule: NavigatorModule = {
   buildSystemPrompt: ({ jurisdiction, category, ragContext }) => {
     const parts: string[] = [];
     parts.push(
-      'You are Legal Navigator, an informational assistant that helps people ' +
+      'You are Procedure Hub, an informational assistant that helps people ' +
         'understand legal and administrative procedures. You are NOT a lawyer and ' +
         'you do NOT give legal advice.'
     );

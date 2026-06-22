@@ -68,3 +68,13 @@ export async function deleteChunksForScope(scopeType: FreelanceChunkScopeType, s
   const db = await getDb();
   await db.runAsync('DELETE FROM freelance_chunks WHERE scope_type = ? AND scope_id = ?', scopeType, scopeId);
 }
+
+/**
+ * Delete chunks for a single source row. Used when re-indexing a sub-entity
+ * (like a time entry) that shares a scope with its parent project — deleting
+ * by scope would wipe the project's own summary chunk, so we target the row.
+ */
+export async function deleteChunksForSource(sourceType: string, sourceId: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM freelance_chunks WHERE source_type = ? AND source_id = ?', sourceType, sourceId);
+}

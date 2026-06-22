@@ -1,7 +1,7 @@
 /**
  * useOcrGlobal - lazy, single-instance on-device OCR for image documents.
  *
- * Mounted only inside the Documents tab (not the whole Legal Navigator
+ * Mounted only inside the Documents tab (not the whole Procedure Hub
  * workspace) since it's a separate, fairly large model download that most
  * case sessions won't need every time. Mount in exactly one place at a time.
  */

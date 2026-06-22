@@ -1,7 +1,7 @@
 /**
  * Local SQLite database for the Freelancer Hub module.
  *
- * Separate on-device database (`freelancer.db`) from Legal Navigator's
+ * Separate on-device database (`freelancer.db`) from Procedure Hub's
  * `legal.db` — Freelancer Hub has several first-class entities (clients,
  * projects, invoices, payments, expenses, contracts) rather than one
  * repeating "case", so it gets its own schema instead of reusing the case
@@ -140,6 +140,33 @@ const MIGRATIONS: string[] = [
     key   TEXT PRIMARY KEY NOT NULL,
     value TEXT NOT NULL
   );
+  `,
+  // v2 — Time Tracking ("Work Log"): a live timer + manual timesheet anchored
+  // to a project, with the billing context (client + governing contract +
+  // rate) snapshotted at entry time so later rate/contract changes don't
+  // rewrite history. Billable entries are the source for invoices.
+  `
+  CREATE TABLE IF NOT EXISTS time_entries (
+    id                TEXT PRIMARY KEY NOT NULL,
+    project_id        TEXT NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+    client_id         TEXT NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+    contract_id       TEXT REFERENCES contracts (id) ON DELETE SET NULL,
+    description       TEXT,
+    start_time        INTEGER NOT NULL,
+    end_time          INTEGER,
+    duration_seconds  INTEGER NOT NULL DEFAULT 0,
+    is_billable       INTEGER NOT NULL DEFAULT 1,
+    billed            INTEGER NOT NULL DEFAULT 0,
+    invoice_id        TEXT REFERENCES invoices (id) ON DELETE SET NULL,
+    rate_snapshot     REAL NOT NULL DEFAULT 0,
+    tags              TEXT,
+    created_at        INTEGER NOT NULL,
+    updated_at        INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS time_entries_project_idx ON time_entries (project_id);
+  CREATE INDEX IF NOT EXISTS time_entries_client_idx ON time_entries (client_id);
+  CREATE INDEX IF NOT EXISTS time_entries_running_idx ON time_entries (end_time);
+  CREATE INDEX IF NOT EXISTS time_entries_unbilled_idx ON time_entries (is_billable, billed);
   `,
 ];
 

@@ -1,5 +1,5 @@
 /**
- * Cross-entity retrieval for Freelancer Hub. Unlike Legal Navigator's
+ * Cross-entity retrieval for Freelancer Hub. Unlike Procedure Hub's
  * per-case `retrieveContext`, this spans every scope type (clients, projects,
  * invoices, expenses, contracts) since the assistant answers business-wide
  * questions. Same cosine/lexical-fallback approach as `lib/rag/retrieve.ts`.

@@ -16,7 +16,7 @@ import {
 
 /**
  * On-device text embeddings model used for RAG inside Navigator modules
- * (e.g. Legal Navigator case search). Loaded lazily — only when a Navigator
+ * (e.g. Procedure Hub case search). Loaded lazily — only when a Navigator
  * workspace is opened — not at app launch, since most users won't use it.
  */
 export const EMBEDDINGS_MODEL = ALL_MINILM_L6_V2;

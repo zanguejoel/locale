@@ -2,7 +2,7 @@
  * Local SQLite database for normal chat (conversations + messages).
  *
  * Replaces the Supabase-backed `conversations`/`messages` tables — chat now
- * lives entirely on-device, same as the Legal Navigator's `legal.db`. Kept as
+ * lives entirely on-device, same as the Procedure Hub's `legal.db`. Kept as
  * its own file/database (`chat.db`) rather than merged into `legal.db` so the
  * two domains stay independently migratable.
  */

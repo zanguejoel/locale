@@ -7,8 +7,9 @@
  */
 import { chunkText } from '@/lib/rag/chunk';
 import { embedText } from '@/lib/rag/embed';
-import { addChunk, deleteChunksForScope } from './chunks';
-import { Client, Project, Invoice, Expense, Contract } from './types';
+import { addChunk, deleteChunksForScope, deleteChunksForSource } from './chunks';
+import { Client, Project, Invoice, Expense, Contract, TimeEntry } from './types';
+import { formatDuration } from './timeMetrics';
 
 async function reindex(scopeType: 'client' | 'project' | 'invoice' | 'expense' | 'contract', scopeId: string, text: string): Promise<void> {
   await deleteChunksForScope(scopeType, scopeId);
@@ -86,4 +87,34 @@ export async function indexContract(contract: Contract): Promise<void> {
     contract.extractedText ? `Excerpt: ${contract.extractedText.slice(0, 500)}` : null,
   ].filter(Boolean).join('\n');
   await reindex('contract', contract.id, text);
+}
+
+/**
+ * Index a time entry under its project's scope (so "how many hours on X" is
+ * retrievable) without clobbering the project's own summary — we target the
+ * entry's source row rather than re-indexing the whole project scope.
+ */
+export async function indexTimeEntry(entry: TimeEntry, projectTitle?: string, clientName?: string): Promise<void> {
+  await deleteChunksForSource('time_entry', entry.id);
+  const date = new Date(entry.startTime).toISOString().slice(0, 10);
+  const text = [
+    `Time entry on ${date}: ${formatDuration(entry.durationSeconds)} of work`,
+    projectTitle ? `Project: ${projectTitle}` : null,
+    clientName ? `Client: ${clientName}` : null,
+    entry.description ? `Work: ${entry.description}` : null,
+    `Billable: ${entry.isBillable ? 'yes' : 'no'}${entry.billed ? ' (invoiced)' : ''}`,
+  ].filter(Boolean).join('\n');
+  const embedding = await embedText(text);
+  await addChunk({
+    scopeType: 'project',
+    scopeId: entry.projectId,
+    sourceType: 'time_entry',
+    sourceId: entry.id,
+    text,
+    embedding: embedding ?? undefined,
+  });
+}
+
+export async function removeTimeEntryIndex(entryId: string): Promise<void> {
+  await deleteChunksForSource('time_entry', entryId);
 }

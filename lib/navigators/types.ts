@@ -12,13 +12,13 @@ import { LetterKind, LetterTone } from '@/lib/cases/types';
 export interface NavigatorModule {
   /** Stable id stored as `module_id` on every case (e.g. 'legal'). */
   id: string;
-  /** Sidebar label, e.g. 'Legal Navigator'. */
+  /** Sidebar label, e.g. 'Procedure Hub'. */
   title: string;
   /** Ionicons glyph name for the sidebar entry. */
   icon: string;
   /** Expo-router path to the module workspace, e.g. '/(legal)'. */
   route: string;
-  /** System-mode tag, e.g. 'LEGAL_NAVIGATOR_MODE'. */
+  /** System-mode tag, e.g. 'PROCEDURE_HUB_MODE'. */
   systemMode: string;
   /** Categories a case in this module can have. */
   categories: string[];

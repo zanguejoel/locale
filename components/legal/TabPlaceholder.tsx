@@ -5,7 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { GradientBackground } from '@/components/GradientBackground';
 
 /**
- * Temporary placeholder for Legal Navigator sub-tabs whose full implementation
+ * Temporary placeholder for Procedure Hub sub-tabs whose full implementation
  * lands in later build steps (chat, documents, timeline, deadlines, export).
  */
 export function TabPlaceholder({ icon, title, note }: { icon: string; title: string; note: string }) {

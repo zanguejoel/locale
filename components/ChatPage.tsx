@@ -170,7 +170,7 @@ const ChatPage = () => {
   // generated text right after `await globalLLM.generate(...)` resolves,
   // without relying on a possibly-stale closure over React state.
   const localStreamContentRef = useRef('');
-  // Potential-case suggestion banner (normal chat -> Legal Navigator hand-off).
+  // Potential-case suggestion banner (normal chat -> Procedure Hub hand-off).
   const [detectedCase, setDetectedCase] = useState<DetectedCase | null>(null);
 
   // Seed local conversation messages from Supabase history when reopening an
@@ -682,7 +682,7 @@ const ChatPage = () => {
     console.log('[ChatPage] 🏠 Sending to local model:', message);
 
     // Opt-in suggestion: flag potential legal matters so the user can spin
-    // up a Legal Navigator case from this message. Heuristic only — no extra
+    // up a Procedure Hub case from this message. Heuristic only — no extra
     // model call on the hot send path.
     const detected = detectPotentialCase(message);
     if (detected) {
@@ -1438,7 +1438,7 @@ const ChatPage = () => {
           )}
         </View>
         
-        {/* Potential Case Detected — opt-in hand-off to Legal Navigator */}
+        {/* Potential Case Detected — opt-in hand-off to Procedure Hub */}
         {detectedCase && (
           <GlassSurface style={styles.caseDetectedBanner} borderRadius={16} highlighted>
             <View style={styles.caseDetectedHeader}>

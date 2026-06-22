@@ -25,7 +25,7 @@ function inferType(mimeType?: string | null, name?: string | null): CaseDocType 
 
 /**
  * New Expense: upload a receipt photo or PDF, extract its text (OCR/PDF —
- * reusing the exact same lib/docs/extractText.ts pipeline Legal Navigator
+ * reusing the exact same lib/docs/extractText.ts pipeline Procedure Hub
  * uses), and have the on-device model fill in vendor/amount/date/category.
  */
 export default function NewExpense() {

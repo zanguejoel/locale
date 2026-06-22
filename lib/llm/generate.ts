@@ -3,7 +3,7 @@
  *
  * Generalizes the prompt-building logic that used to live inline in
  * ChatPage's local send path so both normal chat and navigator-module case
- * chats (Legal Navigator, and future modules) build messages the same way
+ * chats (Procedure Hub, and future modules) build messages the same way
  * against the single shared `globalLLM` instance.
  */
 import { LOCAL_MODEL_LIMITS } from '@/constants/LocalModelsConfig';

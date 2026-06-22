@@ -11,6 +11,8 @@ import { listPayments } from '@/lib/freelance/payments';
 import { listExpenses } from '@/lib/freelance/expenses';
 import { listClients } from '@/lib/freelance/clients';
 import { listProjects } from '@/lib/freelance/projects';
+import { listTimeEntries } from '@/lib/freelance/time';
+import { thisWeekSeconds, toHours } from '@/lib/freelance/timeMetrics';
 import { computeDashboardMetrics, DashboardMetrics } from '@/lib/freelance/metrics';
 import { computeInsights, Insight } from '@/lib/freelance/insights';
 
@@ -18,6 +20,7 @@ const TILES: { key: string; label: string; icon: string; route: string }[] = [
   { key: 'chat', label: 'Business Assistant', icon: 'sparkles-outline', route: '/(freelancer)/chat' },
   { key: 'clients', label: 'Clients', icon: 'people-outline', route: '/(freelancer)/clients' },
   { key: 'projects', label: 'Projects', icon: 'briefcase-outline', route: '/(freelancer)/projects' },
+  { key: 'time', label: 'Time Tracking', icon: 'timer-outline', route: '/(freelancer)/time' },
   { key: 'invoices', label: 'Invoices', icon: 'document-text-outline', route: '/(freelancer)/invoices' },
   { key: 'expenses', label: 'Expenses', icon: 'receipt-outline', route: '/(freelancer)/expenses' },
   { key: 'contracts', label: 'Contracts', icon: 'document-lock-outline', route: '/(freelancer)/contracts' },
@@ -38,13 +41,15 @@ export default function FreelancerDashboard() {
 
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [insights, setInsights] = useState<Insight[]>([]);
+  const [weekHours, setWeekHours] = useState(0);
 
   const load = useCallback(async () => {
-    const [invoices, payments, expenses, clients, projects] = await Promise.all([
-      listInvoices(), listPayments(), listExpenses(), listClients(), listProjects(),
+    const [invoices, payments, expenses, clients, projects, timeEntries] = await Promise.all([
+      listInvoices(), listPayments(), listExpenses(), listClients(), listProjects(), listTimeEntries({ completedOnly: true }),
     ]);
     setMetrics(computeDashboardMetrics(invoices, payments, expenses, clients));
-    setInsights(await computeInsights({ invoices, payments, expenses, clients, projects }));
+    setWeekHours(toHours(thisWeekSeconds(timeEntries)));
+    setInsights(await computeInsights({ invoices, payments, expenses, clients, projects, timeEntries }));
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -77,6 +82,10 @@ export default function FreelancerDashboard() {
             <GlassSurface style={styles.metricCard} borderRadius={14}>
               <Text style={styles.metricLabel}>Avg Invoice</Text>
               <Text style={styles.metricValue}>${metrics.averageInvoiceValue.toFixed(0)}</Text>
+            </GlassSurface>
+            <GlassSurface style={styles.metricCard} borderRadius={14}>
+              <Text style={styles.metricLabel}>Hours (wk)</Text>
+              <Text style={styles.metricValue}>{weekHours}h</Text>
             </GlassSurface>
           </View>
         )}

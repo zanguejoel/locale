@@ -3,9 +3,10 @@
  * LLM-generated. Reliable and free to compute on every dashboard load, unlike
  * an LLM call which would be slow and could hallucinate numbers.
  */
-import { Invoice, Payment, Expense, Client, Project } from './types';
+import { Invoice, Payment, Expense, Client, Project, TimeEntry } from './types';
 import { revenueByClient } from './metrics';
 import { listContractsByProject } from './contracts';
+import { unbilledValue, unbilledSeconds, toHours } from './timeMetrics';
 
 export interface Insight {
   id: string;
@@ -20,6 +21,7 @@ export interface InsightInput {
   expenses: Expense[];
   clients: Client[];
   projects?: Project[];
+  timeEntries?: TimeEntry[];
 }
 
 function withinTrailingDays(dateStr: string, days: number): boolean {
@@ -111,6 +113,38 @@ export async function computeInsights(input: InsightInput): Promise<Insight[]> {
         icon: 'trending-down-outline',
         message: `You've invoiced ${Math.round(thisMonthHours)} hours this month, below your 6-month average of ${Math.round(avg)}.`,
       });
+    }
+  }
+
+  // Unbilled time: billable hours tracked but not yet invoiced.
+  if (input.timeEntries && input.timeEntries.length > 0) {
+    const value = unbilledValue(input.timeEntries);
+    const hours = toHours(unbilledSeconds(input.timeEntries));
+    if (hours >= 4) {
+      insights.push({
+        id: 'unbilled-time',
+        severity: 'info',
+        icon: 'hourglass-outline',
+        message: `You have ${hours}h of unbilled billable time ($${Math.round(value)}) ready to invoice.`,
+      });
+    }
+  }
+
+  // Project over budget: tracked value (hours × rate) nearing/exceeding budget.
+  if (input.projects) {
+    for (const project of input.projects.filter((p) => p.status === 'active' && p.budget && p.budget > 0)) {
+      const trackedValue = project.hoursLogged * project.hourlyRate;
+      const ratio = trackedValue / (project.budget as number);
+      if (ratio >= 0.85) {
+        insights.push({
+          id: `budget-${project.id}`,
+          severity: ratio >= 1 ? 'risk' : 'warning',
+          icon: ratio >= 1 ? 'warning-outline' : 'trending-up-outline',
+          message: ratio >= 1
+            ? `"${project.title}" is over its $${project.budget} budget (${Math.round(trackedValue)} tracked).`
+            : `"${project.title}" has used ${Math.round(ratio * 100)}% of its $${project.budget} budget.`,
+        });
+      }
     }
   }
 

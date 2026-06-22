@@ -111,6 +111,31 @@ export interface Contract {
   createdAt: number;
 }
 
+/**
+ * A tracked block of work, Toggl-style. `startTime`/`endTime` are epoch ms;
+ * a null `endTime` marks the single currently-running timer. `rateSnapshot`
+ * is captured at entry time (governing contract → project rate) so later
+ * changes don't rewrite billed history. Billable, un-billed entries are the
+ * source for invoices.
+ */
+export interface TimeEntry {
+  id: string;
+  projectId: string;
+  clientId: string;
+  contractId: string | null;
+  description: string | null;
+  startTime: number;
+  endTime: number | null;
+  durationSeconds: number;
+  isBillable: boolean;
+  billed: boolean;
+  invoiceId: string | null;
+  rateSnapshot: number;
+  tags: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type FreelanceChunkScopeType = 'client' | 'project' | 'invoice' | 'expense' | 'contract' | 'global';
 
 export interface FreelanceChunk {

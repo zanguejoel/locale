@@ -1,5 +1,5 @@
 /**
- * Freelancer Hub prompt builder. Unlike Legal Navigator, this is NOT a
+ * Freelancer Hub prompt builder. Unlike Procedure Hub, this is NOT a
  * `NavigatorModule` — Freelancer Hub has no per-case jurisdiction/category
  * concept, just one global business-wide assistant thread (FREELANCER_MODE).
  */

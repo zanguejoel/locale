@@ -7,7 +7,7 @@ import { LocaleGlass } from '@/constants/LocaleColors';
 import { useEmbeddingsGlobal } from '@/hooks/useEmbeddingsGlobal';
 
 /**
- * Legal Navigator workspace stack. Header tint matches the glassmorphic chat
+ * Procedure Hub workspace stack. Header tint matches the glassmorphic chat
  * header. Individual case tabs are nested under [caseId].
  */
 export default function LegalLayout() {
@@ -33,7 +33,7 @@ export default function LegalLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Legal Navigator',
+          title: 'Procedure Hub',
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.canGoBack() ? router.back() : router.replace('/(chat)/new')}

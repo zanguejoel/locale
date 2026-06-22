@@ -7,7 +7,7 @@ import { useEmbeddingsGlobal } from '@/hooks/useEmbeddingsGlobal';
 
 /**
  * Freelancer Hub workspace stack. Header tint matches the glassmorphic chat
- * header, same convention as the Legal Navigator stack.
+ * header, same convention as the Procedure Hub stack.
  */
 export default function FreelancerLayout() {
   const theme = useTheme();
@@ -15,7 +15,7 @@ export default function FreelancerLayout() {
   const glass = theme.isDark ? LocaleGlass.dark : LocaleGlass.light;
 
   // RAG over clients/projects/invoices/expenses/contracts needs the same
-  // on-device embeddings model Legal Navigator uses — loads in the
+  // on-device embeddings model Procedure Hub uses — loads in the
   // background, retrieval falls back to lexical matching until ready.
   useEmbeddingsGlobal();
 
@@ -59,6 +59,9 @@ export default function FreelancerLayout() {
       <Stack.Screen name="contracts/index" options={{ title: 'Contracts' }} />
       <Stack.Screen name="contracts/new" options={{ title: 'New Contract', presentation: 'modal' }} />
       <Stack.Screen name="contracts/[contractId]" options={{ title: 'Contract' }} />
+      <Stack.Screen name="time/index" options={{ title: 'Time Tracking' }} />
+      <Stack.Screen name="time/entries/index" options={{ title: 'Timesheet' }} />
+      <Stack.Screen name="time/entries/new" options={{ title: 'Add Time Entry', presentation: 'modal' }} />
       <Stack.Screen name="reports" options={{ title: 'Reports' }} />
       <Stack.Screen name="taxes" options={{ title: 'Taxes' }} />
     </Stack>

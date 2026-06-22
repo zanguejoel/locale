@@ -1,6 +1,6 @@
 /**
  * Overdue-invoice follow-up generator. Same kind x tone draft pattern as
- * lib/followups/generate.ts (Legal Navigator), with Freelancer Hub's
+ * lib/followups/generate.ts (Procedure Hub), with Freelancer Hub's
  * Friendly/Standard/Final tone set instead of Legal's.
  */
 import { LlmHandle } from '@/lib/llm/generate';
